@@ -18,7 +18,7 @@ const AppDataSource = new DataSource({
     username: "alquila360_admin",
     password: "123456789",
     database: "alquila360",
-    entities: [User,Propiedad,Contrato,Pago,Ticket,PropiedadFoto,TicketFoto,],
+    entities: [User,Propiedad,Contrato,Pago,Ticket,PropiedadFoto,TicketFoto],
     synchronize: true,
     logging: true,
 })

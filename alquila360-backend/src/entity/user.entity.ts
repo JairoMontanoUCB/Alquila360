@@ -34,7 +34,7 @@ export class User {
   })
   estado: string;
 
-  @Column({ type: "datetime", nullable: true })
+  @Column({ type: "date", nullable: true })
   fecha_registro: Date;
 
  
