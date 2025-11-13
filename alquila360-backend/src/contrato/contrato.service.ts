@@ -37,7 +37,7 @@ export class ContratoService {
         if ( AuxUsuario == null) {
             throw new Error('Usuario no encontrado');
         }
-        if ( AuxUsuario.rol != 'Inquilino') {
+        if ( AuxUsuario.rol != 'inquilino') {
             throw new Error('El usuario no es un inquilino');
         }
         if ( AuxUsuario.estado != 'activo') {
@@ -68,31 +68,35 @@ export class ContratoService {
             throw new Error('El monto mensual debe ser mayor a 0');
         }
 
+        // Calcular garantia
+
+        var mesesDuracion = this.CalcularMesesContrato(fecha_inicio, fecha_fin);
+        var garantia = this.CalcularGarantia(monto_mensual, AuxPropiedad.tipo, mesesDuracion);
+
         //Se guarda la configuracion
         contrato.inquilino = await AuxUsuario;
         contrato.propiedad = await AuxPropiedad;
         contrato.fecha_inicio = fecha_inicio;
         contrato.fecha_fin = fecha_fin;
         contrato.monto_mensual = monto_mensual; 
+        contrato.garantia = garantia;
         return await AppDataSource.getRepository(Contrato).save(contrato);
     }
+    
+    CalcularMesesContrato(fechaInicio: Date, fechaFin: Date): number {
+        const inicio = new Date(fechaInicio);
+        const fin = new Date(fechaFin);
+        
+        const diferenciaMs = fin.getTime() - inicio.getTime();
+        
+        // Convertir a meses
+        const meses = diferenciaMs / (1000 * 60 * 60 * 24 * 30.44);
+        
+        // Redondear hacia arriba para contar meses completos
+        return Math.ceil(meses);
+    }
 
-    CalcularMesesDuracion (fecha_inicio: Date, fecha_fin: Date): number { // EN TRABAJO
-        var inicio = new Date(fecha_inicio);
-        var fin = new Date(fecha_fin);
-
-        let meses = (fin.getFullYear() - inicio.getFullYear()) * 12;
-        meses -= inicio.getMonth();
-        meses += fin.getMonth();
-
-        // Si el día del mes de la fecha de fin es menor al de la fecha de inicio, se resta un mes
-        if (fin.getDate() < inicio.getDate()) {
-            meses--;
-        }
-        return meses <= 0 ? 0 : meses;
-    } 
-
-    CalcularGarantia (monto: number, tipoPropiedad: "departamento" | "casa" | "local" | "oficina" | "otros"): number {
+    CalcularGarantia (monto: number, tipoPropiedad: string, Meses:number): number {
         var porcentaje:number;
         switch (tipoPropiedad) {
             case "departamento":
@@ -111,6 +115,16 @@ export class ContratoService {
                 porcentaje = 1; // 100% para otros tipos de propiedad
                 break;
         }
-        return monto * porcentaje; // La garantia se calcula en base al monto mensual y es el 7% del mismo
+        
+        var factorMultiplicador; 
+
+        if (Meses < 6) factorMultiplicador = 1.2; 
+        else if (Meses <= 12) factorMultiplicador = 1;
+        else if (Meses <= 24) factorMultiplicador = 0.7;
+        else Meses = factorMultiplicador = 0.5;
+        
+
+        var porcentajeFinal = factorMultiplicador * porcentaje;
+        return monto * porcentajeFinal; // La garantia se calcula en base al monto mensual y la cantidad de meses
     }
 }
