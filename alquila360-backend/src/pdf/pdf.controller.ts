@@ -7,9 +7,7 @@ import { UserService } from '../user/user.service';
 @Controller('pdf')
 export class PdfController {
   constructor(
-    private readonly pdfService: PdfService,
-    private readonly pagoService: PagoService,
-    private readonly userService: UserService
+    
   ) {}
 
   
