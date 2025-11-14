@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from "typeorm";
 import { Contrato } from "./contrato.entity";
 import { User } from "./user.entity";
 
@@ -8,8 +8,13 @@ export class Pago {
   id: number;
 
   @ManyToOne(() => Contrato, contrato => contrato.pagos)
+  @JoinColumn({ name: "id_contrato" })
   contrato: Contrato;
 
+  @Column()
+  id_contrato: number;
+
+  
   @ManyToOne(() => User, user => user.pagos)
   inquilino: User;
 
@@ -29,5 +34,5 @@ export class Pago {
   recibo_numero: string;
 
   @Column({ nullable: true })
-  comprobante_pdf: string;
+  ruta_pdf: string;
 }
