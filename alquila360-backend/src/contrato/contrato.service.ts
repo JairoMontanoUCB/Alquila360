@@ -4,6 +4,9 @@ import { Contrato } from "src/entity/contrato.entity";
 import { User } from "src/entity/user.entity";
 import { Propiedad } from "src/entity/propiedad.entity";
 import { DataSource } from "typeorm";
+import { CreateContratoDto } from "src/dto/contratoDto/create-contrato.dto";
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 
 @Injectable()
 export class ContratoService {
@@ -30,10 +33,21 @@ export class ContratoService {
         return await AppDataSource.getRepository(Contrato).delete(id);
     }
 
-    async RegistrarUsuarioContrato(contrato: Contrato, usuarioId: number, propiedadId: number, monto_mensual: number, fecha_inicio: Date, fecha_fin: Date){
+    async RegistrarUsuarioContrato(contratoDto: CreateContratoDto){
 
+        // Validar DTO
+        const errors = await validate(contratoDto);
+        if (errors.length > 0) {
+            const errorMessages = errors.map(error => 
+                error.constraints ? Object.values(error.constraints) : ['Error de validación']
+            ).flat();
+            throw new Error(`Datos inválidos: ${errorMessages.join(', ')}`);
+        }
+
+        var { inquilinoId, propiedadId, monto_mensual, fecha_inicio, fecha_fin } = contratoDto;
+        
         // Conseguir Inquilino
-        var AuxUsuario = await AppDataSource.getRepository(User).findOneBy({ id: usuarioId });
+        var AuxUsuario = await AppDataSource.getRepository(User).findOneBy({ id: inquilinoId });
         if ( AuxUsuario == null) {
             throw new Error('Usuario no encontrado');
         }
@@ -64,6 +78,7 @@ export class ContratoService {
         }
 
             // Monto mensual
+
         if (monto_mensual <= 0) {
             throw new Error('El monto mensual debe ser mayor a 0');
         }
@@ -74,12 +89,16 @@ export class ContratoService {
         var garantia = this.CalcularGarantia(monto_mensual, AuxPropiedad.tipo, mesesDuracion);
 
         //Se guarda la configuracion
-        contrato.inquilino = await AuxUsuario;
-        contrato.propiedad = await AuxPropiedad;
+
+        const contrato = new Contrato();
+
+        contrato.inquilino = AuxUsuario;
+        contrato.propiedad = AuxPropiedad;
         contrato.fecha_inicio = fecha_inicio;
         contrato.fecha_fin = fecha_fin;
         contrato.monto_mensual = monto_mensual; 
         contrato.garantia = garantia;
+        //FALTA PDF
         return await AppDataSource.getRepository(Contrato).save(contrato);
     }
     
@@ -97,7 +116,8 @@ export class ContratoService {
     }
 
     CalcularGarantia (monto: number, tipoPropiedad: string, Meses:number): number {
-        var porcentaje:number;
+        var porcentaje;
+
         switch (tipoPropiedad) {
             case "departamento":
                 porcentaje = 1; // 100% para departamentos
@@ -121,10 +141,11 @@ export class ContratoService {
         if (Meses < 6) factorMultiplicador = 1.2; 
         else if (Meses <= 12) factorMultiplicador = 1;
         else if (Meses <= 24) factorMultiplicador = 0.7;
-        else Meses = factorMultiplicador = 0.5;
+        else factorMultiplicador = 0.5;
         
 
         var porcentajeFinal = factorMultiplicador * porcentaje;
+
         return monto * porcentajeFinal; // La garantia se calcula en base al monto mensual y la cantidad de meses
     }
 }

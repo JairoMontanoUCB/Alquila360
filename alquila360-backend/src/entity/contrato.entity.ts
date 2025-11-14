@@ -33,6 +33,4 @@ export class Contrato {
   @OneToMany(() => Pago, pago => pago.contrato)
   pagos: Pago[];
 
-  @OneToMany(() => Ticket, ticket => ticket.contrato)
-  tickets: Ticket[];
 }
