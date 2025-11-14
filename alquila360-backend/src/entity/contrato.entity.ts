@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn } from "typeorm";
 import { Propiedad } from "./propiedad.entity";
 import { User } from "./user.entity";
 import { Pago } from "./pago.entity";
@@ -10,7 +10,10 @@ export class Contrato {
   id: number;
 
   @ManyToOne(() => Propiedad, propiedad => propiedad.contratos)
+  @JoinColumn({ name: "id_propiedad" })
   propiedad: Propiedad;
+  @Column()
+  id_propiedad: number;
 
   @ManyToOne(() => User, user => user.contratos)
   inquilino: User;
@@ -33,6 +36,4 @@ export class Contrato {
   @OneToMany(() => Pago, pago => pago.contrato)
   pagos: Pago[];
 
-  @OneToMany(() => Ticket, ticket => ticket.contrato)
-  tickets: Ticket[];
 }
