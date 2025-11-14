@@ -17,12 +17,19 @@ export class PagoService {
 
         // 2. Obtener contrato y propiedad
         const contrato = await AppDataSource.getRepository(Contrato).findOne({
-            where: { id: pagoCreado.id_contrato },
+            where: { id: pago.id_contrato },
         });
+        if (!contrato) {
+            throw new Error(`Contrato con id ${pago.id_contrato} no existe`);
+        }
 
         const propiedad = await AppDataSource.getRepository(Propiedad).findOne({
-            where: { id: contrato?.id_propiedad },
+            where: { id: contrato.id_propiedad },
         });
+        if (!propiedad) {
+            throw new Error(`Propiedad asociada al contrato ${contrato.id} no existe`);
+        }
+        
 
         // 3. Crear PDF
         const pdfPath = await this.pdfService.generatePaymentPDF({
