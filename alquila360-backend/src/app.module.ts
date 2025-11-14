@@ -7,9 +7,11 @@ import { ContratoModule } from './contrato/contrato.module';
 import { TicketModule } from './ticket/ticket.module';
 import { PagoModule } from './pago/pago.module';
 
+import { PdfModule } from './pdf/pdf.module';
+
 
 @Module({
-  imports: [UserModule,PropiedadModule,ContratoModule,TicketModule,PagoModule],
+  imports: [UserModule,PropiedadModule,ContratoModule,TicketModule,PagoModule,PdfModule],
   controllers: [AppController],
   providers: [AppService],
 })
