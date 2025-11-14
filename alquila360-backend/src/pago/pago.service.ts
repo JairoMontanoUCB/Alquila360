@@ -4,11 +4,13 @@ import { Pago } from "src/entity/pago.entity";
 
 import { Contrato } from "src/entity/contrato.entity";
 import { Propiedad } from "src/entity/propiedad.entity";
-import { PdfGeneratorService } from "src/utils/pdf-generator.service";
+import { PdfKitGeneratorService } from "src/utils/pdf-generator.service";
+
+ 
 
 @Injectable()
 export class PagoService {
-    constructor(private readonly pdfService: PdfGeneratorService) {}
+    constructor(private readonly pdfService: PdfKitGeneratorService) {}
 
     async createPago(pago:Pago)
     {
