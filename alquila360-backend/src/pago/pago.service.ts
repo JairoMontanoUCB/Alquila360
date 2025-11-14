@@ -2,11 +2,48 @@ import { Inject, Injectable } from "@nestjs/common";
 import AppDataSource from "src/data-source";
 import { Pago } from "src/entity/pago.entity";
 
+import { Contrato } from "src/entity/contrato.entity";
+import { Propiedad } from "src/entity/propiedad.entity";
+import { PdfGeneratorService } from "src/utils/pdf-generator.service";
+
 @Injectable()
 export class PagoService {
+    constructor(private readonly pdfService: PdfGeneratorService) {}
+
     async createPago(pago:Pago)
     {
-        return await AppDataSource.getRepository(Pago).save(pago);
+        // 1. Guardar en BD
+        const pagoCreado = await AppDataSource.getRepository(Pago).save(pago);
+
+        // 2. Obtener contrato y propiedad
+        const contrato = await AppDataSource.getRepository(Contrato).findOne({
+            where: { id: pago.id_contrato },
+        });
+        if (!contrato) {
+            throw new Error(`Contrato con id ${pago.id_contrato} no existe`);
+        }
+
+        const propiedad = await AppDataSource.getRepository(Propiedad).findOne({
+            where: { id: contrato.id_propiedad },
+        });
+        if (!propiedad) {
+            throw new Error(`Propiedad asociada al contrato ${contrato.id} no existe`);
+        }
+        
+
+        // 3. Crear PDF
+        const pdfPath = await this.pdfService.generatePaymentPDF({
+            id: pagoCreado.id,
+            fecha: pagoCreado.fecha_pago,
+            monto: pagoCreado.monto,
+            propiedad,
+            contrato,
+        });
+
+        pagoCreado.ruta_pdf = pdfPath;
+        await AppDataSource.getRepository(Pago).save(pagoCreado);
+
+        return pagoCreado;
     }
 
     async getAllPago()
@@ -26,5 +63,4 @@ export class PagoService {
     {
         return await AppDataSource.getRepository(Pago).delete(id);
     }
-
 }
