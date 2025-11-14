@@ -12,9 +12,6 @@ export class Ticket {
   @ManyToOne(() => Propiedad, propiedad => propiedad.tickets)
   propiedad: Propiedad;
 
-  @ManyToOne(() => Contrato, contrato => contrato.tickets, { nullable: true })
-  contrato: Contrato;
-
   @ManyToOne(() => User, user => user.tickets)
   inquilino: User;
 
