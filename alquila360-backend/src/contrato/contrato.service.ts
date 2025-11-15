@@ -7,9 +7,12 @@ import { DataSource } from "typeorm";
 import { CreateContratoDto } from "src/auth/dto/contratoDto/create-contrato.dto";
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
+import { PdfKitGeneratorService } from "src/utils/pdf-generator.service";
 
 @Injectable()
 export class ContratoService {
+    constructor(private readonly pdfService: PdfKitGeneratorService) {}
+
     async createContrato(contrato:Contrato)
     {
         return await AppDataSource.getRepository(Contrato).save(contrato);
@@ -89,7 +92,7 @@ export class ContratoService {
         var garantia = this.CalcularGarantia(monto_mensual, AuxPropiedad.tipo, mesesDuracion);
 
         //Se guarda la configuracion
-
+        
         const contrato = new Contrato();
 
         contrato.inquilino = AuxUsuario;
@@ -98,7 +101,23 @@ export class ContratoService {
         contrato.fecha_fin = fecha_fin;
         contrato.monto_mensual = monto_mensual; 
         contrato.garantia = garantia;
-        //FALTA PDF
+
+        await AppDataSource.getRepository(Contrato).save(contrato);
+
+        // Creacion PDF
+
+        const pdfPath = await this.pdfService.generateContractPDF({
+            Id : contrato.id,
+            Inquilino : contrato.inquilino,
+            Propiedad : contrato.propiedad,
+            fecha_inicio : contrato.fecha_inicio,
+            fecha_fin : contrato.fecha_fin,
+            monto_mensual : contrato.monto_mensual,
+            garantia : contrato.garantia
+        });
+
+        contrato.archivo_pdf = pdfPath;
+
         return await AppDataSource.getRepository(Contrato).save(contrato);
     }
     

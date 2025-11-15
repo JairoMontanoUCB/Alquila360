@@ -31,6 +31,10 @@ export class ContratoController {
     deleteContrato(@Param()param: any) {
         return this.contratoService.deleteContrato(param.id);
     }
+    @Post("/registrar-usuario-contrato")
+    RegistrarUsuarioContrato(@Body() contratoDto:any){
+        return this.contratoService.RegistrarUsuarioContrato(contratoDto);
+    }
 }
 
 
