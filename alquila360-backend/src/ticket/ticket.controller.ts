@@ -6,8 +6,6 @@ import { get } from "http";
 @Controller('/ticket')
 export class TicketController {
     constructor(private readonly ticketService : TicketService) {
-
-
     }
     
     @Post()
@@ -31,6 +29,22 @@ export class TicketController {
     deleteTicket(@Param()param: any) {
         return this.ticketService.deleteTicket(param.id);
     }
+
+    @Put('/:id/asignar-tecnico')
+    asignarTecnico(
+        @Param('id') id: number,
+        @Body('tecnicoId') tecnicoId: number
+    ) {
+        return this.ticketService.asignarTecnico(id, tecnicoId);
+    }
+    @Put('/:id/estado')
+    actualizarEstado(
+        @Param('id') id: number,
+        @Body('estado') estado: string
+    ) {
+        return this.ticketService.actualizarEstado(id, estado);
+    }
+
 }
 
 
