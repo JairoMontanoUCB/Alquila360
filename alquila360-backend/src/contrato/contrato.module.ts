@@ -1,5 +1,4 @@
 import { Module } from "@nestjs/common";
-import { userInfo } from "os";
 import { ContratoService } from "./contrato.service";
 import { ContratoController } from "./contrato.controller";
 import { PdfModule } from "src/utils/pdf-generator.module";

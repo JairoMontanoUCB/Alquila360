@@ -1,5 +1,4 @@
-// src/auth/dto/contratoDto/create-contrato.dto.ts
-import { IsDate, IsNumber, IsString, IsOptional, IsInt, Min, MinDate } from 'class-validator';
+import { IsDate, IsNumber, IsOptional, IsInt, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateContratoDto {
@@ -17,14 +16,12 @@ export class CreateContratoDto {
 
   @IsDate()
   @Type(() => Date)
-  @MinDate(new Date())
   fecha_fin: Date;
 
   @IsNumber()
-  @Min(0)
+  @Min(1)
   monto_mensual: number;
 
   @IsOptional()
-  @IsString()
   archivo_pdf?: string;
 }

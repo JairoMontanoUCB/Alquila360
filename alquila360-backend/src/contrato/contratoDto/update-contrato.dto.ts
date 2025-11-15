@@ -1,10 +1,10 @@
-// src/auth/dto/contratoDto/update-contrato.dto.ts
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateContratoDto } from './create-contrato.dto';
 import { IsDate, IsNumber, IsString, IsOptional, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class UpdateContratoDto extends PartialType(CreateContratoDto) {
+
   @IsOptional()
   @IsDate()
   @Type(() => Date)

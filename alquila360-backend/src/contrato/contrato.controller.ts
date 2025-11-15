@@ -1,39 +1,26 @@
 import { Body, Controller, Delete, Get, Param, Post, Put } from "@nestjs/common";
 import { ContratoService } from "./contrato.service";
 import { Contrato } from "src/entity/contrato.entity";
+import { CreateContratoDto } from "src/contrato/contratoDto/create-contrato.dto";
 import { get } from "http";
 
 @Controller('/contrato')
 export class ContratoController {
-    constructor(private readonly contratoService : ContratoService) {
+    constructor(private readonly contratoService : ContratoService) {}
 
-
-    }
-    
-    @Post()
-    createContrato(@Body() contrato : Contrato) {
-        return this.contratoService.createContrato(contrato);
+    @Post("registrar")
+    RegistrarUsuarioContrato(@Body() contratoDto: CreateContratoDto) {
+        return this.contratoService.RegistrarUsuarioContrato(contratoDto);
     }
 
     @Get()
     getAllContrato() {
         return this.contratoService.getAllContrato();
     }
+
     @Get('/:id')
-    getContratoById(@Param()param: any) {
-        return this.contratoService.getContratoById(param.id);
-    }
-    @Put('/:id')
-    updateContrato(@Param()param: any, @Body() contrato: Contrato) {
-        return this.contratoService.updateContrato(param.id, contrato);
-    }
-    @Delete('/:id')
-    deleteContrato(@Param()param: any) {
-        return this.contratoService.deleteContrato(param.id);
-    }
-    @Post("/registrar-usuario-contrato")
-    RegistrarUsuarioContrato(@Body() contratoDto:any){
-        return this.contratoService.RegistrarUsuarioContrato(contratoDto);
+    getContratoById(@Param('id') id: number) {
+        return this.contratoService.getContratoById(id);
     }
 }
 
