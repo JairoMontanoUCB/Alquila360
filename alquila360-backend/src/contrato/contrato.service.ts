@@ -4,7 +4,7 @@ import { Contrato } from "src/entity/contrato.entity";
 import { User } from "src/entity/user.entity";
 import { Propiedad } from "src/entity/propiedad.entity";
 import { DataSource } from "typeorm";
-import { CreateContratoDto } from "src/auth/dto/contratoDto/create-contrato.dto";
+import { CreateContratoDto } from "src/contrato/contratoDto/create-contrato.dto";
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { PdfKitGeneratorService } from "src/utils/pdf-generator.service";
