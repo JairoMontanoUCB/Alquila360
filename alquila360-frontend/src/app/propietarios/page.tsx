@@ -1,93 +1,113 @@
-import Image from "next/image";
-import Navbar from "../components/Navbar"; // ojo: ../ porque estamos dentro de /propietarios
+"use client";
 
-export default function PropietariosPage() {
-  const acciones = [
-    {
-      icon: "➕",
-      label: "Publicar propiedad",
-      desc: "Registra una nueva casa, departamento o local disponible para alquiler.",
-    },
-    {
-      icon: "📩",
-      label: "Ver solicitudes",
-      desc: "Revisa quiénes están interesados en tus propiedades y responde rápidamente.",
-    },
-    {
-      icon: "📜",
-      label: "Gestión de contratos",
-      desc: "Lleva control de contratos activos, vencimientos y renovaciones.",
-    },
-    {
-      icon: "💰",
-      label: "Pagos y estados",
-      desc: "Consulta pagos realizados, pendientes y genera reportes básicos.",
-    },
-    {
-      icon: "🏠",
-      label: "Mis propiedades",
-      desc: "Administra el detalle, fotos y descripción de cada propiedad publicada.",
-    },
-    {
-      icon: "👤",
-      label: "Perfil y contacto",
-      desc: "Actualiza tus datos de propietario y canales de contacto.",
-    },
+export default function DashboardPropietario() {
+  // Estos datos ahora son fijos, luego los pueden traer del backend
+  const resumen = {
+    propiedadesActivas: 3,
+    pagosMes: 10500,
+    contratosVigentes: 0,
+    pagosPendientes: 0,
+    ticketsAbiertos: 0,
+  };
+
+  const menuItems = [
+    { label: "Cuenta", icon: "👤" },
+    { label: "Notificaciones", icon: "🔔" },
+    { label: "Dashboard", icon: "📊" },
+    { label: "Contratos", icon: "📄" },
+    { label: "Mantenimiento", icon: "🛠️" },
+    { label: "Reportes", icon: "📑" },
+    { label: "Pagos", icon: "💳" },
   ];
 
   return (
-    <>
-      <Navbar />
+    <div className="min-h-screen flex bg-[#f7f5ee]">
 
-      {/* HERO PROPIETARIOS */}
-      <section className="relative w-full h-[520px] flex items-center justify-center">
-        <Image
-          src="/hero.png"
-          alt="Fondo del hero para propietarios"
-          fill
-          priority
-          className="object-cover"
-        />
-        <div className="absolute inset-0 bg-black/45" />
-        <div className="relative z-10 text-center text-white px-6 max-w-5xl w-full">
-          <h1 className="text-4xl md:text-5xl font-bold leading-tight">
-            Administra tus propiedades de forma fácil y segura.
-          </h1>
-
-          <p className="mt-4 text-base md:text-lg tracking-wide">
-            Publica, controla solicitudes, gestiona contratos y pagos desde un
-            solo lugar.
-          </p>
-
-          <div className="mt-6 mx-auto flex w-full max-w-3xl">
-            <input
-              type="text"
-              placeholder="Buscar propiedad o inquilino"
-              className="flex-1 px-6 py-3 rounded-l-full border border-white/20 outline-none text-black"
-            />
-            <button
-              type="button"
-              className="px-6 py-3 bg-pink-500 hover:bg-pink-600 text-white rounded-r-full font-semibold"
-            >
-              Buscar
-            </button>
-          </div>
+      {/* SIDEBAR */}
+      <aside className="w-64 bg-[#004030] text-white flex flex-col">
+        <div className="px-8 py-6 border-b border-white/10">
+          <h1 className="text-3xl font-bold tracking-wide">Alquila360</h1>
         </div>
-      </section>
 
-      {/* ACCIONES PARA PROPIETARIOS */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-6 md:p-10">
-        {acciones.map((a) => (
-          <div
-            key={a.label}
-            className="flex flex-col items-start bg-white rounded-2xl shadow hover:shadow-lg transition p-6"
-          >
-            <span className="text-3xl mb-2">{a.icon}</span>
-            <h3 className="text-lg font-semibold mb-1">{a.label}</h3>
-            <p className="text-sm text-gray-600">{a.desc}</p>
+        <nav className="flex-1 px-4 py-6 space-y-2">
+          {menuItems.map((item) => (
+            <button
+              key={item.label}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-[#ffcc00] hover:bg-white/10 transition"
+              type="button"
+            >
+              <span className="text-xl">{item.icon}</span>
+              <span className="font-medium">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+      </aside>
+
+      {/* CONTENIDO PRINCIPAL */}
+      <main className="flex-1 px-10 py-8">
+        <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-8">
+          Bienvenido, aquí tienes un resumen de tus propiedades.
+        </h2>
+
+        {/* PRIMERA FILA: 3 TARJETAS */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Propiedades activas */}
+          <div className="bg-[#93a3a7] rounded-xl shadow-md px-6 py-5 flex flex-col justify-between">
+            <h3 className="text-lg font-medium text-gray-900 mb-3">
+              Propiedades activas
+            </h3>
+            <div className="flex items-center justify-between">
+              <span className="text-4xl font-bold text-white">
+                {resumen.propiedadesActivas}
+              </span>
+              <span className="text-4xl">🏠</span>
+            </div>
           </div>
-        ))}
-      </section>
-    </>
+
+          {/* Pagos recibidos este mes */}
+          <div className="bg-[#93a3a7] rounded-xl shadow-md px-6 py-5 flex flex-col justify-between">
+            <h3 className="text-lg font-medium text-gray-900 mb-3">
+              Pagos recibidos este mes
+            </h3>
+            <span className="text-3xl font-bold text-white">
+              ${resumen.pagosMes.toLocaleString("en-US")}
+            </span>
+          </div>
+
+          {/* Contratos vigentes */}
+          <div className="bg-[#93a3a7] rounded-xl shadow-md px-6 py-5 flex flex-col justify-between">
+            <h3 className="text-lg font-medium text-gray-900 mb-3">
+              Contratos vigentes
+            </h3>
+            <span className="text-3xl font-bold text-white">
+              {resumen.contratosVigentes || "-"}
+            </span>
+          </div>
+        </section>
+
+        {/* SEGUNDA FILA: 2 TARJETAS GRANDES */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Pagos pendientes */}
+          <div className="bg-[#93a3a7] rounded-xl shadow-md px-6 py-5 flex flex-col">
+            <h3 className="text-lg font-medium text-gray-900 mb-3">
+              Pagos pendientes…
+            </h3>
+            <span className="text-2xl font-semibold text-white">
+              {resumen.pagosPendientes ? `$${resumen.pagosPendientes}` : "—"}
+            </span>
+          </div>
+
+          {/* Tickets abiertos */}
+          <div className="bg-[#93a3a7] rounded-xl shadow-md px-6 py-5 flex flex-col">
+            <h3 className="text-lg font-medium text-gray-900 mb-3">
+              Tickets abiertos
+            </h3>
+            <span className="text-2xl font-semibold text-white">
+              {resumen.ticketsAbiertos || "—"}
+            </span>
+          </div>
+        </section>
+      </main>
+    </div>
   );
 }
