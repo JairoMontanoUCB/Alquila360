@@ -1,165 +1,206 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import AppDataSource from "src/data-source";
 import { Contrato } from "src/entity/contrato.entity";
 import { User } from "src/entity/user.entity";
 import { Propiedad } from "src/entity/propiedad.entity";
-import { CreateContratoDto } from "src/contrato/contratoDto/create-contrato.dto";
-import { validate } from 'class-validator';
+import { DataSource } from "typeorm";
+import { CreateContratoDto } from "./contratoDto/create-contrato.dto";
 import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { PdfKitGeneratorService } from "src/utils/pdf-generator.service";
+import { ResponseContratoDto } from "./contratoDto/response-contrato.dto";
 
 @Injectable()
 export class ContratoService {
     constructor(private readonly pdfService: PdfKitGeneratorService) {}
 
-    // ======================================================
-    // LISTAR CONTRATOS
-    // ======================================================
-    async getAllContrato() {
-        return await AppDataSource.getRepository(Contrato).find({
-            relations: ["inquilino", "propiedad"]
-        });
+    async createContrato(contrato:Contrato)
+    {
+        return await AppDataSource.getRepository(Contrato).save(contrato);
     }
 
-    // ======================================================
-    // OBTENER POR ID
-    // ======================================================
-    async getContratoById(id: number) {
-        return await AppDataSource.getRepository(Contrato).findOne({
-            where: { id },
-            relations: ["inquilino", "propiedad"]
-        });
+    async getAllContrato()
+    {
+        return await AppDataSource.getRepository(Contrato).find();
     }
-
-    // ======================================================
-    // ACTUALIZAR CONTRATO
-    // ======================================================
-    async updateContrato(id: number, data: any) {
-
-        if (data.fecha_inicio) data.fecha_inicio = new Date(data.fecha_inicio);
-        if (data.fecha_fin) data.fecha_fin = new Date(data.fecha_fin);
-
-        await AppDataSource.getRepository(Contrato).update(id, data);
+    async getContratoById(id:number)
+    {
+        return await AppDataSource.getRepository(Contrato).findOneBy({id}); 
+    }
+    async updateContrato(id:number, contratoData : Partial<Contrato>)
+    {
+        return await AppDataSource.getRepository(Contrato).update(id, contratoData);
         return this.getContratoById(id);
     }
-
-    // ======================================================
-    // ELIMINAR CONTRATO
-    // ======================================================
-    async deleteContrato(id: number) {
+    async deleteContrato(id:number)
+    {
         return await AppDataSource.getRepository(Contrato).delete(id);
     }
 
-    // ======================================================
-    // REGISTRAR CONTRATO (validación + cálculos + PDF)
-    // ======================================================
-    async RegistrarUsuarioContrato(dto: CreateContratoDto) {
+    async RegistrarUsuarioContrato(contratoDto: CreateContratoDto){
 
-        // 1️⃣ Convertir a instancia real del DTO
-        const dtoInstance = plainToInstance(CreateContratoDto, dto);
-
-        // 2️⃣ Validar DTO
-        const errors = await validate(dtoInstance);
+        // Validar DTO
+        const errors = await validate(contratoDto);
         if (errors.length > 0) {
-            const messages = errors
-                .map(e => Object.values(e.constraints ?? {}))
-                .flat();
-            throw new Error("Datos inválidos: " + messages.join(', '));
+            const errorMessages = errors.map(error => 
+                error.constraints ? Object.values(error.constraints) : ['Error de validación']
+            ).flat();
+            throw new Error(`Datos inválidos: ${errorMessages.join(', ')}`);
         }
 
-        // 3️⃣ Desestructurar valores ya transformados
-        const { propiedadId, inquilinoId, monto_mensual } = dtoInstance;
+        var { inquilinoId, propiedadId, monto_mensual, fecha_inicio, fecha_fin } = contratoDto;
+        
+        // Conseguir Inquilino
+        var AuxUsuario = await AppDataSource.getRepository(User).findOneBy({ id: inquilinoId });
+        if ( AuxUsuario == null) {
+            throw new Error('Usuario no encontrado');
+        }
+        if ( AuxUsuario.rol != 'inquilino') {
+            throw new Error('El usuario no es un inquilino');
+        }
+        if ( AuxUsuario.estado != 'activo') {
+            throw new Error('El usuario no está activo');
+        }
 
-        const fecha_inicio = new Date(dtoInstance.fecha_inicio);
-        const fecha_fin = new Date(dtoInstance.fecha_fin);
+        // Conseguir Propiedad
+        var AuxPropiedad = await AppDataSource.getRepository(Propiedad).findOneBy({ id: propiedadId });
+        if ( AuxPropiedad == null) {
+            throw new Error('Propiedad no encontrada');
+        }
+        if ( AuxPropiedad.estado != 'disponible') {
+            throw new Error('La propiedad no está disponible');
+        }
 
-        // 4️⃣ Validar fechas
-        if (fecha_fin <= fecha_inicio)
-            throw new Error("La fecha de finalización debe ser mayor a la fecha de inicio.");
-/*
-        if (fecha_inicio < new Date())
-            throw new Error("La fecha de inicio no puede ser en el pasado.");
-*/
-        // 5️⃣ Buscar inquilino
-        const usuario = await AppDataSource.getRepository(User).findOneBy({ id: inquilinoId });
-        if (!usuario) throw new Error("Usuario no encontrado.");
-        if (usuario.rol != "inquilino") throw new Error("El usuario no es un inquilino.");
-        if (usuario.estado != "activo") throw new Error("El usuario no está activo.");
+        // Configurar contrato
 
-        // 6️⃣ Buscar propiedad
-const propiedad = await AppDataSource.getRepository(Propiedad).findOne({
-    where: { id: propiedadId },
-    relations: ['propietario']
-});
-        if (!propiedad) throw new Error("Propiedad no encontrada.");
-        if (propiedad.estado != "disponible") throw new Error("La propiedad no está disponible.");
+            // Fechas 
+        if (fecha_fin <= fecha_inicio) {
+            throw new Error('La fecha de fin debe ser mayor a la fecha de inicio');
+        }
+        if (fecha_inicio < new Date()) {
+            throw new Error('La fecha de inicio no puede ser en el pasado');
+        }
 
-        // 7️⃣ Calcular duración del contrato
-        const mesesDuracion = this.CalcularMesesContrato(fecha_inicio, fecha_fin);
+            // Monto mensual
 
-        // 8️⃣ Calcular garantía
-        const garantia = this.CalcularGarantia(monto_mensual, propiedad.tipo, mesesDuracion);
+        if (monto_mensual <= 0) {
+            throw new Error('El monto mensual debe ser mayor a 0');
+        }
 
-        // 9️⃣ Crear entidad Contrato
+        // Calcular garantia
+
+        var mesesDuracion = this.CalcularMesesContrato(fecha_inicio, fecha_fin);
+        var garantia = this.CalcularGarantia(monto_mensual, AuxPropiedad.tipo, mesesDuracion);
+
+        //Se guarda la configuracion
+        
         const contrato = new Contrato();
-        contrato.inquilino = usuario;
-        contrato.propiedad = propiedad;
+
+        contrato.inquilino = AuxUsuario;
+        contrato.propiedad = AuxPropiedad;
         contrato.fecha_inicio = fecha_inicio;
         contrato.fecha_fin = fecha_fin;
-        contrato.monto_mensual = monto_mensual;
+        contrato.monto_mensual = monto_mensual; 
         contrato.garantia = garantia;
 
-        // Guardar contrato por primera vez
-        await AppDataSource.getRepository(Contrato).save(contrato);
+        var contratoGuardado = await AppDataSource.getRepository(Contrato).save(contrato);
 
-        // 🔟 Generar PDF
+        // Creacion PDF
+
         const pdfPath = await this.pdfService.generateContractPDF({
-            Id: contrato.id,
-            Inquilino: usuario,
-            Propiedad: propiedad,
-            fecha_inicio,
-            fecha_fin,
-            monto_mensual,
-            garantia
+            Id : contrato.id,
+            Inquilino : contratoGuardado.inquilino,
+            Propiedad : contratoGuardado.propiedad,
+            fecha_inicio : contratoGuardado.fecha_inicio,
+            fecha_fin : contratoGuardado.fecha_fin,
+            monto_mensual : contratoGuardado.monto_mensual,
+            garantia : contratoGuardado.garantia
         });
 
-        contrato.archivo_pdf = pdfPath;
+        contratoGuardado.archivo_pdf = pdfPath;
 
-        // Guardar contrato con PDF
-        await AppDataSource.getRepository(Contrato).save(contrato);
-
-        return {
-            mensaje: "Contrato creado correctamente",
-            contrato
-        };
+        await AppDataSource.getRepository(Contrato).save(contratoGuardado);
+        return this.toResponseDto(contratoGuardado); //Devuelve el contrato en formato DTO para no exponer claves ni estado.
     }
-
-    // ======================================================
-    // CALCULAR MESES ENTRE FECHAS
-    // ======================================================
-    CalcularMesesContrato(inicio: Date, fin: Date): number {
-        const diff = fin.getTime() - inicio.getTime();
-        return Math.ceil(diff / (1000 * 60 * 60 * 24 * 30.44));
-    }
-
-    // ======================================================
-    // CALCULAR GARANTÍA SEGÚN TIPO DE PROPIEDAD + DURACIÓN
-    // ======================================================
-    CalcularGarantia(monto: number, tipo: string, meses: number): number {
+    
+    CalcularMesesContrato(fechaInicio: Date, fechaFin: Date): number {
+        const inicio = new Date(fechaInicio);
+        const fin = new Date(fechaFin);
         
-        let porcentaje = {
-            departamento: 1,
-            casa: 1.5,
-            local: 2,
-            oficina: 1.5
-        }[tipo] ?? 1;
+        const diferenciaMs = fin.getTime() - inicio.getTime();
+        
+        // Convertir a meses
+        const meses = diferenciaMs / (1000 * 60 * 60 * 24 * 30.44);
+        
+        // Redondear hacia arriba para contar meses completos
+        return Math.ceil(meses);
+    }
 
-        let factor =
-            meses < 6 ? 1.2 :
-            meses <= 12 ? 1 :
-            meses <= 24 ? 0.7 :
-            0.5;
+    CalcularGarantia (monto: number, tipoPropiedad: string, Meses:number): number {
+        var porcentaje;
 
-        return monto * porcentaje * factor;
+        switch (tipoPropiedad) {
+            case "departamento":
+                porcentaje = 1; // 100% para departamentos
+                break;
+            case "casa":
+                porcentaje = 1.5; // 150% para casas";
+                break;
+            case "local":
+                porcentaje = 2; // 200% para locales comerciales
+                break;
+            case "oficina":
+                porcentaje = 1.5; // 150% para oficinas
+                break;
+            default:
+                porcentaje = 1; // 100% para otros tipos de propiedad
+                break;
+        }
+        
+        var factorMultiplicador; 
+
+        if (Meses < 6) factorMultiplicador = 1.2; 
+        else if (Meses <= 12) factorMultiplicador = 1;
+        else if (Meses <= 24) factorMultiplicador = 0.7;
+        else factorMultiplicador = 0.5;
+        
+
+        var porcentajeFinal = factorMultiplicador * porcentaje;
+
+        return monto * porcentajeFinal; // La garantia se calcula en base al monto mensual y la cantidad de meses
+    }
+
+    private toResponseDto(contrato: Contrato): ResponseContratoDto {
+        const response = new ResponseContratoDto();
+        
+        response.id = contrato.id;
+        response.fecha_inicio = contrato.fecha_inicio;
+        response.fecha_fin = contrato.fecha_fin;
+        response.monto_mensual = contrato.monto_mensual;
+        response.garantia = contrato.garantia;
+        response.archivo_pdf = contrato.archivo_pdf;
+        
+        // Propiedad 
+        response.propiedad = {
+            id: contrato.propiedad.id,
+            direccion: contrato.propiedad.direccion,
+            tipo: contrato.propiedad.tipo,
+            propietario: {
+                id: contrato.propiedad.propietario.id,
+                nombre: contrato.propiedad.propietario.nombre,
+                apellido: contrato.propiedad.propietario.apellido,
+                email: contrato.propiedad.propietario.email
+            }
+        };
+        
+        // Inquilino 
+        response.inquilino = {
+            id: contrato.inquilino.id,
+            nombre: contrato.inquilino.nombre,
+            apellido: contrato.inquilino.apellido,
+            email: contrato.inquilino.email
+        };
+        
+        return response;
     }
 }
