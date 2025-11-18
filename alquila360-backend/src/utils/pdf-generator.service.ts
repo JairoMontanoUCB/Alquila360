@@ -131,7 +131,7 @@ export class PdfKitGeneratorService {
     doc.fontSize(12)
       .text(`Descripción: ${data.Propiedad.descripcion}`)
       .text(`Dirección: ${data.Propiedad.direccion}`)
-      .text(`Dueño: ${data.Propiedad.propietario.nombre} ${data.Propiedad.propietario.apellido}`);
+      .text(`Dueño: ${data.Propiedad.propietario?.nombre ?? 'No especificado'} ${data.Propiedad.propietario?.apellido ?? ''}`);
     doc.moveDown();
 
     // ------------------------------------

@@ -22,6 +22,11 @@ export class ContratoController {
     getContratoById(@Param('id') id: number) {
         return this.contratoService.getContratoById(id);
     }
+    
+    @Delete('/:id')
+    deleteContrato(@Param('id') id: number) {
+        return this.contratoService.deleteContrato(id);
+    }
 }
 
 

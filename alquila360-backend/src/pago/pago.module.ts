@@ -8,7 +8,7 @@ import { PdfKitGeneratorService } from "../utils/pdf-generator.service";
 @Module({
     imports: [],
     controllers: [PagoController],
-providers: [PagoService, PdfKitGeneratorService],
+    providers: [PagoService, PdfKitGeneratorService],
     exports: [PagoService],
 })
 export class PagoModule {}

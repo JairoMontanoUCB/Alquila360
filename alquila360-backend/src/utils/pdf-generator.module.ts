@@ -4,6 +4,6 @@ import { Module } from '@nestjs/common';
 
 @Module({
   providers: [PdfKitGeneratorService],
-  exports: [PdfKitGeneratorService],   // 👈 IMPORTANTE
+  exports: [PdfKitGeneratorService],   
 })
 export class PdfModule {}
