@@ -1,108 +1,62 @@
-import { Inject, Injectable, HttpException, HttpStatus } from "@nestjs/common";
-import AppDataSource from "src/data-source";
-import { Ticket } from "src/entity/ticket.entity";
-import { TicketFoto } from "src/entity/ticket_foto.entity";
-import { User } from "src/entity/user.entity";
+import { Injectable } from '@nestjs/common';
+import AppDataSource from 'src/data-source';
+import { Ticket } from 'src/entity/ticket.entity';
+import { TicketFoto } from 'src/entity/ticket_foto.entity';
+import { User } from 'src/entity/user.entity';
+import { Propiedad } from 'src/entity/propiedad.entity';
 
 @Injectable()
 export class TicketService {
-    async createTicket(data: any)
-    {
-        const ticket = await AppDataSource.getRepository(Ticket).save({
-            descripcion: data.descripcion,
-            prioridad: data.prioridad,
-            estado: data.estado,
-            fecha_limite: data.fecha_limite,
-            propiedad: { id: data.propiedadId },
-            contrato: { id: data.contratoId },
-            inquilino: { id: data.inquilinoId },
-            tecnico_asignado: { id: data.tecnicoAsignadoId }
-        });
 
-        
-        if (data.fotos && data.fotos.length > 0) {
+  async crearTicket(usuarioId: number, data: any, fotos: Express.Multer.File[]) {
+    const usuario = await AppDataSource.getRepository(User).findOneBy({ id: usuarioId });
+    if (!usuario) throw new Error("Usuario no encontrado");
 
-            const fotoRepo = AppDataSource.getRepository(TicketFoto);
+    const propiedad = await AppDataSource.getRepository(Propiedad).findOneBy({ id: data.propiedadId });
+    if (!propiedad) throw new Error("Propiedad no encontrada");
 
-            const fotosAInsertar = data.fotos.map((ruta: string) => ({
-                ruta_foto: ruta,
-                ticket: ticket
-            }));
+    const ticket = new Ticket();
+    ticket.descripcion = data.descripcion;
+    ticket.usuario = usuario;
+    ticket.propiedad = propiedad;
+    ticket.prioridad = "baja";
+    ticket.estado = "pendiente";
+    ticket.tecnico = null;
 
-            await fotoRepo.save(fotosAInsertar);
-        }
+    await AppDataSource.getRepository(Ticket).save(ticket);
 
-        return ticket;
+    for (const foto of fotos) {
+      const tFoto = new TicketFoto();
+      tFoto.ruta = `/storage/tickets/${foto.filename}`;
+      tFoto.ticket = ticket;
+      await AppDataSource.getRepository(TicketFoto).save(tFoto);
     }
 
-    async getAllTicket()
-    {
-        return await AppDataSource.getRepository(Ticket).find({
-  relations: [
-    "propiedad",
-    "contrato",
-    "inquilino",
-    "tecnico_asignado",
-    "fotos"
-  ]
-});
-    }
-    async getTicketById(id:number)
-    {
-        return await AppDataSource.getRepository(Ticket).findOne({
-            where: { id },
-            relations: [
-                "propiedad",
-                "contrato",
-                "inquilino",
-                "tecnico_asignado",
-                "fotos"
-            ]
-        }); 
-    }
-    async updateTicket(id:number, ticketData : Partial<Ticket>)
-    {
-        return await AppDataSource.getRepository(Ticket).update(id, ticketData);
-        return this.getTicketById(id);
-    }
-    async deleteTicket(id:number)
-    {
-        return await AppDataSource.getRepository(Ticket).delete(id);
-    }
+    return { message: "Ticket creado correctamente", id: ticket.id };
+  }
 
+  async getTicketsByUsuario(usuarioId: number) {
+    return AppDataSource.getRepository(Ticket).find({
+      where: { usuario: { id: usuarioId } },
+      relations: ["fotos", "propiedad"]
+    });
+  }
 
-    async asignarTecnico(ticketId: number, tecnicoId: number) {
-        const ticketRepo = AppDataSource.getRepository(Ticket);
-        const userRepo = AppDataSource.getRepository(User);
+  async cambiarPrioridad(id: number, prioridad: string) {
+    await AppDataSource.getRepository(Ticket).update(id, { prioridad });
+    return { message: "Prioridad actualizada" };
+  }
 
-        const tecnico = await userRepo.findOne({ where: { id: tecnicoId } });
-        if (!tecnico) {
-            throw new HttpException("El técnico no existe.", HttpStatus.NOT_FOUND);
-        }
+  async cambiarEstado(id: number, estado: string) {
+    await AppDataSource.getRepository(Ticket).update(id, { estado });
+    return { message: "Estado actualizado" };
+  }
 
-        if (tecnico.rol !== "tecnico") {
-            throw new HttpException("El usuario asignado no tiene rol de técnico.", HttpStatus.BAD_REQUEST);
-        }
+  async asignarTecnico(id: number, tecnicoId: number) {
+    const tecnico = await AppDataSource.getRepository(User).findOneBy({ id: tecnicoId });
+    if (!tecnico) throw new Error("Técnico no encontrado");
 
-        await ticketRepo.update(ticketId, { tecnico_asignado: { id: tecnicoId } });
-
-        return this.getTicketById(ticketId);
-    }
-
-
-    async actualizarEstado(ticketId: number, estado: string) {
-        const estadosPermitidos = ["pendiente", "en_proceso", "resuelto", "cerrado"];
-        if (!estadosPermitidos.includes(estado)) {
-            throw new HttpException(
-                `Estado inválido. Valores permitidos: ${estadosPermitidos.join(", ")}`,
-                HttpStatus.BAD_REQUEST
-            );
-        }
-
-        const ticketRepo = AppDataSource.getRepository(Ticket);
-        await ticketRepo.update(ticketId, { estado });
-
-        return this.getTicketById(ticketId);
-    }
-
+    await AppDataSource.getRepository(Ticket).update(id, { tecnico });
+    return { message: "Técnico asignado" };
+  }
 }
