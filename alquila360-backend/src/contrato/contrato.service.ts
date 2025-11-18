@@ -40,13 +40,13 @@ export class ContratoService {
     async RegistrarUsuarioContrato(contratoDto: CreateContratoDto){
 
         // Validar DTO
-        const errors = await validate(contratoDto);
-        if (errors.length > 0) {
-            const errorMessages = errors.map(error => 
-                error.constraints ? Object.values(error.constraints) : ['Error de validación']
-            ).flat();
-            throw new Error(`Datos inválidos: ${errorMessages.join(', ')}`);
-        }
+        // const errors = await validate(contratoDto);
+        // if (errors.length > 0) {
+        //     const errorMessages = errors.map(error => 
+        //         error.constraints ? Object.values(error.constraints) : ['Error de validación']
+        //     ).flat();
+        //     throw new Error(`Datos inválidos: ${errorMessages.join(', ')}`);
+        // }
 
         var { inquilinoId, propiedadId, monto_mensual, fecha_inicio, fecha_fin } = contratoDto;
         
@@ -108,7 +108,7 @@ export class ContratoService {
         // Creacion PDF
 
         const pdfPath = await this.pdfService.generateContractPDF({
-            Id : contrato.id,
+            Id : contratoGuardado.id,
             Inquilino : contratoGuardado.inquilino,
             Propiedad : contratoGuardado.propiedad,
             fecha_inicio : contratoGuardado.fecha_inicio,
@@ -118,9 +118,26 @@ export class ContratoService {
         });
 
         contratoGuardado.archivo_pdf = pdfPath;
-
         await AppDataSource.getRepository(Contrato).save(contratoGuardado);
-        return this.toResponseDto(contratoGuardado); //Devuelve el contrato en formato DTO para no exponer claves ni estado.
+    
+        // ⬇️ CARGA con la sintaxis CORRECTA de TypeORM
+        const contratoCompleto = await AppDataSource.getRepository(Contrato).findOne({
+            where: { id: contratoGuardado.id },
+            relations: [
+                'propiedad', 
+                'propiedad.propietario',  // ← relación anidada
+                'inquilino'
+            ]
+        });
+    
+        if (!contratoCompleto) {
+            throw new Error('No se pudo cargar el contrato completo');
+        }
+    
+        console.log('🔍 Propiedad cargada:', contratoCompleto.propiedad);
+        console.log('🔍 Propietario cargado:', contratoCompleto.propiedad?.propietario);
+    
+        return this.toResponseDto(contratoCompleto);
     }
     
     CalcularMesesContrato(fechaInicio: Date, fechaFin: Date): number {

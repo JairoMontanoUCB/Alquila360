@@ -3,15 +3,17 @@ import { Propiedad } from "./propiedad.entity";
 import { User } from "./user.entity";
 import { Pago } from "./pago.entity";
 import { Ticket } from "./ticket.entity";
+import { Exclude } from 'class-transformer';
 
 @Entity("contratos")
 export class Contrato {
   @PrimaryGeneratedColumn({ name: "contrato_id" })
   id: number;
-
+ 
   @ManyToOne(() => Propiedad, propiedad => propiedad.contratos)
   @JoinColumn({ name: "id_propiedad" })
   propiedad: Propiedad;
+  
   @Column()
   id_propiedad: number;
 
