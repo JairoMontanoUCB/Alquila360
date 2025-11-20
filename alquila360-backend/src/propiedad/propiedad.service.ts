@@ -6,55 +6,62 @@ import { PropiedadFoto } from "src/entity/propiedad_foto.entity";
 @Injectable()
 export class PropiedadService {
 
-    async createPropiedad(data: any) {
+  async crearPropiedad(data: any, fotos: Express.Multer.File[]) {
+    const repoProp = AppDataSource.getRepository(Propiedad);
 
-        
-        const propiedad = await AppDataSource.getRepository(Propiedad).save({
-            direccion: data.direccion,
-            ciudad: data.ciudad,
-            tipo: data.tipo,
-            estado: data.estado,
-            descripcion: data.descripcion,
-            precio_referencia: data.precio_referencia,
-            propietario: { id: data.propietarioId }
+    // Crear objeto propiedad
+    const propiedad = repoProp.create({
+      direccion: data.direccion,
+      ciudad: data.ciudad,
+      tipo: data.tipo,
+      estado: "disponible",
+      descripcion: data.descripcion ?? null,
+      precio_referencia: data.precio_referencia,
+      propietario: { id: data.propietarioId }
+    });
+
+    // Guardar propiedad en DB
+    await repoProp.save(propiedad);
+
+    // Guardar fotos si vienen
+    if (fotos && fotos.length > 0) {
+      const repoFoto = AppDataSource.getRepository(PropiedadFoto);
+
+      for (const foto of fotos) {
+        const nuevaFoto = repoFoto.create({
+          ruta: `/storage/propiedades/${foto.filename}`,
+          propiedad: propiedad
         });
 
-        
-        if (data.fotos && data.fotos.length > 0) {
-
-            const fotoRepo = AppDataSource.getRepository(PropiedadFoto);
-
-            const fotosAInsertar = data.fotos.map((ruta: string) => ({
-                ruta_foto: ruta,
-                propiedad: propiedad  
-            }));
-
-            await fotoRepo.save(fotosAInsertar);
-        }
-
-        return propiedad;
+        await repoFoto.save(nuevaFoto);
+      }
     }
 
+    return {
+      message: "Propiedad creada correctamente",
+      id: propiedad.id
+    };
+  }
 
-    async getAllPropiedad() {
-        return await AppDataSource.getRepository(Propiedad).find({
-            relations: ["fotos", "propietario"]
-        });
-    }
+  async getAllPropiedad() {
+    return AppDataSource.getRepository(Propiedad).find({
+      relations: ["fotos", "propietario"]
+    });
+  }
 
-    async getPropiedadById(id: number) {
-        return await AppDataSource.getRepository(Propiedad).findOne({
-            where: { id },
-            relations: ["fotos", "propietario"]
-        });
-    }
+  async getPropiedadById(id: number) {
+    return AppDataSource.getRepository(Propiedad).findOne({
+      where: { id },
+      relations: ["fotos", "propietario"]
+    });
+  }
 
-    async updatePropiedad(id: number, propiedadData: Partial<Propiedad>) {
-        await AppDataSource.getRepository(Propiedad).update(id, propiedadData);
-        return this.getPropiedadById(id);
-    }
+  async updatePropiedad(id: number, propiedadData: Partial<Propiedad>) {
+    await AppDataSource.getRepository(Propiedad).update(id, propiedadData);
+    return this.getPropiedadById(id);
+  }
 
-    async deletePropiedad(id: number) {
-        return await AppDataSource.getRepository(Propiedad).delete(id);
-    }
+  async deletePropiedad(id: number) {
+    return AppDataSource.getRepository(Propiedad).delete(id);
+  }
 }
