@@ -25,4 +25,7 @@ export class CreateTicketDto {
 
   @IsOptional()
   tecnico_asignadoId?: number;
+
+  @IsOptional()
+  UrlFoto?: string[];
 }

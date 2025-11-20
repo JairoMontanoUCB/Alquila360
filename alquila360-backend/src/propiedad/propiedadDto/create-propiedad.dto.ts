@@ -8,10 +8,10 @@ export class CreatePropiedadDto {
   ciudad: string;
 
   @IsString()
-  tipo: string; // ejemplo: "departamento", "casa", "local"
+  tipo: string; // "departamento", "casa", "local"
 
   @IsString()
-  estado: string; // ejemplo: "disponible", "ocupado", "mantenimiento"
+  estado: string; // "disponible", "ocupado", "mantenimiento"
 
   @IsOptional()
   @IsString()

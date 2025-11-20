@@ -3,35 +3,34 @@ import AppDataSource from "src/data-source";
 import { Ticket } from "src/entity/ticket.entity";
 import { TicketFoto } from "src/entity/ticket_foto.entity";
 import { User } from "src/entity/user.entity";
+import { CreateTicketDto } from "./ticketDto/create-ticket.dto";
+
 
 @Injectable()
 export class TicketService {
-    async createTicket(data: any)
+    async createTicket(ticketDto: CreateTicketDto)
     {
         const ticket = await AppDataSource.getRepository(Ticket).save({
-            descripcion: data.descripcion,
-            prioridad: data.prioridad,
-            estado: data.estado,
-            fecha_limite: data.fecha_limite,
-            propiedad: { id: data.propiedadId },
-            contrato: { id: data.contratoId },
-            inquilino: { id: data.inquilinoId },
-            tecnico_asignado: { id: data.tecnicoAsignadoId }
+            descripcion: ticketDto.descripcion,
+            prioridad: ticketDto.prioridad,
+            estado: ticketDto.estado,
+            fecha_limite: ticketDto.fecha_limite,
+            propiedad: { id: ticketDto.propiedadId },
+            contrato: { id: ticketDto.contratoId },
+            inquilino: { id: ticketDto.inquilinoId },
+            tecnico_asignado: { id: ticketDto.tecnico_asignadoId }
         });
 
-        
-        if (data.fotos && data.fotos.length > 0) {
-
-            const fotoRepo = AppDataSource.getRepository(TicketFoto);
-
-            const fotosAInsertar = data.fotos.map((ruta: string) => ({
-                ruta_foto: ruta,
-                ticket: ticket
-            }));
-
-            await fotoRepo.save(fotosAInsertar);
+        if (ticketDto.UrlFoto && ticketDto.UrlFoto.length > 0) {
+            const fotosArray = ticketDto.UrlFoto.map((url: string) => {
+                const foto = new TicketFoto();
+                foto.ruta_foto = url;
+                foto.ticket = ticket; 
+                return foto;
+            });
         }
 
+        await AppDataSource.getRepository(Ticket).save(ticket);
         return ticket;
     }
 
