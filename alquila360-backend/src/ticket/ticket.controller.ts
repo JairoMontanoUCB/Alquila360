@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 
 import { TicketService } from './ticket.service';
-//import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as path from 'path';
@@ -22,7 +22,7 @@ import { v4 as uuid } from 'uuid';
 export class TicketController {
   constructor(private readonly ticketService: TicketService) {}
 
-  //@UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @Post('/crear')
   @UseInterceptors(
     FilesInterceptor('fotos', 10, {
@@ -43,7 +43,7 @@ export class TicketController {
     return this.ticketService.crearTicket(req.user.id, body, fotos);
   }
 
-  //@UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @Get('mis-tickets')
   getMisTickets(@Req() req) {
     return this.ticketService.getTicketsByUsuario(req.user.id);

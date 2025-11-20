@@ -3,12 +3,16 @@ import AppDataSource from "src/data-source";
 import { User } from "src/entity/user.entity";
 import { UserRating } from "src/entity/user_rating.entity";
 import { CreateUserDto } from "./userDto/create-user.dto";
+import * as bcrypt from "bcryptjs";
 
 @Injectable()
 export class UserService {
     
     async createUser(dto: CreateUserDto) {
     const repo = AppDataSource.getRepository(User);
+    const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(dto.password, salt);
+
 
     const newUser = repo.create({
         nombre: dto.nombre,
@@ -16,7 +20,8 @@ export class UserService {
         email: dto.email,
         rol: 'inquilino',   // <--- rol fijo
         estado: 'activo',
-        password_hash: dto.password,
+        password_hash: hashedPassword,
+        fecha_registro: new Date()
     });
 
     return repo.save(newUser);
