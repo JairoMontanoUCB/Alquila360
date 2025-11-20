@@ -120,12 +120,12 @@ export class ContratoService {
         contratoGuardado.archivo_pdf = pdfPath;
         await AppDataSource.getRepository(Contrato).save(contratoGuardado);
     
-        // ⬇️ CARGA con la sintaxis CORRECTA de TypeORM
+        // Cargar relaciones para la respuesta
         const contratoCompleto = await AppDataSource.getRepository(Contrato).findOne({
             where: { id: contratoGuardado.id },
             relations: [
                 'propiedad', 
-                'propiedad.propietario',  // ← relación anidada
+                'propiedad.propietario',  
                 'inquilino'
             ]
         });
@@ -133,9 +133,6 @@ export class ContratoService {
         if (!contratoCompleto) {
             throw new Error('No se pudo cargar el contrato completo');
         }
-    
-        console.log('🔍 Propiedad cargada:', contratoCompleto.propiedad);
-        console.log('🔍 Propietario cargado:', contratoCompleto.propiedad?.propietario);
     
         return this.toResponseDto(contratoCompleto);
     }

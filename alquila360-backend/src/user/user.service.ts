@@ -41,4 +41,6 @@ export class UserService {
     async deleteUser(id: number) {
         return await AppDataSource.getRepository(User).delete(id);
     }
+
+    
 }
