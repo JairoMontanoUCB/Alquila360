@@ -5,9 +5,6 @@ export class CreateTicketDto {
   propiedadId: number;
 
   @IsNumber()
-  contratoId: number;
-
-  @IsNumber()
   inquilinoId: number;
 
   @IsString()
@@ -25,4 +22,7 @@ export class CreateTicketDto {
 
   @IsOptional()
   tecnico_asignadoId?: number;
+
+  @IsOptional()
+  UrlFoto?: string[];
 }

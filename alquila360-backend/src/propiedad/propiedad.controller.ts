@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Post, Put } from "@nestjs/common"
 import { PropiedadService } from "./propiedad.service";
 import { Propiedad } from "src/entity/propiedad.entity";
 import { get } from "http";
+import { CreatePropiedadDto } from "./propiedadDto/create-propiedad.dto";
 
 @Controller('/propiedad')
 export class PropiedadController {
@@ -11,8 +12,8 @@ export class PropiedadController {
     }
     
     @Post()
-    createPropiedad(@Body() propiedad : Propiedad) {
-        return this.propiedadService.createPropiedad(propiedad);
+    createPropiedad(@Body() propiedadDto : CreatePropiedadDto) {
+        return this.propiedadService.createPropiedad(propiedadDto);
     }
 
     @Get()
