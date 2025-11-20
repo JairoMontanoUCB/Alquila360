@@ -1,12 +1,20 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import { LoginUserDto } from './dto/userDto/login-user.dto';
-import { CreateUserDto } from './dto/userDto/create-user.dto';
+import { RegisterUserDto } from './dto/userDto/register-user.dto';
+import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class AuthService {
-  constructor(private usuariosService: UserService) {}
+  constructor(
+    private readonly usuariosService: UserService,
+    private readonly jwtService: JwtService
+  ) {}
 
+  // --------------------------
+  // LOGIN
+  // --------------------------
   async login(loginDto: LoginUserDto) {
     const { email, password } = loginDto;
 
@@ -16,22 +24,36 @@ export class AuthService {
       throw new UnauthorizedException('Usuario no encontrado');
     }
 
-    if (usuario.password_hash !== password) {
+    // Verificar contraseña (bcrypt)
+    const passwordValid = await bcrypt.compare(password, usuario.password_hash);
+    if (!passwordValid) {
       throw new UnauthorizedException('Contraseña incorrecta');
     }
+
+    // Generar token real
+    const token = this.jwtService.sign({
+      id: usuario.id,
+      email: usuario.email,
+      rol: usuario.rol,
+    });
 
     return {
       message: 'Login exitoso',
       usuario: {
         id: usuario.id,
         nombre: usuario.nombre,
+        apellido: usuario.apellido,
+        email: usuario.email,
         rol: usuario.rol,
       },
-      token: "TOKEN_DE_EJEMPLO"
+      token,
     };
   }
 
-  async register(createUserDto: CreateUserDto) {
-    return this.usuariosService.createUser(createUserDto);
+  // --------------------------
+  // REGISTER — Rol siempre INQUILINO
+  // --------------------------
+  async register(dto: RegisterUserDto) {
+    return this.usuariosService.registerUser(dto);
   }
 }
