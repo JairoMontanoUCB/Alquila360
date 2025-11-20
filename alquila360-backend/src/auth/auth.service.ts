@@ -1,9 +1,10 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import { LoginUserDto } from './dto/userDto/login-user.dto';
-import { RegisterUserDto } from './dto/userDto/register-user.dto';
+import { RegisterUserDto } from 'src/auth/dto/userDto/register-user.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
+import { CreateUserDto } from 'src/user/userDto/create-user.dto';
 
 @Injectable()
 export class AuthService {
@@ -53,7 +54,7 @@ export class AuthService {
   // --------------------------
   // REGISTER — Rol siempre INQUILINO
   // --------------------------
-  async register(dto: RegisterUserDto) {
-    return this.usuariosService.registerUser(dto);
+  async register(dto: CreateUserDto) {
+  return this.usuariosService.createUser(dto);
   }
 }

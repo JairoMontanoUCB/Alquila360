@@ -8,19 +8,19 @@ import { CreateUserDto } from "./userDto/create-user.dto";
 export class UserService {
     
     async createUser(dto: CreateUserDto) {
-        const repo = AppDataSource.getRepository(User);
+    const repo = AppDataSource.getRepository(User);
 
-        const newUser = repo.create({
-            nombre: dto.nombre,
-            apellido: dto.apellido,
-            email: dto.email,
-            rol: dto.rol,
-            estado: 'activo',
-            password_hash: dto.password, // luego le hacemos hash
-        });
+    const newUser = repo.create({
+        nombre: dto.nombre,
+        apellido: dto.apellido,
+        email: dto.email,
+        rol: 'inquilino',   // <--- rol fijo
+        estado: 'activo',
+        password_hash: dto.password,
+    });
 
-        return repo.save(newUser);
-    }
+    return repo.save(newUser);
+}
 
     async getAllUsers() {
         return await AppDataSource.getRepository(User).find();

@@ -17,11 +17,10 @@ export class TicketService {
 
     const ticket = new Ticket();
     ticket.descripcion = data.descripcion;
-    ticket.usuario = usuario;
     ticket.propiedad = propiedad;
     ticket.prioridad = "baja";
     ticket.estado = "pendiente";
-    ticket.tecnico = null;
+    ticket.tecnico = usuario;
 
     await AppDataSource.getRepository(Ticket).save(ticket);
 
@@ -38,7 +37,7 @@ export class TicketService {
   async getTicketsByUsuario(usuarioId: number) {
     return AppDataSource.getRepository(Ticket).find({
       where: { usuario: { id: usuarioId } },
-      relations: ["fotos", "propiedad"]
+      relations: ["fotos", "propiedad", "tecnico"]
     });
   }
 

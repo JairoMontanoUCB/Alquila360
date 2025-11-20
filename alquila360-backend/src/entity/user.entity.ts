@@ -48,9 +48,6 @@ export class User {
   @OneToMany(() => Pago, pago => pago.inquilino)
   pagos: Pago[];
 
-  @OneToMany(() => Ticket, ticket => ticket.inquilino)
-  tickets: Ticket[];
-
   @OneToMany(() => UserRating, rating => rating.usuario)
 calificacionesRecibidas: UserRating[];
 
@@ -65,4 +62,11 @@ ratingTotal: number; // suma de todas las estrellas
 
 @Column({ type: "int", default: 0 })
 ratingCount: number; // número de calificaciones hechas
+
+// Tickets creados por este usuario (inquilino)
+  @OneToMany(() => Ticket, ticket => ticket.usuario)
+tickets: Ticket[];
+
+@OneToMany(() => Ticket, ticket => ticket.tecnico)
+ticketsAsignados:  Ticket[];
 }
