@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Post, Put } from "@nestjs/common"
 import { TicketService } from "./ticket.service";
 import { Ticket } from "src/entity/ticket.entity";
 import { get } from "http";
+import { CreateTicketDto } from "./ticketDto/create-ticket.dto";
 
 @Controller('/ticket')
 export class TicketController {
@@ -9,8 +10,8 @@ export class TicketController {
     }
     
     @Post()
-    createTicket(@Body() ticket : Ticket) {
-        return this.ticketService.createTicket(ticket);
+    createTicket(@Body() ticketDto : CreateTicketDto) {
+        return this.ticketService.createTicket(ticketDto);
     }
 
     @Get()
