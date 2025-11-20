@@ -4,24 +4,27 @@ import { Propiedad } from "src/entity/propiedad.entity";
 import { PropiedadFoto } from "src/entity/propiedad_foto.entity";
 import { CreatePropiedadDto } from "./propiedadDto/create-propiedad.dto";
 import { User } from "src/entity/user.entity";
+import { BusinessException } from "src/common/Exceptions/BussinessException";
+import { PropiedadRules } from "src/common/Rules/PropiedadRules";
 
 @Injectable()
 export class PropiedadService {
 
     async createPropiedad(propiedadDto: CreatePropiedadDto) {
-        const propietario = await AppDataSource.getRepository(User).findOneBy({ 
+        var propietario = await AppDataSource.getRepository(User).findOneBy({ 
             id: propiedadDto.propietarioId 
         });
 
-        if (!propietario) {
-            throw new Error('Propietario no encontrado');
-        }
+        // validar propietario
+        
 
         if(propietario?.rol == 'inquilino'){
             propietario.rol = 'propietario';
 
             await AppDataSource.getRepository(User).save(propietario);
         }
+
+        PropiedadRules.ValidarDatosContrato(propiedadDto);
         
         // Crea propiedad
         const propiedad = await AppDataSource.getRepository(Propiedad).save({
