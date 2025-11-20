@@ -27,10 +27,11 @@ export class TicketService {
                 foto.ruta_foto = url;
                 foto.ticket = ticket; 
                 return foto;
+                
             });
+            await AppDataSource.getRepository(TicketFoto).save(fotosArray);
         }
 
-        await AppDataSource.getRepository(Ticket).save(ticket);
         return ticket;
     }
 

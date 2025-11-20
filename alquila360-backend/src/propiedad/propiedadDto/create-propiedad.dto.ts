@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsOptional } from "class-validator";
+import { IsString, IsNumber, IsOptional, IsInt } from "class-validator";
 
 export class CreatePropiedadDto {
   @IsString()
@@ -10,6 +10,7 @@ export class CreatePropiedadDto {
   @IsString()
   tipo: string; // "departamento", "casa", "local"
 
+  @IsOptional()
   @IsString()
   estado: string; // "disponible", "ocupado", "mantenimiento"
 
@@ -22,4 +23,8 @@ export class CreatePropiedadDto {
 
   @IsNumber()
   propietarioId: number;
+
+  @IsOptional()
+  UrlFotos?: string[];
+
 }
