@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import AppDataSource from "src/data-source";
 import { Pago } from "src/entity/pago.entity";
 
@@ -22,7 +22,7 @@ export class PagoService {
             where: { id: pago.id_contrato },
         });
         if (!contrato) {
-            throw new Error(`Contrato con id ${pago.id_contrato} no existe`);
+            throw new HttpException(`Contrato con id ${pago.id_contrato} no existe`, HttpStatus.BAD_REQUEST);
         }
 
         const propiedad = await AppDataSource.getRepository(Propiedad).findOne({

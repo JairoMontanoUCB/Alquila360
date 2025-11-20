@@ -5,9 +5,6 @@ export class CreateTicketDto {
   propiedadId: number;
 
   @IsNumber()
-  contratoId: number;
-
-  @IsNumber()
   inquilinoId: number;
 
   @IsString()

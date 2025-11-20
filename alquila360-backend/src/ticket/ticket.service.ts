@@ -16,7 +16,6 @@ export class TicketService {
             estado: ticketDto.estado,
             fecha_limite: ticketDto.fecha_limite,
             propiedad: { id: ticketDto.propiedadId },
-            contrato: { id: ticketDto.contratoId },
             inquilino: { id: ticketDto.inquilinoId },
             tecnico_asignado: { id: ticketDto.tecnico_asignadoId }
         });
@@ -40,7 +39,6 @@ export class TicketService {
         return await AppDataSource.getRepository(Ticket).find({
   relations: [
     "propiedad",
-    "contrato",
     "inquilino",
     "tecnico_asignado",
     "fotos"
@@ -53,7 +51,6 @@ export class TicketService {
             where: { id },
             relations: [
                 "propiedad",
-                "contrato",
                 "inquilino",
                 "tecnico_asignado",
                 "fotos"

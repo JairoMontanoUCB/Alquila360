@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { BadRequestException, HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import AppDataSource from "src/data-source";
 import { Contrato } from "src/entity/contrato.entity";
 import { User } from "src/entity/user.entity";
@@ -9,6 +9,8 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { PdfKitGeneratorService } from "src/utils/pdf-generator.service";
 import { ResponseContratoDto } from "./contratoDto/response-contrato.dto";
+import { HTTPRequest } from "puppeteer";
+import { ContratoRules } from "src/common/Rules/ContratoRules";
 
 @Injectable()
 export class ContratoService {
@@ -51,46 +53,25 @@ export class ContratoService {
         var { inquilinoId, propiedadId, monto_mensual, fecha_inicio, fecha_fin } = contratoDto;
         
         // Conseguir Inquilino
-        var AuxUsuario = await AppDataSource.getRepository(User).findOneBy({ id: inquilinoId });
-        if ( AuxUsuario == null) {
-            throw new Error('Usuario no encontrado');
-        }
-        if ( AuxUsuario.rol != 'inquilino') {
-            throw new Error('El usuario no es un inquilino');
-        }
-        if ( AuxUsuario.estado != 'activo') {
-            throw new Error('El usuario no está activo');
-        }
+        var AuxUsuario = await ContratoRules.validarInquilino(contratoDto.inquilinoId);
 
         // Conseguir Propiedad
-        var AuxPropiedad = await AppDataSource.getRepository(Propiedad).findOneBy({ id: propiedadId });
-        if ( AuxPropiedad == null) {
-            throw new Error('Propiedad no encontrada');
-        }
-        if ( AuxPropiedad.estado != 'disponible') {
-            throw new Error('La propiedad no está disponible');
-        }
+        var AuxPropiedad = await ContratoRules.validarPropiedad(contratoDto.propiedadId);
 
         // Configurar contrato
 
             // Fechas 
-        if (fecha_fin <= fecha_inicio) {
-            throw new Error('La fecha de fin debe ser mayor a la fecha de inicio');
-        }
-        if (fecha_inicio < new Date()) {
-            throw new Error('La fecha de inicio no puede ser en el pasado');
-        }
+        ContratoRules.validarFechas(fecha_inicio, fecha_fin);
 
             // Monto mensual
 
-        if (monto_mensual <= 0) {
-            throw new Error('El monto mensual debe ser mayor a 0');
-        }
+        ContratoRules.validarMonto(monto_mensual);
 
-        // Calcular garantia
+            // Calcular garantia
 
         var mesesDuracion = this.CalcularMesesContrato(fecha_inicio, fecha_fin);
         var garantia = this.CalcularGarantia(monto_mensual, AuxPropiedad.tipo, mesesDuracion);
+        ContratoRules.validarGarantia(garantia);
 
         //Se guarda la configuracion
         
@@ -131,7 +112,7 @@ export class ContratoService {
         });
     
         if (!contratoCompleto) {
-            throw new Error('No se pudo cargar el contrato completo');
+            throw new HttpException('No se pudo cargar el contrato completo', HttpStatus.BAD_REQUEST);
         }
     
         return this.toResponseDto(contratoCompleto);
