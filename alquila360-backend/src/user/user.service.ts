@@ -2,13 +2,15 @@ import { Injectable } from "@nestjs/common";
 import AppDataSource from "src/data-source";
 import { User } from "src/entity/user.entity";
 import { CreateUserDto } from "src/auth/dto/userDto/create-user.dto";
+import { EmailService } from 'src/email/email.service';
 
 @Injectable()
 export class UserService {
-    
+    constructor(private readonly emailService: EmailService) {}
+
     async createUser(dto: CreateUserDto) {
         const repo = AppDataSource.getRepository(User);
-
+        
         const newUser = repo.create({
             nombre: dto.nombre,
             apellido: dto.apellido,
@@ -18,7 +20,13 @@ export class UserService {
             password_hash: dto.password, // luego le hacemos hash
         });
 
-        return repo.save(newUser);
+        const savedUser = await repo.save(newUser);
+
+        // Enviar correo
+        await this.emailService.sendWelcomeEmail(savedUser.email, savedUser.nombre);
+
+
+        return savedUser;
     }
 
     async getAllUsers() {
