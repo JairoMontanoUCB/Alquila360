@@ -111,11 +111,9 @@ export class ContratoService {
             ]
         });
     
-        if (!contratoCompleto) {
-            throw new HttpException('No se pudo cargar el contrato completo', HttpStatus.BAD_REQUEST);
-        }
+        ContratoRules.validarContratoCompleto(contratoCompleto!);
     
-        return this.toResponseDto(contratoCompleto);
+        return this.toResponseDto(contratoCompleto!);
     }
     
     CalcularMesesContrato(fechaInicio: Date, fechaFin: Date): number {

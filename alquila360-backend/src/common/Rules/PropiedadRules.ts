@@ -13,6 +13,7 @@ import { CreatePropiedadDto } from 'src/propiedad/propiedadDto/create-propiedad.
         }
 
         static ValidarDatosContrato(propiedadDto: CreatePropiedadDto): void {
+            
             if (!propiedadDto.tipo) {
                 throw new BusinessException('El tipo de propiedad es requerido');
             }
@@ -21,10 +22,13 @@ import { CreatePropiedadDto } from 'src/propiedad/propiedadDto/create-propiedad.
             if (!tiposValidos.includes(propiedadDto.tipo.toLowerCase())) {
             throw new BusinessException(`Tipo de propiedad inválido. Valores permitidos: ${tiposValidos.join(', ')}`);
             }
-            if (propiedadDto.direccion && propiedadDto.direccion.trim() === '') {
+
+            // Validar que no haya espacios vacios 
+
+            if (!propiedadDto.direccion?.trim()) {
                 throw new BusinessException('La dirección no puede estar vacía');
             }
-            if (propiedadDto.ciudad && propiedadDto.ciudad.trim() === '') {
+            if (!propiedadDto.ciudad?.trim()) {
                 throw new BusinessException('La ciudad no puede estar vacía');
             }
             

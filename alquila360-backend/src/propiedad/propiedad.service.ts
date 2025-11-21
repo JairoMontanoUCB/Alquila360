@@ -16,7 +16,7 @@ export class PropiedadService {
         });
 
         // validar propietario
-        
+        PropiedadRules.ValidarPropietario(propietario!);
 
         if(propietario?.rol == 'inquilino'){
             propietario.rol = 'propietario';
