@@ -12,8 +12,8 @@ export default function Sidebar() {
     { label: "Contratos", icon: "📄", href: "/propietarios/contratos" },
     { label: "Pagos", icon: "💳", href: "/propietarios/pagos" },
     { label: "Tickets", icon: "🛠️", href: "/propietarios/tickets" },
-    { label: "Expensas", icon: "💰", href: "/expensas" },
-    { label: "Perfil", icon: "👤", href: "/perfil" },
+    { label: "Expensas", icon: "💰", href: "/propietarios/Expensas" },
+    { label: "Perfil", icon: "👤", href: "/propietarios/perfil" },
   ];
 
   return (
