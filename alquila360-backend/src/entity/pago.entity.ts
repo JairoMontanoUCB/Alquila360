@@ -18,7 +18,7 @@ export class Pago {
   @ManyToOne(() => User, user => user.pagos)
   inquilino: User;
 
-  @Column({ type: "datetime", nullable: true })
+  @Column({ type: "date" })
   fecha_pago: Date;
 
   @Column({ type: "decimal" })
@@ -31,7 +31,7 @@ export class Pago {
   medio_pago: string;
 
   @Column({ nullable: true })
-  recibo_numero: string;
+  recibo_numero?: string;
 
   @Column({ nullable: true })
   ruta_pdf: string;
