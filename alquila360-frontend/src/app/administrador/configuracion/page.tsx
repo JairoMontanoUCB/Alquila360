@@ -1,21 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
-
-const menuItems = [
-  { label: "Dashboard", href: "/administrador" },
-  { label: "Propiedades", href: "/administrador/propiedades" },
-  { label: "Usuarios", href: "/administrador/usuarios" },
-  { label: "Contratos", href: "/administrador/contratos" },
-  { label: "Pagos", href: "/administrador/pagos" },
-  { label: "Expensas", href: "/administrador/expensas" },
-  { label: "Tickets", href: "/administrador/tickets" },
-  { label: "Reportes", href: "/administrador/reportes" },
-  { label: "Configuracion", href: "/administrador/configuracion" },
-];
-
-const activeLabel = "Configuracion";
+import SidebarAdministrador from "../../components/sideBarAdministrador"; 
 
 type Tab = "General" | "Notificaciones" | "Empresa" | "Roles";
 
@@ -48,46 +34,16 @@ export default function ConfiguracionPage() {
   const [inqRealizarPagos, setInqRealizarPagos] = useState(true);
   const [inqCrearTickets, setInqCrearTickets] = useState(true);
 
-  // Tecnico
+  // Técnico
   const [tecVerTickets, setTecVerTickets] = useState(true);
   const [tecActualizarTickets, setTecActualizarTickets] = useState(true);
 
   return (
-    <main className="min-h-screen flex bg-[#0b3b2c] text-slate-900">
-      {/* sidebar */}
-      <aside className="w-64 bg-[#0b3b2c] text-white flex flex-col py-6 px-4">
-        <div className="text-2xl font-bold tracking-wide mb-10 px-2">
-          ALQUILA 360
-        </div>
+    <div className="min-h-screen flex bg-[#0b3b2c] text-slate-900">
+      {/* 👇 SIDEBAR REUTILIZABLE DEL ADMINISTRADOR */}
+      <SidebarAdministrador />
 
-        <nav className="flex-1 space-y-1">
-          {menuItems.map((item) => {
-            const isActive = item.label === activeLabel;
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                className={`w-full block px-3 py-2 rounded-lg text-sm ${
-                  isActive
-                    ? "bg-[#4b7f5e] font-semibold"
-                    : "hover:bg-[#164332]"
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="mt-8 border-t border-white/20 pt-4 px-2 text-xs space-y-1">
-          <div>Administrador</div>
-          <button className="text-slate-200 hover:underline">
-            Cerrar sesion
-          </button>
-        </div>
-      </aside>
-
-      {/* contenido principal */}
+      {/* 👇 CONTENIDO PRINCIPAL */}
       <section className="flex-1 bg-[#f7f5ee] px-10 py-8 overflow-y-auto">
         <header className="mb-4">
           <h1 className="text-3xl font-extrabold text-[#123528]">
@@ -192,9 +148,7 @@ export default function ConfiguracionPage() {
                   </div>
                   <ToggleSwitch
                     activo={alertasUrgentes}
-                    onToggle={() =>
-                      setAlertasUrgentes((valor) => !valor)
-                    }
+                    onToggle={() => setAlertasUrgentes((valor) => !valor)}
                   />
                 </div>
               </section>
@@ -220,25 +174,19 @@ export default function ConfiguracionPage() {
                     titulo="Pagos recibidos"
                     descripcion="Notificar cuando se reciba un pago"
                     activo={emailPagoRecibido}
-                    onToggle={() =>
-                      setEmailPagoRecibido((v) => !v)
-                    }
+                    onToggle={() => setEmailPagoRecibido((v) => !v)}
                   />
                   <RowNotificacion
                     titulo="Pagos en mora"
                     descripcion="Alertar sobre pagos vencidos"
                     activo={emailPagosMora}
-                    onToggle={() =>
-                      setEmailPagosMora((v) => !v)
-                    }
+                    onToggle={() => setEmailPagosMora((v) => !v)}
                   />
                   <RowNotificacion
                     titulo="Nuevos tickets"
                     descripcion="Notificar cuando se cree un ticket"
                     activo={emailTicketsNuevos}
-                    onToggle={() =>
-                      setEmailTicketsNuevos((v) => !v)
-                    }
+                    onToggle={() => setEmailTicketsNuevos((v) => !v)}
                   />
                   <RowNotificacion
                     titulo="Vencimiento de contratos"
@@ -260,9 +208,7 @@ export default function ConfiguracionPage() {
                   titulo="Actividades importantes"
                   descripcion="Recibir notificaciones push de eventos importantes"
                   activo={pushActividades}
-                  onToggle={() =>
-                    setPushActividades((v) => !v)
-                  }
+                  onToggle={() => setPushActividades((v) => !v)}
                 />
               </section>
 
@@ -394,7 +340,9 @@ export default function ConfiguracionPage() {
                 <RowPermiso
                   texto="Actualizar estado de tickets"
                   activo={tecActualizarTickets}
-                  onToggle={() => setTecActualizarTickets((v) => !v)}
+                  onToggle={() =>
+                    setTecActualizarTickets((v) => !v)
+                  }
                 />
               </div>
 
@@ -407,7 +355,7 @@ export default function ConfiguracionPage() {
           )}
         </div>
       </section>
-    </main>
+    </div>
   );
 }
 

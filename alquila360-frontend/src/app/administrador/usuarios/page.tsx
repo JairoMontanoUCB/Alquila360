@@ -2,18 +2,9 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import SidebarAdministrador from "../../components/sideBarAdministrador";
 
-const menuItems = [
-  { label: "Dashboard", href: "/administrador" },
-  { label: "Propiedades", href: "/administrador/propiedades" },
-  { label: "Usuarios", href: "/administrador/usuarios" },
-  { label: "Contratos", href: "/administrador/contratos" },
-  { label: "Pagos", href: "/administrador/pagos" },
-  { label: "Expensas", href: "/administrador/expensas" },
-  { label: "Tickets", href: "/administrador/tickets" },
-  { label: "Reportes", href: "/administrador/reportes" },
-  { label: "Configuracion", href: "/administrador/configuracion" },
-];
+
 
 const activeLabel = "Usuarios";
 
@@ -128,39 +119,8 @@ export default function UsuariosPage() {
   };
 
   return (
-    <main className="min-h-screen flex bg-[#0b3b2c] text-slate-900">
-      {/* sidebar */}
-      <aside className="w-64 bg-[#0b3b2c] text-white flex flex-col py-6 px-4">
-        <div className="text-2xl font-bold tracking-wide mb-10 px-2">
-          ALQUILA 360
-        </div>
-
-        <nav className="flex-1 space-y-1">
-          {menuItems.map((item) => {
-            const isActive = item.label === activeLabel;
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                className={`w-full block px-3 py-2 rounded-lg text-sm ${
-                  isActive
-                    ? "bg-[#4b7f5e] font-semibold"
-                    : "hover:bg-[#164332]"
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="mt-8 border-t border-white/20 pt-4 px-2 text-xs space-y-1">
-          <div>Administrador</div>
-          <button className="text-slate-200 hover:underline">
-            Cerrar sesion
-          </button>
-        </div>
-      </aside>
+    <div className="min-h-screen flex bg-[#0b3b2c] text-slate-900">
+      <SidebarAdministrador />
 
       {/* contenido usuarios */}
       <section className="flex-1 bg-[#f7f5ee] px-10 py-8 overflow-y-auto">
@@ -471,7 +431,7 @@ export default function UsuariosPage() {
           />
         )}
       </section>
-    </main>
+    </div>
   );
 }
 
