@@ -1,50 +1,66 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from "@nestjs/common";
-import { TicketService } from "./ticket.service";
-import { Ticket } from "src/entity/ticket.entity";
-import { get } from "http";
+import {
+  Controller,
+  Post,
+  Patch,
+  Get,
+  Req,
+  Body,
+  Param,
+  UseGuards,
+  UploadedFiles,
+  UseInterceptors
+} from '@nestjs/common';
+
+import { TicketService } from './ticket.service';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import * as path from 'path';
+import { v4 as uuid } from 'uuid';
 
 @Controller('/ticket')
 export class TicketController {
-    constructor(private readonly ticketService : TicketService) {
-    }
-    
-    @Post()
-    createTicket(@Body() ticket : Ticket) {
-        return this.ticketService.createTicket(ticket);
-    }
+  constructor(private readonly ticketService: TicketService) {}
 
-    @Get()
-    getAllTicket() {
-        return this.ticketService.getAllTicket();
-    }
-    @Get('/:id')
-    getTicketById(@Param()param: any) {
-        return this.ticketService.getTicketById(param.id);
-    }
-    @Put('/:id')
-    updateTicket(@Param()param: any, @Body() ticket: Ticket) {
-        return this.ticketService.updateTicket(param.id, ticket);
-    }
-    @Delete('/:id')
-    deleteTicket(@Param()param: any) {
-        return this.ticketService.deleteTicket(param.id);
-    }
+  @UseGuards(JwtAuthGuard)
+  @Post('/crear')
+  @UseInterceptors(
+    FilesInterceptor('fotos', 10, {
+      storage: diskStorage({
+        destination: './storage/tickets',
+        filename: (req, file, cb) => {
+          const name = uuid() + path.extname(file.originalname);
+          cb(null, name);
+        }
+      })
+    })
+  )
+  crear(
+    @Req() req,
+    @Body() body: any,
+    @UploadedFiles() fotos: Express.Multer.File[]
+  ) {
+    return this.ticketService.crearTicket(req.user.id, body, fotos);
+  }
 
-    @Put('/:id/asignar-tecnico')
-    asignarTecnico(
-        @Param('id') id: number,
-        @Body('tecnicoId') tecnicoId: number
-    ) {
-        return this.ticketService.asignarTecnico(id, tecnicoId);
-    }
-    @Put('/:id/estado')
-    actualizarEstado(
-        @Param('id') id: number,
-        @Body('estado') estado: string
-    ) {
-        return this.ticketService.actualizarEstado(id, estado);
-    }
+  @UseGuards(JwtAuthGuard)
+  @Get('mis-tickets')
+  getMisTickets(@Req() req) {
+    return this.ticketService.getTicketsByUsuario(req.user.id);
+  }
 
+  @Patch(':id/prioridad')
+  cambiarPrioridad(@Param('id') id: number, @Body() body: any) {
+    return this.ticketService.cambiarPrioridad(id, body.prioridad);
+  }
+
+  @Patch(':id/estado')
+  cambiarEstado(@Param('id') id: number, @Body() body: any) {
+    return this.ticketService.cambiarEstado(id, body.estado);
+  }
+
+  @Patch(':id/asignar')
+  asignarTecnico(@Param('id') id: number, @Body() body: any) {
+    return this.ticketService.asignarTecnico(id, body.tecnicoId);
+  }
 }
-
-

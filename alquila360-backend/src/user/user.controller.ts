@@ -1,6 +1,10 @@
 import { Controller, Post, Body, Get, Param, Put, Delete } from '@nestjs/common';
 import { UserService } from './user.service';
-import { CreateUserDto } from 'src/auth/dto/userDto/create-user.dto';
+
+// DTOs correctos (ubicados en src/user/userDto)
+import { CreateUserDto } from './userDto/create-user.dto';
+import { UpdateUserDto } from './userDto/update-user.dto';
+import { RateUserDto } from './userDto/rate-user.dto';
 
 @Controller('user')
 export class UserController {
@@ -22,12 +26,20 @@ export class UserController {
   }
 
   @Put(':id')
-  update(@Param('id') id: number, @Body() body: Partial<CreateUserDto>) {
+  update(@Param('id') id: number, @Body() body: UpdateUserDto) {
     return this.userService.updateUser(id, body);
   }
 
   @Delete(':id')
   delete(@Param('id') id: number) {
     return this.userService.deleteUser(id);
+  }
+
+  @Post(':id/calificar')
+  calificarUsuario(
+    @Param('id') usuarioId: number,
+    @Body() dto: RateUserDto
+  ) {
+    return this.userService.calificarUsuario(usuarioId, dto);
   }
 }

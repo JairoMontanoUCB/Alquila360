@@ -43,9 +43,14 @@ export class Propiedad {
   @OneToMany(() => Ticket, ticket => ticket.propiedad)
   tickets: Ticket[];
 
+<<<<<<< HEAD
   @OneToMany(() => PropiedadFoto, foto => foto.propiedad)
   fotos: PropiedadFoto[];
 
   @OneToMany(() => Expensa, expensa => expensa.propiedad)
   expensas: Expensa[];
+=======
+  @OneToMany(() => PropiedadFoto, foto => foto.propiedad, { cascade: true })
+fotos: PropiedadFoto[];
+>>>>>>> origin/ticketPrueba
 }

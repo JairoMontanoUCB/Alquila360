@@ -1,11 +1,10 @@
-import { Module } from "@nestjs/common";
-import { userInfo } from "os";
-import { PropiedadService } from "./propiedad.service";
-import { PropiedadController } from "./propiedad.controller";
+import { Module } from '@nestjs/common';
+import { PropiedadController } from './propiedad.controller';
+import { PropiedadService } from './propiedad.service';
 
 @Module({
-    imports: [],
-    controllers: [PropiedadController],
-    providers: [PropiedadService],
+  controllers: [PropiedadController],
+  providers: [PropiedadService],
+  exports: [PropiedadService],
 })
 export class PropiedadModule {}

@@ -11,7 +11,18 @@ import { AuthModule } from './auth/auth.module';
 import { ExpensaModule } from './expensa/expensa.module';
 
 @Module({
+<<<<<<< HEAD
   imports: [UserModule,PropiedadModule,ContratoModule,TicketModule,PagoModule,AuthModule,ExpensaModule],
+=======
+imports: [
+  UserModule,
+  PropiedadModule,
+  ContratoModule,
+  TicketModule,
+  PagoModule,
+  AuthModule
+],
+>>>>>>> origin/ticketPrueba
   controllers: [AppController],
   providers: [AppService],
 })
