@@ -1,10 +1,7 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
 import SidebarAdministrador from "../../components/sideBarAdministrador";
-
-const activeLabel = "Pagos";
 
 type PagoEstado = "Pagado" | "Pendiente";
 
@@ -53,6 +50,9 @@ const pagos: Pago[] = [
 ];
 
 export default function PagosPage() {
+
+  const [openModal, setOpenModal] = React.useState(false);
+
   const totalMes = "$300.000";
   const completados = 3;
   const pendientes = 1;
@@ -67,7 +67,6 @@ export default function PagosPage() {
   return (
     <div className="min-h-screen flex bg-[#0b3b2c] text-slate-900">
       <SidebarAdministrador />
-      
 
       {/* contenido pagos */}
       <section className="flex-1 bg-[#f7f5ee] px-10 py-8 overflow-y-auto">
@@ -81,7 +80,10 @@ export default function PagosPage() {
             </p>
           </div>
 
-          <button className="flex items-center gap-2 bg-yellow-400 hover:bg-yellow-500 text-black px-4 py-2 rounded-lg font-semibold text-sm">
+          <button
+            onClick={() => setOpenModal(true)}
+            className="flex items-center gap-2 bg-yellow-400 hover:bg-yellow-500 text-black px-4 py-2 rounded-lg font-semibold text-sm"
+          >
             <span>⬇</span>
             <span>Descargar Historial</span>
           </button>
@@ -153,6 +155,120 @@ export default function PagosPage() {
           </table>
         </div>
       </section>
+
+      {/* MODAL HISTORIAL COMPLETO */}
+      {openModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 px-6">
+          <div className="bg-white w-full max-w-5xl rounded-2xl shadow-xl border border-slate-300 p-8 relative">
+            {/* BOTON CERRAR */}
+            <button
+              onClick={() => setOpenModal(false)}
+              className="absolute top-4 right-4 text-slate-600 hover:text-black text-xl"
+            >
+              ✕
+            </button>
+
+            {/* TITULO */}
+            <h1 className="text-3xl font-extrabold text-[#123528] mb-1">
+              Historial Completo de Pagos
+            </h1>
+            <p className="text-sm text-slate-500 mb-6">
+              Registro de todos los pagos realizados
+            </p>
+
+            {/* RESUMEN */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              <div className="bg-[#f7f5ee] p-4 rounded-xl border border-slate-300">
+                <p className="text-xs text-slate-500">Total de Pagos</p>
+                <p className="text-3xl font-bold mt-1">8</p>
+              </div>
+
+              <div className="bg-[#f7f5ee] p-4 rounded-xl border border-slate-300">
+                <p className="text-xs text-slate-500">Total Recaudado</p>
+                <p className="text-3xl font-bold text-emerald-600 mt-1">
+                  $805.000
+                </p>
+              </div>
+
+              <div className="bg-[#f7f5ee] p-4 rounded-xl border border-slate-300">
+                <p className="text-xs text-slate-500">Periodo</p>
+                <p className="text-2xl font-semibold mt-1">
+                  Sep - Nov 2024
+                </p>
+              </div>
+            </div>
+
+            {/* TABLA MODAL */}
+            <div className="border border-slate-300 rounded-xl overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-100">
+                  <tr>
+                    <th className="p-3 text-left">Inquilino</th>
+                    <th className="p-3 text-left">Propiedad</th>
+                    <th className="p-3 text-left">Monto</th>
+                    <th className="p-3 text-left">Fecha</th>
+                    <th className="p-3 text-left">Método</th>
+                    <th className="p-3 text-left">Estado</th>
+                    <th className="p-3 text-left">Periodo</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {[
+                    {
+                      inquilino: "María González",
+                      propiedad: "San Isidro 1234",
+                      monto: "$85.000",
+                      fecha: "20 Nov 2024",
+                      metodo: "Transferencia",
+                      estado: "Pagado",
+                      periodo: "Noviembre 2024",
+                    },
+                    {
+                      inquilino: "Carlos Rodríguez",
+                      propiedad: "Palermo 5678",
+                      monto: "$120.000",
+                      fecha: "15 Nov 2024",
+                      metodo: "Efectivo",
+                      estado: "Pagado",
+                      periodo: "Noviembre 2024",
+                    },
+                  ].map((row, index) => (
+                    <tr key={index} className="border-t">
+                      <td className="p-3">{row.inquilino}</td>
+                      <td className="p-3">{row.propiedad}</td>
+                      <td className="p-3">{row.monto}</td>
+                      <td className="p-3">{row.fecha}</td>
+                      <td className="p-3">{row.metodo}</td>
+                      <td className="p-3">
+                        <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 text-xs font-semibold">
+                          {row.estado}
+                        </span>
+                      </td>
+                      <td className="p-3">{row.periodo}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* BOTONES ABAJO */}
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setOpenModal(false)}
+                className="px-5 py-2 rounded-lg border border-slate-300 bg-slate-100 hover:bg-slate-200"
+              >
+                Cerrar
+              </button>
+
+              <button className="flex items-center gap-2 px-5 py-2 rounded-lg bg-yellow-400 hover:bg-yellow-500 text-black font-semibold">
+                <span>⬇</span>
+                Exportar a PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
