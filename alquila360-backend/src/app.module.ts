@@ -8,10 +8,11 @@ import { TicketModule } from './ticket/ticket.module';
 import { PagoModule } from './pago/pago.module';
 import { authPlugins } from 'mysql2';
 import { AuthModule } from './auth/auth.module';
+import { EmailModule } from './email/email.module';
 
 
 @Module({
-  imports: [UserModule,PropiedadModule,ContratoModule,TicketModule,PagoModule,AuthModule],
+  imports: [UserModule,PropiedadModule,ContratoModule,TicketModule,PagoModule,AuthModule,EmailModule],
   controllers: [AppController],
   providers: [AppService],
 })

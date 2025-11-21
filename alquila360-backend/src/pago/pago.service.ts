@@ -5,12 +5,12 @@ import { Pago } from "src/entity/pago.entity";
 import { Contrato } from "src/entity/contrato.entity";
 import { Propiedad } from "src/entity/propiedad.entity";
 import { PdfKitGeneratorService } from "src/utils/pdf-generator.service";
-
+import { EmailService } from "src/email/email.service";
  
 
 @Injectable()
 export class PagoService {
-    constructor(private readonly pdfService: PdfKitGeneratorService) {}
+    constructor(private readonly pdfService: PdfKitGeneratorService, private readonly emailService: EmailService) {}
 
     async createPago(pago:Pago)
     {
@@ -40,10 +40,16 @@ export class PagoService {
             monto: pagoCreado.monto,
             propiedad,
             contrato,
-        });
+        }); 
 
         pagoCreado.ruta_pdf = pdfPath;
         await AppDataSource.getRepository(Pago).save(pagoCreado);
+
+        await this.emailService.sendPaymentEmail(
+            pagoCreado.inquilino?.email ?? 'correo@dummy.com', 
+            pagoCreado.monto,
+            pagoCreado.fecha_pago.toISOString().slice(0, 10)
+        );
 
         return pagoCreado;
     }
