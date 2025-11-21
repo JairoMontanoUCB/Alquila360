@@ -18,6 +18,8 @@ import { diskStorage } from 'multer';
 import * as path from 'path';
 import { v4 as uuid } from 'uuid';
 
+import { CreateTicketDto } from './ticketDto/create-ticket.dto';
+
 @Controller('/ticket')
 export class TicketController {
   constructor(private readonly ticketService: TicketService) {}
@@ -29,15 +31,15 @@ export class TicketController {
       storage: diskStorage({
         destination: './storage/tickets',
         filename: (req, file, cb) => {
-          const name = uuid() + path.extname(file.originalname);
-          cb(null, name);
+          const filename = uuid() + path.extname(file.originalname);
+          cb(null, filename);
         }
       })
     })
   )
   crear(
     @Req() req,
-    @Body() body: any,
+    @Body() body: CreateTicketDto,
     @UploadedFiles() fotos: Express.Multer.File[]
   ) {
     return this.ticketService.crearTicket(req.user.id, body, fotos);

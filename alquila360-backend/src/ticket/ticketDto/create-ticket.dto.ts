@@ -1,28 +1,12 @@
-import { IsString, IsNumber, IsEnum, IsDateString, IsOptional } from "class-validator";
+import { IsString, IsNumber } from "class-validator";
+import { Type } from "class-transformer";
 
 export class CreateTicketDto {
+
+  @Type(() => Number)
   @IsNumber()
   propiedadId: number;
 
-  @IsNumber()
-  contratoId: number;
-
-  @IsNumber()
-  inquilinoId: number;
-
   @IsString()
   descripcion: string;
-
-  @IsEnum(["roja", "naranja", "verde"])
-  prioridad: "roja" | "naranja" | "verde";
-
-  @IsEnum(["pendiente", "en_proceso", "resuelto", "cerrado"])
-  estado: string;
-
-  @IsOptional()
-  @IsDateString()
-  fecha_limite?: string;
-
-  @IsOptional()
-  tecnico_asignadoId?: number;
 }
