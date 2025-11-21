@@ -83,6 +83,7 @@ export class ContratoService {
         contrato.fecha_fin = fecha_fin;
         contrato.monto_mensual = monto_mensual; 
         contrato.garantia = garantia;
+        contrato.estado = "activo";
 
         var contratoGuardado = await AppDataSource.getRepository(Contrato).save(contrato);
 
@@ -162,6 +163,8 @@ export class ContratoService {
 
         return monto * porcentajeFinal; // La garantia se calcula en base al monto mensual y la cantidad de meses
     }
+
+    // FALTA CREAR EL CIERRE DE CONTRATO
 
     private toResponseDto(contrato: Contrato): ResponseContratoDto {
         const response = new ResponseContratoDto();

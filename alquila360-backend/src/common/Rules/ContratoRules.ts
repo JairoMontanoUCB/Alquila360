@@ -13,9 +13,6 @@ export class ContratoRules {
         if (!usuario) {
             throw new BusinessException(`Usuario con ID ${inquilinoId} no encontrado`);
         }
-        if (usuario.rol !== 'inquilino') {
-            throw new UsuarioNoInquilinoException(inquilinoId, usuario.rol);
-        }
         if (usuario.estado !== 'activo') {
             throw new UsuarioNoActivoException(inquilinoId, usuario.estado);
         }
