@@ -8,10 +8,10 @@ import { TicketModule } from './ticket/ticket.module';
 import { PagoModule } from './pago/pago.module';
 import { authPlugins } from 'mysql2';
 import { AuthModule } from './auth/auth.module';
-
+import { ExpensaModule } from './expensa/expensa.module';
 
 @Module({
-  imports: [UserModule,PropiedadModule,ContratoModule,TicketModule,PagoModule,AuthModule],
+  imports: [UserModule,PropiedadModule,ContratoModule,TicketModule,PagoModule,AuthModule,ExpensaModule],
   controllers: [AppController],
   providers: [AppService],
 })

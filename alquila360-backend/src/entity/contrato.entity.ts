@@ -3,6 +3,7 @@ import { Propiedad } from "./propiedad.entity";
 import { User } from "./user.entity";
 import { Pago } from "./pago.entity";
 import { Ticket } from "./ticket.entity";
+import { Expensa } from "./expensa.entity";
 
 @Entity("contratos")
 export class Contrato {
@@ -35,5 +36,11 @@ export class Contrato {
 
   @OneToMany(() => Pago, pago => pago.contrato)
   pagos: Pago[];
+
+  @OneToMany(() => Expensa, expensa => expensa.contrato)
+  expensas: Expensa[];
+
+
+ 
 
 }

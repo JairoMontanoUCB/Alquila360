@@ -7,6 +7,7 @@ import { Pago } from "./entity/pago.entity";
 import { Ticket } from "./entity/ticket.entity";
 import { PropiedadFoto } from "./entity/propiedad_foto.entity";
 import { TicketFoto } from "./entity/ticket_foto.entity";
+import { Expensa } from "./entity/expensa.entity";
 
 import "reflect-metadata"
 
@@ -18,7 +19,7 @@ const AppDataSource = new DataSource({
     username: "alquila360_admin",
     password: "123456789",
     database: "alquila360",
-    entities: [User,Propiedad,Contrato,Pago,Ticket,PropiedadFoto,TicketFoto],
+    entities: [User,Propiedad,Contrato,Pago,Ticket,PropiedadFoto,TicketFoto,Expensa],
     synchronize: true,
     logging: true,
 })
