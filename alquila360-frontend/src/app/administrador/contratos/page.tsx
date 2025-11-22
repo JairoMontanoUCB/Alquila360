@@ -3,40 +3,230 @@
 import React, { useState } from "react";
 import SidebarAdministrador from "../../components/sideBarAdministrador";
 
+const activeLabel = "Contratos";
+
+type EstadoContrato = "Vigente" | "Finalizado";
+
 type Contrato = {
   id: string;
   propiedad: string;
   inquilino: string;
-  fechaInicio: string;
-  fechaFin: string;
-  cuotaMensual: string;
-  estado: "Vigente" | "Finalizado";
+  propietario: string;
+  fechaInicio: string; // YYYY-MM-DD
+  fechaFin: string;    // YYYY-MM-DD
+  montoAlquiler: string;   // solo número, ej: "85000"
+  montoGarantia: string;   // solo número
+  frecuenciaCobro: string; // Mensual / Trimestral / Anual
+  numeroCuotas: string;
+  diaVencimiento: string;
+  penalidades: string;
+  clausulas: string;
+  estado: EstadoContrato;
 };
 
-const contratosVigentes: Contrato[] = [
+const contratosIniciales: Contrato[] = [
   {
     id: "C-001",
-    propiedad: "Calle Secundaria 456",
-    inquilino: "Maria Gonzalez",
-    fechaInicio: "01/01/2024",
-    fechaFin: "31/12/2024",
-    cuotaMensual: "$85.000",
+    propiedad: "Av. Principal 123, Piso 5",
+    inquilino: "María González",
+    propietario: "Juan Carlos Martínez",
+    fechaInicio: "2024-01-01",
+    fechaFin: "2024-12-31",
+    montoAlquiler: "85000",
+    montoGarantia: "170000",
+    frecuenciaCobro: "Mensual",
+    numeroCuotas: "12",
+    diaVencimiento: "10",
+    penalidades:
+      "Mora del 2% por día de atraso en el pago. El locatario será responsable de los costos de reparación por daños causados.",
+    clausulas:
+      "El locatario se compromete a mantener la propiedad en buen estado. No se permiten modificaciones estructurales sin autorización escrita. Los gastos de servicios públicos correrán por cuenta del locatario.",
     estado: "Vigente",
   },
 ];
 
+function formatearFechaBonita(fecha: string) {
+  if (!fecha) return "-";
+  const d = new Date(fecha);
+  if (isNaN(d.getTime())) return fecha;
+  return d.toLocaleDateString("es-AR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function formatearMoneda(valor: string) {
+  if (!valor) return "$0";
+  const num = Number(valor);
+  if (isNaN(num)) return `$${valor}`;
+  return `$${num.toLocaleString("es-AR")}`;
+}
+
 export default function ContratosPage() {
-  const [showNuevoContrato, setShowNuevoContrato] = useState(false);
-  const [showDetalleContrato, setShowDetalleContrato] = useState(false);
-  const [showEditarContrato, setShowEditarContrato] = useState(false);
+  const [contratos, setContratos] = useState<Contrato[]>(contratosIniciales);
+
+  const [selectedContrato, setSelectedContrato] = useState<Contrato | null>(
+    null
+  );
+
+  const [openFormModal, setOpenFormModal] = useState(false);
+  const [openViewModal, setOpenViewModal] = useState(false);
+  const [formMode, setFormMode] = useState<"crear" | "editar" | null>(null);
+
+  // --- STATE DEL FORM ---
+  const [formPropiedad, setFormPropiedad] = useState("");
+  const [formInquilino, setFormInquilino] = useState("");
+  const [formPropietario, setFormPropietario] = useState("");
+
+  const [formFechaInicio, setFormFechaInicio] = useState("");
+  const [formFechaFin, setFormFechaFin] = useState("");
+
+  const [formMontoAlquiler, setFormMontoAlquiler] = useState("85000");
+  const [formMontoGarantia, setFormMontoGarantia] = useState("170000");
+
+  const [formFrecuenciaCobro, setFormFrecuenciaCobro] = useState("Mensual");
+  const [formNumeroCuotas, setFormNumeroCuotas] = useState("12");
+  const [formDiaVencimiento, setFormDiaVencimiento] = useState("10");
+
+  const [formPenalidades, setFormPenalidades] = useState(
+    "Ej: Mora del 2% por día de atraso. Costo de reparaciones por daños..."
+  );
+  const [formClausulas, setFormClausulas] = useState(
+    "Agregue cualquier cláusula adicional del contrato..."
+  );
+
+  // ---- HELPERS PARA FORM ----
+  const resetForm = () => {
+    setFormPropiedad("");
+    setFormInquilino("");
+    setFormPropietario("");
+    setFormFechaInicio("");
+    setFormFechaFin("");
+    setFormMontoAlquiler("85000");
+    setFormMontoGarantia("170000");
+    setFormFrecuenciaCobro("Mensual");
+    setFormNumeroCuotas("12");
+    setFormDiaVencimiento("10");
+    setFormPenalidades(
+      "Ej: Mora del 2% por día de atraso. Costo de reparaciones por daños..."
+    );
+    setFormClausulas(
+      "Agregue cualquier cláusula adicional del contrato..."
+    );
+  };
+
+  const cargarFormDesdeContrato = (c: Contrato) => {
+    setFormPropiedad(c.propiedad);
+    setFormInquilino(c.inquilino);
+    setFormPropietario(c.propietario);
+    setFormFechaInicio(c.fechaInicio);
+    setFormFechaFin(c.fechaFin);
+    setFormMontoAlquiler(c.montoAlquiler);
+    setFormMontoGarantia(c.montoGarantia);
+    setFormFrecuenciaCobro(c.frecuenciaCobro);
+    setFormNumeroCuotas(c.numeroCuotas);
+    setFormDiaVencimiento(c.diaVencimiento);
+    setFormPenalidades(c.penalidades);
+    setFormClausulas(c.clausulas);
+  };
+
+  // ---- ABRIR / CERRAR MODALES ----
+  const abrirModalNuevo = () => {
+    setFormMode("crear");
+    setSelectedContrato(null);
+    resetForm();
+    setOpenFormModal(true);
+  };
+
+  const abrirModalVer = (contrato: Contrato) => {
+    setSelectedContrato(contrato);
+    setOpenViewModal(true);
+  };
+
+  const cerrarModalForm = () => {
+    setOpenFormModal(false);
+    setFormMode(null);
+  };
+
+  const cerrarModalVer = () => {
+    setOpenViewModal(false);
+  };
+
+  const abrirEditorDesdeVista = () => {
+    if (!selectedContrato) return;
+    setFormMode("editar");
+    cargarFormDesdeContrato(selectedContrato);
+    setOpenViewModal(false);
+    setOpenFormModal(true);
+  };
+
+  // ---- GUARDAR CONTRATO (CREAR / EDITAR) ----
+  const guardarContrato = () => {
+    if (!formPropiedad || !formInquilino) {
+      alert("Completa al menos Propiedad e Inquilino para guardar el contrato.");
+      return;
+    }
+
+    if (formMode === "crear") {
+      const nextNumber = contratos.length + 1;
+      const nuevoId = `C-${String(nextNumber).padStart(3, "0")}`;
+
+      const nuevoContrato: Contrato = {
+        id: nuevoId,
+        propiedad: formPropiedad,
+        inquilino: formInquilino,
+        propietario: formPropietario || "Propietario sin definir",
+        fechaInicio: formFechaInicio,
+        fechaFin: formFechaFin,
+        montoAlquiler: formMontoAlquiler,
+        montoGarantia: formMontoGarantia,
+        frecuenciaCobro: formFrecuenciaCobro,
+        numeroCuotas: formNumeroCuotas,
+        diaVencimiento: formDiaVencimiento,
+        penalidades: formPenalidades,
+        clausulas: formClausulas,
+        estado: "Vigente",
+      };
+
+      setContratos((prev) => [...prev, nuevoContrato]);
+      setSelectedContrato(nuevoContrato);
+    }
+
+    if (formMode === "editar" && selectedContrato) {
+      const actualizado: Contrato = {
+        ...selectedContrato,
+        propiedad: formPropiedad,
+        inquilino: formInquilino,
+        propietario: formPropietario,
+        fechaInicio: formFechaInicio,
+        fechaFin: formFechaFin,
+        montoAlquiler: formMontoAlquiler,
+        montoGarantia: formMontoGarantia,
+        frecuenciaCobro: formFrecuenciaCobro,
+        numeroCuotas: formNumeroCuotas,
+        diaVencimiento: formDiaVencimiento,
+        penalidades: formPenalidades,
+        clausulas: formClausulas,
+      };
+
+      setContratos((prev) =>
+        prev.map((c) => (c.id === actualizado.id ? actualizado : c))
+      );
+      setSelectedContrato(actualizado);
+    }
+
+    setOpenFormModal(false);
+    setFormMode(null);
+  };
 
   return (
     <div className="min-h-screen flex bg-[#0b3b2c] text-slate-900">
       <SidebarAdministrador />
 
-      {/* contenido contratos */}
+      {/* CONTENIDO PRINCIPAL */}
       <section className="flex-1 bg-[#f7f5ee] px-10 py-8 overflow-y-auto">
-        <header className="mb-4 flex justify-between items-start">
+        <header className="mb-4flex justify-between items-start flex mb-4 justify-between">
           <div>
             <h1 className="text-3xl font-extrabold text-[#123528]">
               Contratos
@@ -47,19 +237,19 @@ export default function ContratosPage() {
           </div>
 
           <button
-            onClick={() => setShowNuevoContrato(true)}
+            onClick={abrirModalNuevo}
             className="bg-yellow-400 hover:bg-yellow-500 text-black px-4 py-2 rounded-lg font-semibold"
           >
             Nuevo Contrato
           </button>
         </header>
 
-        {/* tabla contratos vigentes */}
+        {/* TABLA CONTRATOS VIGENTES */}
         <div className="bg-white border border-slate-300 rounded-xl overflow-hidden shadow-sm mb-6">
           <table className="w-full text-sm">
             <thead className="bg-slate-100 text-left">
               <tr>
-                <th className="p-3">N° Contrato</th>
+                <th className="p-3">N°</th>
                 <th className="p-3">Propiedad</th>
                 <th className="p-3">Inquilino</th>
                 <th className="p-3">Fecha Inicio</th>
@@ -70,14 +260,14 @@ export default function ContratosPage() {
               </tr>
             </thead>
             <tbody>
-              {contratosVigentes.map((c) => (
+              {contratos.map((c) => (
                 <tr key={c.id} className="border-t">
                   <td className="p-3">{c.id}</td>
                   <td className="p-3">{c.propiedad}</td>
                   <td className="p-3">{c.inquilino}</td>
-                  <td className="p-3">{c.fechaInicio}</td>
-                  <td className="p-3">{c.fechaFin}</td>
-                  <td className="p-3">{c.cuotaMensual}</td>
+                  <td className="p-3">{formatearFechaBonita(c.fechaInicio)}</td>
+                  <td className="p-3">{formatearFechaBonita(c.fechaFin)}</td>
+                  <td className="p-3">{formatearMoneda(c.montoAlquiler)}</td>
                   <td className="p-3">
                     <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-300">
                       {c.estado}
@@ -85,21 +275,13 @@ export default function ContratosPage() {
                   </td>
                   <td className="p-3">
                     <div className="flex gap-2">
-                      {/* OJITO: abre contrato de locacion */}
                       <button
-                        onClick={() => setShowDetalleContrato(true)}
+                        onClick={() => abrirModalVer(c)}
                         className="px-3 py-1 rounded-lg text-xs bg-slate-100 hover:bg-slate-200"
                       >
                         👁️
                       </button>
-
-                      {/* Renovar: por ahora solo placeholder, NO abre editar contrato */}
-                      <button
-                        onClick={() => {
-                          // aqui despues puedes abrir un modal de renovacion
-                        }}
-                        className="px-3 py-1 rounded-lg text-xs bg-emerald-500 hover:bg-emerald-600 text-white font-semibold"
-                      >
+                      <button className="px-3 py-1 rounded-lg text-xs bg-emerald-500 hover:bg-emerald-600 text-white font-semibold">
                         Renovar
                       </button>
                     </div>
@@ -107,7 +289,7 @@ export default function ContratosPage() {
                 </tr>
               ))}
 
-              {contratosVigentes.length === 0 && (
+              {contratos.length === 0 && (
                 <tr>
                   <td colSpan={8} className="p-4 text-center text-slate-400">
                     No hay contratos vigentes para mostrar.
@@ -118,7 +300,7 @@ export default function ContratosPage() {
           </table>
         </div>
 
-        {/* historial contratos finalizados */}
+        {/* HISTORIAL CONTRATOS FINALIZADOS */}
         <div className="bg-white border border-slate-300 rounded-xl shadow-sm p-4">
           <h2 className="font-semibold text-[#123528] mb-2">
             Historial de Contratos Finalizados
@@ -129,285 +311,80 @@ export default function ContratosPage() {
         </div>
       </section>
 
-      {/* MODAL: NUEVO CONTRATO */}
-      {showNuevoContrato && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl w-full max-w-4xl p-6 shadow-lg border border-slate-200 max-h-[90vh] overflow-y-auto">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-[#123528]">
-                Crear Nuevo Contrato
-              </h2>
+      {/* MODAL VER CONTRATO (👁️) */}
+      {openViewModal && selectedContrato && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 px-4 md:px-8">
+          <div className="bg-white w-full max-w-5xl rounded-2xl shadow-xl border border-slate-300 p-6 md:p-8 max-h-[90vh] overflow-y-auto relative">
+            {/* HEADER */}
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <p className="text-sm text-slate-500">Contrato de Alquiler</p>
+                <h2 className="text-2xl md:text-3xl font-extrabold text-[#123528] text-center md:text-left">
+                  CONTRATO DE LOCACIÓN
+                </h2>
+              </div>
               <button
-                onClick={() => setShowNuevoContrato(false)}
-                className="text-slate-500 hover:text-slate-700"
+                onClick={cerrarModalVer}
+                className="text-slate-600 hover:text-black text-xl"
               >
                 ✕
               </button>
             </div>
 
-            {/* PARTES DEL CONTRATO */}
-            <div className="bg-slate-100 rounded-lg p-4 mb-6">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">
-                Partes del Contrato
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="text-xs font-medium text-slate-600">
-                    Propiedad
-                  </label>
-                  <select className="w-full mt-1 px-3 py-2 rounded-md border border-slate-300 bg-white text-sm">
-                    <option>Seleccionar propiedad</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-slate-600">
-                    Inquilino
-                  </label>
-                  <select className="w-full mt-1 px-3 py-2 rounded-md border border-slate-300 bg-white text-sm">
-                    <option>Seleccionar inquilino</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-slate-600">
-                    Propietario
-                  </label>
-                  <select className="w-full mt-1 px-3 py-2 rounded-md border border-slate-300 bg-white text-sm">
-                    <option>Seleccionar propietario</option>
-                  </select>
-                </div>
+            {/* NUMERO CONTRATO */}
+            <div className="flex justify-center mb-6">
+              <div className="flex items-center gap-2 text-sm text-amber-700">
+                <span>📄</span>
+                <span>Contrato N° {selectedContrato.id}</span>
               </div>
             </div>
-
-            {/* DURACION DEL CONTRATO */}
-            <div className="bg-white border border-slate-200 rounded-lg p-4 mb-6">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">
-                Duracion del Contrato
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-medium text-slate-600">
-                    Fecha de Inicio
-                  </label>
-                  <input
-                    type="date"
-                    className="w-full mt-1 px-3 py-2 rounded-md border border-slate-300 bg-white text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-slate-600">
-                    Fecha de Finalizacion
-                  </label>
-                  <input
-                    type="date"
-                    className="w-full mt-1 px-3 py-2 rounded-md border border-slate-300 bg-white text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* INFORMACION FINANCIERA */}
-            <div className="bg-white border border-slate-200 rounded-lg p-4 mb-6">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">
-                Informacion Financiera
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-medium text-slate-600">
-                    Monto del Alquiler ($/mes)
-                  </label>
-                  <input
-                    type="number"
-                    defaultValue={85000}
-                    className="w-full mt-1 px-3 py-2 rounded-md border border-slate-300 bg-white text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-slate-600">
-                    Monto de la Garantia ($)
-                  </label>
-                  <input
-                    type="number"
-                    defaultValue={170000}
-                    className="w-full mt-1 px-3 py-2 rounded-md border border-slate-300 bg-white text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* DETALLE DE CUOTAS */}
-            <div className="bg-white border border-slate-200 rounded-lg p-4 mb-6">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">
-                Detalle de Cuotas
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
-                <div>
-                  <label className="text-xs font-medium text-slate-600">
-                    Frecuencia de Cobro
-                  </label>
-                  <select className="w-full mt-1 px-3 py-2 rounded-md border border-slate-300 bg-white text-sm">
-                    <option>Mensual</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-slate-600">
-                    Numero de Cuotas
-                  </label>
-                  <input
-                    type="number"
-                    defaultValue={12}
-                    className="w-full mt-1 px-3 py-2 rounded-md border border-slate-300 bg-white text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-slate-600">
-                    Dia de Vencimiento
-                  </label>
-                  <input
-                    type="number"
-                    defaultValue={10}
-                    className="w-full mt-1 px-3 py-2 rounded-md border border-slate-300 bg-white text-sm"
-                  />
-                </div>
-              </div>
-
-              <p className="text-xs text-slate-500">
-                Nota: Todas las cuotas tendran el mismo valor mensual de $0.
-              </p>
-            </div>
-
-            {/* PENALIDADES */}
-            <div className="bg-white border border-slate-200 rounded-lg p-4 mb-6">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">
-                Penalidades por Incumplimiento
-              </h3>
-              <textarea
-                rows={3}
-                placeholder="Ej: Mora del 2% por dia de atraso en el pago. Costo de reparaciones por danos..."
-                className="w-full px-3 py-2 rounded-md border border-slate-300 bg-white text-sm resize-none"
-              />
-            </div>
-
-            {/* CLAUSULAS ADICIONALES */}
-            <div className="bg-white border border-slate-200 rounded-lg p-4 mb-6">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">
-                Clausulas Adicionales
-              </h3>
-              <textarea
-                rows={3}
-                placeholder="Agregue cualquier clausula adicional del contrato..."
-                className="w-full px-3 py-2 rounded-md border border-slate-300 bg-white text-sm resize-none"
-              />
-            </div>
-
-            {/* Footer */}
-            <div className="flex justify-end gap-3 mt-4">
-              <button
-                onClick={() => setShowNuevoContrato(false)}
-                className="px-4 py-2 bg-slate-200 rounded-lg text-sm hover:bg-slate-300"
-              >
-                Cancelar
-              </button>
-              <button className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 rounded-lg text-sm font-semibold">
-                Guardar Contrato
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: VER CONTRATO */}
-      {showDetalleContrato && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl w-full max-w-5xl p-6 shadow-lg border border-slate-200 max-h-[90vh] overflow-y-auto">
-            {/* header */}
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-[#123528]">
-                Contrato de Alquiler
-              </h2>
-              <button
-                onClick={() => setShowDetalleContrato(false)}
-                className="text-slate-500 hover:text-slate-700"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* titulo grande */}
-            <div className="text-center mb-4">
-              <h1 className="text-2xl font-extrabold text-[#123528] tracking-wide">
-                CONTRATO DE LOCACION
-              </h1>
-              <p className="text-xs text-slate-500 mt-1">
-                Sistema de Gestion ALQUILA 360
-              </p>
-              <p className="text-xs text-[#c27a3a] mt-1">
-                📄 Contrato N° C-001
-              </p>
-            </div>
-
-            <hr className="my-4 border-slate-200" />
 
             {/* PARTES DEL CONTRATO */}
             <section className="mb-6">
-              <h3 className="text-sm font-semibold text-[#123528] mb-3">
+              <h3 className="font-semibold text-[#123528] mb-3">
                 PARTES DEL CONTRATO
               </h3>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* locador */}
-                <div className="border border-emerald-900 rounded-xl p-4">
-                  <p className="text-xs font-semibold text-emerald-900 mb-1 flex items-center gap-2">
-                    <span className="text-lg">👤</span>
-                    LOCADOR (Propietario)
+                {/* Locador */}
+                <div className="border border-emerald-900/40 rounded-2xl p-4">
+                  <p className="text-sm font-semibold text-emerald-700 mb-1">
+                    👤 LOCADOR (Propietario)
                   </p>
-                  <p className="text-sm font-semibold text-slate-800">
-                    Juan Carlos Martinez
+                  <p className="font-semibold text-slate-800">
+                    {selectedContrato.propietario}
                   </p>
-                  <p className="text-xs text-slate-600 mt-1">DNI: 28.456.789</p>
-                  <p className="text-xs text-slate-600">
-                    martinez@email.com
+                  <p className="text-sm text-slate-600 mt-1">
+                    DNI: 28.456.789
+                    <br />
+                    propietario@example.com
                   </p>
                 </div>
 
-                {/* locatario */}
-                <div className="border border-emerald-900 rounded-xl p-4">
-                  <p className="text-xs font-semibold text-emerald-900 mb-1 flex items-center gap-2">
-                    <span className="text-lg">👤</span>
-                    LOCATARIO (Inquilino)
+                {/* Locatario */}
+                <div className="border border-emerald-900/40 rounded-2xl p-4">
+                  <p className="text-sm font-semibold text-emerald-700 mb-1">
+                    👤 LOCATARIO (Inquilino)
                   </p>
-                  <p className="text-sm font-semibold text-slate-800">
-                    Maria Gonzalez
+                  <p className="font-semibold text-slate-800">
+                    {selectedContrato.inquilino}
                   </p>
-                  <p className="text-xs text-slate-600 mt-1">DNI: 32.654.987</p>
-                  <p className="text-xs text-slate-600">maria@email.com</p>
+                  <p className="text-sm text-slate-600 mt-1">
+                    DNI: 32.654.987
+                    <br />
+                    inquilino@example.com
+                  </p>
                 </div>
               </div>
             </section>
 
             {/* INMUEBLE */}
             <section className="mb-6">
-              <h3 className="text-sm font-semibold text-[#123528] mb-2">
-                INMUEBLE
-              </h3>
-
-              <div className="bg-[#f7f2e8] border border-amber-200 rounded-xl p-4">
-                <p className="text-xs font-semibold text-amber-700 mb-1 flex items-center gap-2">
-                  <span>🏠</span>Direccion de la Propiedad
+              <h3 className="font-semibold text-[#123528] mb-3">INMUEBLE</h3>
+              <div className="rounded-2xl bg-[#f9f3e7] px-4 py-3 border border-emerald-900/30">
+                <p className="font-semibold text-amber-800 flex items-center gap-2 mb-1">
+                  <span>🏠</span> Dirección de la Propiedad
                 </p>
-                <p className="text-sm text-slate-800">
-                  Avenida Libertador 1234, San Isidro, Buenos Aires
-                </p>
+                <p className="text-slate-800">{selectedContrato.propiedad}</p>
                 <p className="text-xs text-slate-600 mt-1">
                   Tipo: Casa · Superficie: 120 m² · Ambientes: 3
                 </p>
@@ -416,185 +393,157 @@ export default function ContratosPage() {
 
             {/* PLAZO DEL CONTRATO */}
             <section className="mb-6">
-              <h3 className="text-sm font-semibold text-[#123528] mb-3">
+              <h3 className="font-semibold text-[#123528] mb-3">
                 PLAZO DEL CONTRATO
               </h3>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="border border-emerald-900 rounded-xl p-4">
-                  <p className="text-xs font-semibold text-slate-600 mb-1 flex items-center gap-2">
-                    <span>📅</span> Fecha de Inicio
+                <div className="border border-emerald-900/40 rounded-2xl p-4">
+                  <p className="text-sm font-medium text-slate-700 mb-1">
+                    📅 Fecha de Inicio
                   </p>
-                  <p className="text-sm text-slate-800">
-                    01 de Enero de 2024
+                  <p className="text-slate-800">
+                    {formatearFechaBonita(selectedContrato.fechaInicio)}
                   </p>
                 </div>
-
-                <div className="border border-emerald-900 rounded-xl p-4">
-                  <p className="text-xs font-semibold text-slate-600 mb-1 flex items-center gap-2">
-                    <span>📅</span> Fecha de Finalizacion
+                <div className="border border-emerald-900/40 rounded-2xl p-4">
+                  <p className="text-sm font-medium text-slate-700 mb-1">
+                    📅 Fecha de Finalización
                   </p>
-                  <p className="text-sm text-slate-800">
-                    31 de Diciembre de 2024
+                  <p className="text-slate-800">
+                    {formatearFechaBonita(selectedContrato.fechaFin)}
                   </p>
                 </div>
               </div>
             </section>
 
-            {/* CONDICIONES ECONOMICAS */}
+            {/* CONDICIONES ECONÓMICAS */}
             <section className="mb-6">
-              <h3 className="text-sm font-semibold text-[#123528] mb-3">
-                CONDICIONES ECONOMICAS
+              <h3 className="font-semibold text-[#123528] mb-3">
+                CONDICIONES ECONÓMICAS
               </h3>
-
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-[#f7f2e8] rounded-xl p-4 border border-amber-100">
-                  <p className="text-xs font-semibold text-slate-600 mb-1 flex items-center gap-1">
-                    <span>💲</span> Alquiler Mensual
+                <div className="rounded-2xl bg-[#f9f3e7] px-4 py-3 border border-emerald-900/20">
+                  <p className="text-sm font-medium text-slate-700 mb-1">
+                    💲 Alquiler Mensual
                   </p>
-                  <p className="text-xl font-bold text-slate-900">
-                    $85.000
-                  </p>
-                </div>
-
-                <div className="bg-[#f7f2e8] rounded-xl p-4 border border-amber-100">
-                  <p className="text-xs font-semibold text-slate-600 mb-1 flex items-center gap-1">
-                    <span>💰</span> Garantia
-                  </p>
-                  <p className="text-xl font-bold text-slate-900">
-                    $170.000
+                  <p className="text-2xl font-bold text-[#123528]">
+                    {formatearMoneda(selectedContrato.montoAlquiler)}
                   </p>
                 </div>
-
-                <div className="bg-[#f7f2e8] rounded-xl p-4 border border-amber-100">
-                  <p className="text-xs font-semibold text-slate-600 mb-1">
+                <div className="rounded-2xl bg-[#f9f3e7] px-4 py-3 border border-emerald-900/20">
+                  <p className="text-sm font-medium text-slate-700 mb-1">
+                    💲 Garantía
+                  </p>
+                  <p className="text-2xl font-bold text-[#123528]">
+                    {formatearMoneda(selectedContrato.montoGarantia)}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-[#f9f3e7] px-4 py-3 border border-emerald-900/20">
+                  <p className="text-sm font-medium text-slate-700 mb-1">
                     Vencimiento
                   </p>
-                  <p className="text-xl font-bold text-slate-900">Dia 10</p>
+                  <p className="text-xl font-semibold text-[#123528]">
+                    Día {selectedContrato.diaVencimiento}
+                  </p>
                 </div>
               </div>
             </section>
 
             {/* DETALLE DE CUOTAS */}
             <section className="mb-6">
-              <h3 className="text-sm font-semibold text-[#123528] mb-3">
+              <h3 className="font-semibold text-[#123528] mb-3">
                 DETALLE DE CUOTAS
               </h3>
-
-              <div className="border border-emerald-900 rounded-xl p-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 text-center">
-                  <div>
-                    <p className="text-xs font-semibold text-slate-600">
+              <div className="border border-emerald-900/40 rounded-2xl p-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-slate-700">
                       Frecuencia
                     </p>
-                    <p className="text-sm text-slate-800">Mensual</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-slate-600">
-                      Numero de Cuotas
+                    <p className="text-slate-800">
+                      {selectedContrato.frecuenciaCobro}
                     </p>
-                    <p className="text-sm text-slate-800">12 cuotas</p>
                   </div>
-                  <div>
-                    <p className="text-xs font-semibold text-slate-600">
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-slate-700">
+                      Número de Cuotas
+                    </p>
+                    <p className="text-slate-800">
+                      {selectedContrato.numeroCuotas} cuotas
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-slate-700">
                       Valor por Cuota
                     </p>
-                    <p className="text-sm text-slate-800">$85.000</p>
+                    <p className="text-slate-800">
+                      {formatearMoneda(selectedContrato.montoAlquiler)}
+                    </p>
                   </div>
                 </div>
-
-                <p className="text-xs text-center text-slate-600">
-                  Todas las cuotas tendran el mismo valor mensual sin
-                  variacion.
+                <p className="text-sm text-slate-600 text-center mt-2">
+                  Todas las cuotas tendrán el mismo valor mensual sin
+                  variación.
                 </p>
               </div>
             </section>
 
             {/* PENALIDADES */}
             <section className="mb-6">
-              <h3 className="text-sm font-semibold text-[#123528] mb-3">
-                PENALIDADES
-              </h3>
-
-              <div className="border border-emerald-900 rounded-xl p-4 text-sm text-slate-700 space-y-1">
-                <p>• Mora del 2% por dia de atraso en el pago.</p>
-                <p>
-                  • El locatario sera responsable de los costos de reparacion
-                  por danos causados.
-                </p>
-                <p>
-                  • Rescision anticipada: Penalidad equivalente a 2 meses de
-                  alquiler.
-                </p>
+              <h3 className="font-semibold text-[#123528] mb-3">PENALIDADES</h3>
+              <div className="border border-emerald-900/40 rounded-2xl p-4 text-sm text-slate-700 whitespace-pre-line">
+                {selectedContrato.penalidades}
               </div>
             </section>
 
             {/* CLAUSULAS ADICIONALES */}
-            <section className="mb-8">
-              <h3 className="text-sm font-semibold text-[#123528] mb-3">
-                CLAUSULAS ADICIONALES
+            <section className="mb-6">
+              <h3 className="font-semibold text-[#123528] mb-3">
+                CLÁUSULAS ADICIONALES
               </h3>
-
-              <div className="border border-emerald-900 rounded-xl p-4 text-sm text-slate-700 space-y-1">
-                <p>
-                  • El locatario se compromete a mantener la propiedad en buen
-                  estado.
-                </p>
-                <p>
-                  • No se permiten modificaciones estructurales sin autorizacion
-                  escrita.
-                </p>
-                <p>
-                  • Los gastos de servicios publicos correran por cuenta del
-                  locatario.
-                </p>
-                <p>
-                  • Prohibida la cesion o subarriendo sin consentimiento del
-                  locador.
-                </p>
+              <div className="border border-emerald-900/40 rounded-2xl p-4 text-sm text-slate-700 whitespace-pre-line">
+                {selectedContrato.clausulas}
               </div>
             </section>
 
             {/* FIRMAS */}
             <section className="mb-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-center mt-8">
-                <div>
-                  <div className="border-t border-slate-400 w-3/4 mx-auto mb-2" />
-                  <p className="text-sm font-semibold text-slate-800">
-                    Juan Carlos Martinez
-                  </p>
-                  <p className="text-xs text-slate-500">Firma del Locador</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mt-10">
+                <div className="text-center">
+                  <div className="border-t border-slate-300 pt-4">
+                    <p className="font-semibold text-[#123528]">
+                      {selectedContrato.propietario}
+                    </p>
+                    <p className="text-sm text-slate-600">Firma del Locador</p>
+                  </div>
                 </div>
-                <div>
-                  <div className="border-t border-slate-400 w-3/4 mx-auto mb-2" />
-                  <p className="text-sm font-semibold text-slate-800">
-                    Maria Gonzalez
-                  </p>
-                  <p className="text-xs text-slate-500">Firma del Locatario</p>
+                <div className="text-center">
+                  <div className="border-t border-slate-300 pt-4">
+                    <p className="font-semibold text-[#123528]">
+                      {selectedContrato.inquilino}
+                    </p>
+                    <p className="text-sm text-slate-600">
+                      Firma del Locatario
+                    </p>
+                  </div>
                 </div>
               </div>
             </section>
 
-            {/* botones finales */}
-            <div className="flex justify-end gap-3 mt-4">
-              <button className="px-4 py-2 rounded-lg text-sm border border-slate-300 hover:bg-slate-100">
+            {/* BOTONES ABAJO */}
+            <div className="flex justify-end gap-3 mt-6">
+              <button className="px-4 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-sm font-medium">
                 Imprimir
               </button>
-
-              {/* ESTE EDITAR ES EL QUE ABRE EL MODAL DE EDITAR CONTRATO */}
               <button
-                onClick={() => {
-                  setShowDetalleContrato(false);
-                  setShowEditarContrato(true);
-                }}
-                className="px-4 py-2 rounded-lg text-sm border border-emerald-600 text-emerald-700 hover:bg-emerald-50"
+                onClick={abrirEditorDesdeVista}
+                className="px-4 py-2 rounded-lg border border-emerald-500 bg-white hover:bg-emerald-50 text-sm font-medium text-emerald-700"
               >
                 Editar
               </button>
-
               <button
-                onClick={() => setShowDetalleContrato(false)}
-                className="px-4 py-2 rounded-lg text-sm bg-yellow-400 hover:bg-yellow-500"
+                onClick={cerrarModalVer}
+                className="px-4 py-2 rounded-lg bg-yellow-400 hover:bg-yellow-500 text-black text-sm font-semibold"
               >
                 Cerrar
               </button>
@@ -603,210 +552,220 @@ export default function ContratosPage() {
         </div>
       )}
 
-      {/* MODAL: EDITAR CONTRATO */}
-      {showEditarContrato && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl w-full max-w-4xl p-6 shadow-lg border border-slate-200 max-h-[90vh] overflow-y-auto">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-[#123528]">
-                Editar Contrato
+      {/* MODAL FORMULARIO (CREAR / EDITAR) */}
+      {openFormModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 px-4 md:px-6">
+          <div className="bg-white w-full max-w-5xl rounded-2xl shadow-xl border border-slate-300 p-6 md:p-8 max-h-[90vh] overflow-y-auto relative">
+            {/* HEADER MODAL */}
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl md:text-2xl font-semibold text-[#123528]">
+                {formMode === "editar"
+                  ? "Editar Contrato"
+                  : "Crear Nuevo Contrato"}
               </h2>
               <button
-                onClick={() => setShowEditarContrato(false)}
-                className="text-slate-500 hover:text-slate-700"
+                onClick={cerrarModalForm}
+                className="text-slate-600 hover:text-black text-xl"
               >
                 ✕
               </button>
             </div>
 
             {/* PARTES DEL CONTRATO */}
-            <div className="bg-[#f7f2e8] rounded-lg p-4 mb-6">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">
+            <section className="mb-6 border border-emerald-900/40 rounded-2xl bg-[#f9f6ef] p-5 space-y-4">
+              <h3 className="font-semibold text-[#123528] text-lg mb-1">
                 Partes del Contrato
               </h3>
-
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="text-xs font-medium text-slate-600">
+                  <p className="text-sm font-medium text-slate-700">
                     Propiedad
-                  </label>
+                  </p>
                   <select
-                    defaultValue="prop"
-                    className="w-full mt-1 px-3 py-2 rounded-md border border-slate-300 bg-white text-sm"
+                    className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
+                    value={formPropiedad}
+                    onChange={(e) => setFormPropiedad(e.target.value)}
                   >
-                    <option value="prop">Seleccionar propiedad</option>
+                    <option value="">Seleccionar propiedad</option>
+                    <option>Av. Principal 123, Piso 5</option>
+                    <option>Calle Secundaria 456</option>
+                    <option>Plaza Central 789, Apto 12</option>
                   </select>
                 </div>
-
                 <div>
-                  <label className="text-xs font-medium text-slate-600">
+                  <p className="text-sm font-medium text-slate-700">
                     Inquilino
-                  </label>
+                  </p>
                   <select
-                    defaultValue="inq"
-                    className="w-full mt-1 px-3 py-2 rounded-md border border-slate-300 bg-white text-sm"
+                    className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
+                    value={formInquilino}
+                    onChange={(e) => setFormInquilino(e.target.value)}
                   >
-                    <option value="inq">Seleccionar inquilino</option>
+                    <option value="">Seleccionar inquilino</option>
+                    <option>María González</option>
+                    <option>Carlos Rodríguez</option>
+                    <option>Ana Martínez</option>
                   </select>
                 </div>
-
                 <div>
-                  <label className="text-xs font-medium text-slate-600">
+                  <p className="text-sm font-medium text-slate-700">
                     Propietario
-                  </label>
+                  </p>
                   <select
-                    defaultValue="propiet"
-                    className="w-full mt-1 px-3 py-2 rounded-md border border-slate-300 bg-white text-sm"
+                    className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
+                    value={formPropietario}
+                    onChange={(e) => setFormPropietario(e.target.value)}
                   >
-                    <option value="propiet">Seleccionar propietario</option>
+                    <option value="">Seleccionar propietario</option>
+                    <option>Juan Carlos Martínez</option>
+                    <option>Empresa Inmobiliaria SRL</option>
                   </select>
                 </div>
               </div>
-            </div>
+            </section>
 
-            {/* DURACION DEL CONTRATO */}
-            <div className="bg-white border border-slate-200 rounded-lg p-4 mb-6">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">
-                Duracion del Contrato
+            {/* DURACIÓN DEL CONTRATO */}
+            <section className="mb-6 border border-emerald-900/40 rounded-2xl p-5 space-y-4">
+              <h3 className="font-semibold text-[#123528] text-lg">
+                Duración del Contrato
               </h3>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-medium text-slate-600">
+                  <p className="text-sm font-medium text-slate-700">
                     Fecha de Inicio
-                  </label>
+                  </p>
                   <input
                     type="date"
-                    defaultValue="2024-01-01"
-                    className="w-full mt-1 px-3 py-2 rounded-md border border-slate-300 bg-slate-100 text-sm"
+                    className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
+                    value={formFechaInicio}
+                    onChange={(e) => setFormFechaInicio(e.target.value)}
                   />
                 </div>
-
                 <div>
-                  <label className="text-xs font-medium text-slate-600">
-                    Fecha de Finalizacion
-                  </label>
+                  <p className="text-sm font-medium text-slate-700">
+                    Fecha de Finalización
+                  </p>
                   <input
                     type="date"
-                    defaultValue="2024-12-31"
-                    className="w-full mt-1 px-3 py-2 rounded-md border border-slate-300 bg-slate-100 text-sm"
+                    className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
+                    value={formFechaFin}
+                    onChange={(e) => setFormFechaFin(e.target.value)}
                   />
                 </div>
               </div>
-            </div>
+            </section>
 
-            {/* INFORMACION FINANCIERA */}
-            <div className="bg-white border border-slate-200 rounded-lg p-4 mb-6">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">
-                Informacion Financiera
+            {/* INFORMACIÓN FINANCIERA */}
+            <section className="mb-6 border border-emerald-900/40 rounded-2xl p-5 space-y-4">
+              <h3 className="font-semibold text-[#123528] text-lg">
+                Información Financiera
               </h3>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-medium text-slate-600">
+                  <p className="text-sm font-medium text-slate-700">
                     Monto del Alquiler ($/mes)
-                  </label>
+                  </p>
                   <input
-                    type="number"
-                    defaultValue={85000}
-                    className="w-full mt-1 px-3 py-2 rounded-md border border-slate-300 bg-slate-100 text-sm"
+                    className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
+                    value={formMontoAlquiler}
+                    onChange={(e) => setFormMontoAlquiler(e.target.value)}
                   />
                 </div>
-
                 <div>
-                  <label className="text-xs font-medium text-slate-600">
-                    Monto de la Garantia ($)
-                  </label>
+                  <p className="text-sm font-medium text-slate-700">
+                    Monto de la Garantía ($)
+                  </p>
                   <input
-                    type="number"
-                    defaultValue={170000}
-                    className="w-full mt-1 px-3 py-2 rounded-md border border-slate-300 bg-slate-100 text-sm"
+                    className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
+                    value={formMontoGarantia}
+                    onChange={(e) => setFormMontoGarantia(e.target.value)}
                   />
                 </div>
               </div>
-            </div>
+            </section>
 
             {/* DETALLE DE CUOTAS */}
-            <div className="bg-white border border-slate-200 rounded-lg p-4 mb-6">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">
+            <section className="mb-6 border border-emerald-900/40 rounded-2xl p-5 space-y-4">
+              <h3 className="font-semibold text-[#123528] text-lg">
                 Detalle de Cuotas
               </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="text-xs font-medium text-slate-600">
+                  <p className="text-sm font-medium text-slate-700">
                     Frecuencia de Cobro
-                  </label>
+                  </p>
                   <select
-                    defaultValue="Mensual"
-                    className="w-full mt-1 px-3 py-2 rounded-md border border-slate-300 bg-slate-100 text-sm"
+                    className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
+                    value={formFrecuenciaCobro}
+                    onChange={(e) => setFormFrecuenciaCobro(e.target.value)}
                   >
                     <option>Mensual</option>
+                    <option>Trimestral</option>
+                    <option>Anual</option>
                   </select>
                 </div>
-
                 <div>
-                  <label className="text-xs font-medium text-slate-600">
-                    Numero de Cuotas
-                  </label>
+                  <p className="text-sm font-medium text-slate-700">
+                    Número de Cuotas
+                  </p>
                   <input
-                    type="number"
-                    defaultValue={12}
-                    className="w-full mt-1 px-3 py-2 rounded-md border border-slate-300 bg-slate-100 text-sm"
+                    className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
+                    value={formNumeroCuotas}
+                    onChange={(e) => setFormNumeroCuotas(e.target.value)}
                   />
                 </div>
-
                 <div>
-                  <label className="text-xs font-medium text-slate-600">
-                    Dia de Vencimiento
-                  </label>
+                  <p className="text-sm font-medium text-slate-700">
+                    Día de Vencimiento
+                  </p>
                   <input
-                    type="number"
-                    defaultValue={10}
-                    className="w-full mt-1 px-3 py-2 rounded-md border border-slate-300 bg-slate-100 text-sm"
+                    className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
+                    value={formDiaVencimiento}
+                    onChange={(e) => setFormDiaVencimiento(e.target.value)}
                   />
                 </div>
               </div>
-
-              <p className="text-xs text-slate-500">
-                Nota: Todas las cuotas tendran el mismo valor mensual de $0.
+              <p className="text-xs text-slate-500 mt-2">
+                Nota: Todas las cuotas tendrán el mismo valor mensual.
               </p>
-            </div>
+            </section>
 
             {/* PENALIDADES */}
-            <div className="bg-white border border-slate-200 rounded-lg p-4 mb-6">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">
+            <section className="mb-6 space-y-3">
+              <h3 className="font-semibold text-[#123528] text-lg">
                 Penalidades por Incumplimiento
               </h3>
               <textarea
-                rows={3}
-                defaultValue="Ej: Mora del 2% por dia de atraso en el pago. Costo de reparaciones por danos..."
-                className="w-full px-3 py-2 rounded-md border border-slate-300 bg-slate-100 text-sm resize-none"
+                className="w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm h-20"
+                value={formPenalidades}
+                onChange={(e) => setFormPenalidades(e.target.value)}
               />
-            </div>
+            </section>
 
-            {/* CLAUSULAS ADICIONALES */}
-            <div className="bg-white border border-slate-200 rounded-lg p-4 mb-6">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">
-                Clausulas Adicionales
+            {/* CLÁUSULAS ADICIONALES */}
+            <section className="mb-6 space-y-3">
+              <h3 className="font-semibold text-[#123528] text-lg">
+                Cláusulas Adicionales
               </h3>
               <textarea
-                rows={3}
-                defaultValue="Agregue cualquier clausula adicional del contrato..."
-                className="w-full px-3 py-2 rounded-md border border-slate-300 bg-slate-100 text-sm resize-none"
+                className="w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm h-20"
+                value={formClausulas}
+                onChange={(e) => setFormClausulas(e.target.value)}
               />
-            </div>
+            </section>
 
-            {/* Footer */}
+            {/* BOTONES FINALES */}
             <div className="flex justify-end gap-3 mt-4">
               <button
-                onClick={() => setShowEditarContrato(false)}
-                className="px-4 py-2 bg-slate-200 rounded-lg text-sm hover:bg-slate-300"
+                onClick={cerrarModalForm}
+                className="px-5 py-2 rounded-lg border border-slate-300 bg-slate-100 hover:bg-slate-200 text-sm font-medium"
               >
                 Cancelar
               </button>
-              <button className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 rounded-lg text-sm font-semibold">
+              <button
+                onClick={guardarContrato}
+                className="px-5 py-2 rounded-lg bg-yellow-400 hover:bg-yellow-500 text-black text-sm font-semibold"
+              >
                 Guardar Contrato
               </button>
             </div>
