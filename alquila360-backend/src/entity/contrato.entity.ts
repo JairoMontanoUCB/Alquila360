@@ -40,7 +40,7 @@ export class Contrato {
 
   @Column({
     type: "enum",
-    enum: ["activo", "finalizado", "cancelado"],
+    enum: ["pendiente","activo", "finalizado", "cancelado"],
     default: "pendiente",
   })
   estado: string;
