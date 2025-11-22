@@ -13,8 +13,8 @@ export class EmailService {
       port: 465,
       secure: true,
       auth: {
-        user: 'TU_CORREO@gmail.com', //HAY QUE CREAR CORREO PARA LA APP
-        pass: 'TU_APP_PASSWORD',    //https://myaccount.google.com/apppasswords
+        user: 'alquila360.app@gmail.com', //HAY QUE CREAR CORREO PARA LA APP
+        pass: 'eeqv oxrs iisa yzgo',    //https://myaccount.google.com/apppasswords
       },
     });
   }
