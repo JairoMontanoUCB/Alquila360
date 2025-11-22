@@ -38,4 +38,10 @@ export class Contrato {
   @OneToMany(() => Pago, pago => pago.contrato)
   pagos: Pago[];
 
+  @Column({
+    type: "enum",
+    enum: ["pendiente","activo", "finalizado", "cancelado"],
+    default: "pendiente",
+  })
+  estado: string;
 }

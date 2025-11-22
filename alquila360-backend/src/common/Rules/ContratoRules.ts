@@ -3,6 +3,7 @@ UsuarioNoActivoException } from '../Exceptions/BussinessException';
 import AppDataSource from "src/data-source";
 import { User } from "src/entity/user.entity";
 import { Propiedad } from "src/entity/propiedad.entity";
+import { Contrato } from 'src/entity/contrato.entity';
 
 export class ContratoRules {
     
@@ -11,9 +12,6 @@ export class ContratoRules {
         
         if (!usuario) {
             throw new BusinessException(`Usuario con ID ${inquilinoId} no encontrado`);
-        }
-        if (usuario.rol !== 'inquilino') {
-            throw new UsuarioNoInquilinoException(inquilinoId, usuario.rol);
         }
         if (usuario.estado !== 'activo') {
             throw new UsuarioNoActivoException(inquilinoId, usuario.estado);
@@ -53,6 +51,12 @@ export class ContratoRules {
     static validarGarantia(garantia: number): void {
         if (garantia < 0) {
             throw new BusinessException('La garantía no puede ser negativa');
+        }
+    }
+
+    static validarContratoCompleto(contratoCompleto: Contrato): void {
+        if (!contratoCompleto) {
+            throw new BusinessException('No se pudo cargar el contrato completo');
         }
     }
 }

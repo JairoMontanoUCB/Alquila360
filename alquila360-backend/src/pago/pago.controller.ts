@@ -3,15 +3,17 @@ import { PagoService } from "./pago.service";
 import { Pago } from "src/entity/pago.entity";
 import { get } from "http";
 import * as fs from "fs";
+import { CreatePagoDto } from "./pagoDto/create-pago.dto";
 
 @Controller('/pago')
 export class PagoController {
     constructor(private readonly pagoService : PagoService) {}
     
     @Post()
-    createPago(@Body() pago : Pago) {
-        return this.pagoService.createPago(pago);
+    createPago(@Body() createPagoDto : CreatePagoDto) {
+        return this.pagoService.createPago(createPagoDto);
     }
+    
 
     @Get()
     getAllPago() {
