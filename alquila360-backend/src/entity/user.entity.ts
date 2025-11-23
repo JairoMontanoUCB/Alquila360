@@ -4,6 +4,7 @@ import { Contrato } from "./contrato.entity";
 import { Pago } from "./pago.entity";
 import { Ticket } from "./ticket.entity";
 import { UserRating } from "./user_rating.entity";
+import { PropertyRating } from "./property_rating.entity";
 
 @Entity("usuarios")
 export class User {
@@ -69,4 +70,8 @@ tickets: Ticket[];
 
 @OneToMany(() => Ticket, ticket => ticket.tecnico)
 ticketsAsignados:  Ticket[];
+
+@OneToMany(() => PropertyRating, rating => rating.autor)
+propertyRatings: PropertyRating[];
+
 }

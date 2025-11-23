@@ -3,21 +3,24 @@ import { AppModule } from './app.module';
 import AppDataSource from './data-source';
 import { ValidationPipe } from '@nestjs/common';
 
-
-
 async function bootstrap() {
+  try {
+    await AppDataSource.initialize();
+  } catch (error) {
+    console.log(error);
+  }
 
-try {
-  AppDataSource.initialize()
-  
-} catch (error) {
-  console.log(error);
-}
+  const app = await NestFactory.create(AppModule, { cors: true });
 
-  const app = await NestFactory.create(AppModule, {cors:true});
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
+      whitelist: true
+    })
+  );
+
   await app.listen(process.env.PORT ?? 3001);
-
-
 }
+
 bootstrap();

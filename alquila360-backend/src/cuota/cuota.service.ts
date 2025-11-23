@@ -9,8 +9,7 @@ export class CuotaService {
   private readonly logger = new Logger(CuotaService.name);
 
   /**
-   * Genera todas las cuotas mensuales para un contrato
-   * @param contrato - Contrato para el cual generar las cuotas
+   * Genera todas las cuotas mensuales para un contrato, No se divide el monto porque ya es mensual
    */
   async generarCuotasMensuales(contrato: Contrato): Promise<Cuota[]> {
     try {
@@ -23,7 +22,7 @@ export class CuotaService {
       // Calcular número total de meses del contrato
       const totalMeses = this.calcularTotalMeses(fechaInicio, fechaFin);
       
-      this.logger.log(`Duración del contrato: ${totalMeses} meses`);
+      this.logger.log(`Duración del contrato: ${totalMeses} meses, Monto mensual: ${contrato.monto_mensual}`);
 
       // Generar una cuota por cada mes
       for (let i = 0; i < totalMeses; i++) {
@@ -32,10 +31,16 @@ export class CuotaService {
         cuota.contrato_id = contrato.id;
         cuota.numero_referencia = this.generarNumeroReferencia(contrato.id, i + 1);
         cuota.fecha_vencimiento = this.calcularFechaVencimiento(fechaInicio, i);
+        
+        //Usar directamente el monto_mensual del contrato
+        //NO se divide porque ya es el monto por mes
         cuota.monto = contrato.monto_mensual;
+        
         cuota.estado = "pendiente";
 
         cuotas.push(cuota);
+        
+        this.logger.debug(`Cuota ${i + 1}: ${cuota.numero_referencia}, Monto: ${cuota.monto}, Vence: ${cuota.fecha_vencimiento}`);
       }
 
       // Guardar todas las cuotas en la base de datos
@@ -57,9 +62,15 @@ export class CuotaService {
     const inicio = new Date(fechaInicio);
     const fin = new Date(fechaFin);
     
+    // Cálculo preciso de meses completos
     let meses = (fin.getFullYear() - inicio.getFullYear()) * 12;
     meses -= inicio.getMonth();
     meses += fin.getMonth();
+    
+    // Ajustar por días si es necesario
+    if (fin.getDate() < inicio.getDate()) {
+      meses--; // Restar un mes si no se completa el mes
+    }
     
     return meses <= 0 ? 1 : meses; // Mínimo 1 mes
   }

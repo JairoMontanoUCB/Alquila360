@@ -16,6 +16,7 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { v4 as uuid } from 'uuid';
 import * as path from 'path';
+import { RatePropiedadDto } from './propiedadDto/rate-propiedad.dto';
 
 @Controller('/propiedad')
 export class PropiedadController {
@@ -59,4 +60,17 @@ export class PropiedadController {
   delete(@Param('id') id: number) {
     return this.propiedadService.deletePropiedad(id);
   }
+  
+
+
+@Post(':id/calificar')
+calificarPropiedad(
+  @Param('id') propiedadId: number,
+  @Body() dto: RatePropiedadDto
+) {
+  return this.propiedadService.calificarPropiedad(propiedadId, dto);
+}
+
+
+
 }
