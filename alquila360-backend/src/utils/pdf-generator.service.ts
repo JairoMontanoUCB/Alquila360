@@ -4,6 +4,7 @@ import * as path from "path";
 import PDFDocument = require("pdfkit");
 import { Contrato } from "src/entity/contrato.entity";
 import { Propiedad } from "src/entity/propiedad.entity";
+import { Cuota } from "src/entity/cuota.entity";
 import { User } from "src/entity/user.entity";
 
 @Injectable()
@@ -16,6 +17,7 @@ export class PdfKitGeneratorService {
     monto: number;
     propiedad: any;
     contrato: any;
+    cuota?: any;
   }): Promise<string> {
 
     // Ruta del archivo
@@ -67,6 +69,19 @@ export class PdfKitGeneratorService {
       .text(`Fecha Inicio: ${data.contrato?.fecha_inicio}`)
       .text(`Fecha Fin: ${data.contrato?.fecha_fin}`);
     doc.moveDown();
+
+    // ------------------------------------
+    //  CUOTA
+    // ------------------------------------
+    if(data.cuota)
+    {
+    doc.fontSize(16).text("Cuota");
+    doc.fontSize(12)
+      .text(`Cuota Nº: ${data.cuota?.id ?? "N/A"}`)
+      .text(`Número de Referencia: ${data.cuota?.numero_referencia ?? "N/A"}`)
+      .text(`Monto Cuota: Bs. ${data.cuota?.monto ?? "N/A"}`)
+      .text(`Fecha Vencimiento: ${data.cuota?.fecha_vencimiento}`);
+    doc.moveDown();}
 
     // ------------------------------------
     //  PIE DE PÁGINA
