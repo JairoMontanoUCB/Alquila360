@@ -1,4 +1,5 @@
 "use client";
+import { loginRequest } from "@/services/authService.js";
 
 import { useState } from "react";
 import Image from "next/image";
@@ -8,17 +9,35 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
+ const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    if (!email || !password) {
-      setError("Todos los campos son obligatorios.");
-      return;
-    }
+  if (!email || !password) {
+    setError("Todos los campos son obligatorios.");
+    return;
+  }
 
-    setError(null);
-    alert("Inicio de sesión exitoso");
-  };
+  try {
+    const data = await loginRequest(email, password);
+    console.log("LOGIN OK:", data);
+
+    localStorage.setItem("token", data.access_token);
+    localStorage.setItem("role", data.usuario.rol);
+const role = data.usuario.rol;
+
+    if (role === "administrador") window.location.href = "/administrador";
+if (role === "propietario") window.location.href = "/propietarios";
+if (role === "inquilino") window.location.href = "/inquilino";
+
+    if (role === "tecnico") window.location.href = "/tecnicos";
+
+    //window.location.href = "/inquilino";
+
+  } catch (err) {
+    console.error(err);
+    setError("Correo o contraseña incorrectos.");
+  }
+};
 
   return (
     <div className="min-h-screen grid grid-cols-1 md:grid-cols-2">

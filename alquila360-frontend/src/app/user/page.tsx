@@ -2,7 +2,7 @@
 
 import {useEffect, useState} from "react";
 import styles from "./page.module.css";
-import { getUsers } from "../services/user.service";
+import { getUsers } from "../../services/user.service";
 
 
 export default function User(){
