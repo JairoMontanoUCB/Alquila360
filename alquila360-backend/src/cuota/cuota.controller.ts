@@ -6,7 +6,6 @@ import { CreateExpensaDto } from './cuotaDto/create-expensa.dto';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 @Controller('/cuotas')
-@UseGuards(JwtAuthGuard)
 export class CuotaController {
   constructor(private readonly cuotaService: CuotaService) {}
 

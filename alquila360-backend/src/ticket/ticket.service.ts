@@ -6,6 +6,10 @@ import { User } from "src/entity/user.entity";
 import { Propiedad } from "src/entity/propiedad.entity";
 import { CreateTicketDto } from "./ticketDto/create-ticket.dto";
 
+import { TicketRules } from "src/common/Rules/TicketRules"; // <-- Ajusta esta ruta si es diferente
+import { BusinessException } from "src/common/Exceptions/BussinessException";
+
+
 @Injectable()
 export class TicketService {
 
@@ -75,10 +79,14 @@ export class TicketService {
     return { message: "Prioridad actualizada" };
   }
 
+
+  
   async cambiarEstado(id: number, estado: string) {
     await AppDataSource.getRepository(Ticket).update(id, { estado });
     return { message: "Estado actualizado" };
   }
+
+
 
   async asignarTecnico(id: number, tecnicoId: number) {
     const tecnico = await AppDataSource.getRepository(User).findOneBy({ id: tecnicoId });

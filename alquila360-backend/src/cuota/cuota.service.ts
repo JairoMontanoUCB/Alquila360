@@ -157,17 +157,24 @@ export class CuotaService {
 
   //CAMBIOS PARA EXPENSAS
   async registrarExpensa(createExpensaDto: CreateExpensaDto): Promise<Cuota> {
-    // 1. Crear una nueva Cuota
     const cuotaRepository = AppDataSource.getRepository(Cuota);
+
+    // 🌟🌟🌟 CORRECCIÓN CRÍTICA AQUÍ: Convertir el valor a Date 🌟🌟🌟
+    // Esto asegura que, incluso si el @Type() no funciona, TypeORM reciba un objeto Date válido.
+    const fechaVencimientoObj = new Date(createExpensaDto.fechaVencimiento);
+
     const nuevaExpensa = cuotaRepository.create({
-      contrato_id: createExpensaDto.contratoId,
-      fecha_vencimiento: createExpensaDto.fechaVencimiento,
-      monto: createExpensaDto.monto,
-      // 2. CLAVE: Marcar el tipo como EXPENSA
-      tipo: 'EXPENSA',
-      estado: 'pendiente',
-      // 3. Generar número de referencia. (Necesitarás implementar esta lógica)
-      numero_referencia: this.generarReferenciaExpensa(createExpensaDto.contratoId, createExpensaDto.fechaVencimiento), // <- Reemplazar con tu lógica
+        contrato_id: createExpensaDto.contratoId,
+        
+        // 🚨 Usamos el objeto Date convertido:
+        fecha_vencimiento: fechaVencimientoObj, 
+        
+        monto: createExpensaDto.monto,
+        tipo: 'EXPENSA',
+        estado: 'pendiente',
+        
+        // También usamos el objeto Date convertido para la referencia:
+        numero_referencia: this.generarReferenciaExpensa(createExpensaDto.contratoId, fechaVencimientoObj), 
     });
     
     // 4. Guardar en la BD

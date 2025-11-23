@@ -21,6 +21,10 @@ export class Contrato {
   @ManyToOne(() => User, user => user.contratos)
   inquilino: User;
 
+  // AÑADIENDO INQUILINO PARA EXPENSAS
+  @Column() 
+  inquilinoId: number; 
+  
   @Column({ type: "date" })
   fecha_inicio: Date;
 
