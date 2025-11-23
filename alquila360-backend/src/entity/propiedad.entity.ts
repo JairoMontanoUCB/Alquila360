@@ -3,6 +3,7 @@ import { User } from "./user.entity";
 import { Contrato } from "./contrato.entity";
 import { Ticket } from "./ticket.entity";
 import { PropiedadFoto } from "./propiedad_foto.entity";
+import { PropertyRating } from "./property_rating.entity";
 
 @Entity("propiedades")
 export class Propiedad {
@@ -44,4 +45,17 @@ descripcion: string | null;
 
   @OneToMany(() => PropiedadFoto, foto => foto.propiedad)
   fotos: PropiedadFoto[];
+
+  @OneToMany(() => PropertyRating, rating => rating.propiedad)
+  calificaciones: PropertyRating[];
+
+  @Column({ type: "float", default: 0 })
+ratingPromedio: number;
+
+@Column({ type: "int", default: 0 })
+ratingTotal: number;
+
+@Column({ type: "int", default: 0 })
+ratingCount: number;
+  
 }
