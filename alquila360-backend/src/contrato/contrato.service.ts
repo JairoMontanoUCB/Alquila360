@@ -87,6 +87,7 @@ export class ContratoService {
         contrato.monto_mensual = monto_mensual; 
         contrato.garantia = garantia;
         contrato.estado = "activo";
+        
 
         var contratoGuardado = await AppDataSource.getRepository(Contrato).save(contrato);
 
