@@ -1,58 +1,137 @@
 "use client";
 
-import Sidebar from "../../components/sideBarPropietario"; // O "../../components/SidebarPropietario"
+import { useState, ChangeEvent, FormEvent } from "react";
+import Sidebar from "../../components/sideBarPropietario";
+
+type Expensa = {
+  id: string;
+  propiedad: string;
+  tipo: string;
+  descripcion: string;
+  monto: number; // guardamos como número
+  fecha: string; // aquí guardaremos el "Mes"
+  estado: string;
+};
+
+const expensasIniciales: Expensa[] = [
+  {
+    id: "exp1",
+    propiedad: "Calle Secundaria 456",
+    tipo: "Agua",
+    descripcion: "Factura de agua del mes de noviembre",
+    monto: 45,
+    fecha: "2024-11-15",
+    estado: "Pagado",
+  },
+  {
+    id: "exp2",
+    propiedad: "Calle Secundaria 456",
+    tipo: "Luz",
+    descripcion: "Factura de electricidad del mes de noviembre",
+    monto: 120,
+    fecha: "2024-11-15",
+    estado: "No pagado",
+  },
+  {
+    id: "exp3",
+    propiedad: "Calle Secundaria 456",
+    tipo: "Gas",
+    descripcion: "Factura de gas del mes de noviembre",
+    monto: 35,
+    fecha: "2024-11-15",
+    estado: "Pagado",
+  },
+  {
+    id: "exp4",
+    propiedad: "Calle Secundaria 456",
+    tipo: "Mantenimiento",
+    descripcion: "Mantenimiento general del edificio",
+    monto: 200,
+    fecha: "2024-11-10",
+    estado: "Pagado",
+  },
+];
 
 export default function ExpensasPage() {
-  const resumen = {
-    total: 400,
-    pagadas: 280,
-    noPagadas: 120,
-  };
+  const [expensas, setExpensas] = useState<Expensa[]>(expensasIniciales);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const expensas = [
-    {
-      id: "exp1",
-      propiedad: "Calle Secundaria 456",
-      tipo: "Agua",
-      descripcion: "Factura de agua del mes de noviembre",
-      monto: "$45",
-      fecha: "2024-11-15",
-      estado: "Pagado",
+  // formulario de nueva expensa
+  const [nuevaExpensa, setNuevaExpensa] = useState({
+    propiedad: "",
+    tipo: "Agua",
+    mes: "",
+    monto: "",
+    estado: "No pagado",
+    descripcion: "",
+  });
+
+  // resumen calculado a partir de las expensas
+  const resumen = expensas.reduce(
+    (acc, e) => {
+      acc.total += e.monto;
+      if (e.estado === "Pagado") acc.pagadas += e.monto;
+      else acc.noPagadas += e.monto;
+      return acc;
     },
-    {
-      id: "exp2",
-      propiedad: "Calle Secundaria 456",
-      tipo: "Luz",
-      descripcion: "Factura de electricidad del mes de noviembre",
-      monto: "$120",
-      fecha: "2024-11-15",
-      estado: "No pagado",
-    },
-    {
-      id: "exp3",
-      propiedad: "Calle Secundaria 456",
-      tipo: "Gas",
-      descripcion: "Factura de gas del mes de noviembre",
-      monto: "$35",
-      fecha: "2024-11-15",
-      estado: "Pagado",
-    },
-    {
-      id: "exp4",
-      propiedad: "Calle Secundaria 456",
-      tipo: "Mantenimiento",
-      descripcion: "Mantenimiento general del edificio",
-      monto: "$200",
-      fecha: "2024-11-10",
-      estado: "Pagado",
-    },
-  ];
+    { total: 0, pagadas: 0, noPagadas: 0 }
+  );
 
   const getEstadoBadge = (estado: string) => {
     if (estado === "Pagado") {
       return "bg-[#d3f7e8] text-[#1b7c4b]";
     }
     return "bg-[#ffd9dd] text-[#d8454f]";
+  };
+
+  // ------- MODAL ---------
+  const abrirModal = () => {
+    setNuevaExpensa({
+      propiedad: "",
+      tipo: "Agua",
+      mes: "",
+      monto: "",
+      estado: "No pagado",
+      descripcion: "",
+    });
+    setIsModalOpen(true);
+  };
+
+  const cerrarModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setNuevaExpensa((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+
+    const nuevoId = `exp${expensas.length + 1}`;
+
+    const montoNumber = parseFloat(nuevaExpensa.monto || "0");
+
+    const expensaAInsertar: Expensa = {
+      id: nuevoId,
+      propiedad: nuevaExpensa.propiedad || "Sin propiedad",
+      tipo: nuevaExpensa.tipo || "Otro",
+      descripcion:
+        nuevaExpensa.descripcion || "Sin descripción adicional...",
+      monto: isNaN(montoNumber) ? 0 : montoNumber,
+      // usamos el campo "mes" como fecha mostrada en la tabla
+      fecha: nuevaExpensa.mes || "Sin mes",
+      estado: nuevaExpensa.estado,
+    };
+
+    setExpensas((prev) => [...prev, expensaAInsertar]);
+    setIsModalOpen(false);
   };
 
   return (
@@ -67,7 +146,10 @@ export default function ExpensasPage() {
             <p className="text-sm text-gray-600">Gastos por inmueble</p>
           </div>
 
-          <button className="bg-[#f4b000] text-white px-6 py-2.5 rounded-lg shadow-md hover:bg-[#d89c00] text-sm transition">
+          <button
+            className="bg-[#f4b000] text-white px-6 py-2.5 rounded-lg shadow-md hover:bg-[#d89c00] text-sm transition"
+            onClick={abrirModal}
+          >
             Registrar Expensa
           </button>
         </header>
@@ -125,7 +207,7 @@ export default function ExpensasPage() {
                   <th className="py-4 px-4">Tipo</th>
                   <th className="py-4 px-4">Descripción</th>
                   <th className="py-4 px-4">Monto</th>
-                  <th className="py-4 px-4">Fecha</th>
+                  <th className="py-4 px-4">Fecha / Mes</th>
                   <th className="py-4 px-4">Estado</th>
                 </tr>
               </thead>
@@ -145,7 +227,7 @@ export default function ExpensasPage() {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-sm">{exp.descripcion}</td>
-                    <td className="py-3 px-4 text-sm">{exp.monto}</td>
+                    <td className="py-3 px-4 text-sm">${exp.monto}</td>
                     <td className="py-3 px-4 text-sm">{exp.fecha}</td>
                     <td className="py-3 px-4">
                       <span
@@ -163,6 +245,135 @@ export default function ExpensasPage() {
           </div>
         </section>
       </main>
+
+      {/* MODAL REGISTRAR EXPENSA */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-8">
+            {/* Header modal */}
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">Registrar Nueva Expensa</h2>
+              <button
+                className="text-2xl leading-none px-2"
+                onClick={cerrarModal}
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Primera fila: Propiedad y Tipo */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm mb-1">Propiedad</label>
+                  <select
+                    name="propiedad"
+                    value={nuevaExpensa.propiedad}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
+                  >
+                    <option value="">Seleccionar propiedad</option>
+                    <option value="Calle Secundaria 456">
+                      Calle Secundaria 456
+                    </option>
+                    <option value="Av. Principal 123, Piso 5">
+                      Av. Principal 123, Piso 5
+                    </option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm mb-1">Tipo de Expensa</label>
+                  <select
+                    name="tipo"
+                    value={nuevaExpensa.tipo}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
+                  >
+                    <option value="Agua">Agua</option>
+                    <option value="Luz">Luz</option>
+                    <option value="Gas">Gas</option>
+                    <option value="Mantenimiento">Mantenimiento</option>
+                    <option value="Otro">Otros</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Segunda fila: Mes y Monto */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm mb-1">Mes</label>
+                  <input
+                    type="text"
+                    name="mes"
+                    placeholder="Ej: Noviembre 2024"
+                    value={nuevaExpensa.mes}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm mb-1">Monto</label>
+                  <input
+                    type="number"
+                    name="monto"
+                    placeholder="Ej: 5000"
+                    value={nuevaExpensa.monto}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
+                  />
+                </div>
+              </div>
+
+              {/* Estado */}
+              <div>
+                <label className="block text-sm mb-1">Estado</label>
+                <select
+                  name="estado"
+                  value={nuevaExpensa.estado}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
+                >
+                  <option value="No pagado">No pagado</option>
+                  <option value="Pagado">Pagado</option>
+                </select>
+              </div>
+
+              {/* Descripción */}
+              <div>
+                <label className="block text-sm mb-1">
+                  Descripción (Opcional)
+                </label>
+                <textarea
+                  name="descripcion"
+                  value={nuevaExpensa.descripcion}
+                  onChange={handleChange}
+                  placeholder="Detalles adicionales sobre la expensa..."
+                  className="w-full h-24 rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
+                />
+              </div>
+
+              {/* Botones */}
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={cerrarModal}
+                  className="px-4 py-2 rounded-lg border border-gray-400 text-gray-700 hover:bg-gray-100 transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-lg bg-[#f4b000] text-white hover:bg-[#d89c00] transition"
+                >
+                  Registrar Expensa
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
