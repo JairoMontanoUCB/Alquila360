@@ -30,7 +30,7 @@ const AppDataSource = new DataSource({
         TicketFoto,
         UserRating,
         Cuota,
-        PropertyRating,  // ← AGREGA ESTO
+        PropertyRating, 
     ],
     synchronize: true,
     logging: true,

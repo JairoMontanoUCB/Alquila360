@@ -27,6 +27,11 @@ export class ContratoController {
     deleteContrato(@Param('id') id: number) {
         return this.contratoService.deleteContrato(id);
     }
+
+    @Get('/TerminarContrato/:id')
+    TerminarContrato(@Param('id') id: number) {
+        return this.contratoService.FinalizarContrato(id);
+    }
 }
 
 
