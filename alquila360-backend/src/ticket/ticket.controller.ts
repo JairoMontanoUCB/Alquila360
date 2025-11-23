@@ -1,28 +1,20 @@
-import {
-  Controller,
-  Post,
-  Patch,
-  Get,
-  Req,
-  Body,
-  Param,
-  UseGuards,
-  UploadedFiles,
-  UseInterceptors
-} from '@nestjs/common';
-
-import { TicketService } from './ticket.service';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
-import { FilesInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import * as path from 'path';
-import { v4 as uuid } from 'uuid';
+import { Body, Controller, Delete, Get, Param, Post, Put } from "@nestjs/common";
+import { TicketService } from "./ticket.service";
+import { Ticket } from "src/entity/ticket.entity";
+import { get } from "http";
+import { CreateTicketDto } from "./ticketDto/create-ticket.dto";
 
 import { CreateTicketDto } from './ticketDto/create-ticket.dto';
 
 @Controller('/ticket')
 export class TicketController {
-  constructor(private readonly ticketService: TicketService) {}
+    constructor(private readonly ticketService : TicketService) {
+    }
+    
+    @Post()
+    createTicket(@Body() ticketDto : CreateTicketDto) {
+        return this.ticketService.createTicket(ticketDto);
+    }
 
   @UseGuards(JwtAuthGuard)
   @Post('/crear')
