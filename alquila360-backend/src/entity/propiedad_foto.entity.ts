@@ -3,12 +3,12 @@ import { Propiedad } from "./propiedad.entity";
 
 @Entity("propiedad_fotos")
 export class PropiedadFoto {
-  @PrimaryGeneratedColumn({ name: "foto_id" })
+  @PrimaryGeneratedColumn()
   id: number;
+
+  @Column()
+  ruta: string;
 
   @ManyToOne(() => Propiedad, propiedad => propiedad.fotos)
   propiedad: Propiedad;
-
-  @Column()
-  ruta_foto: string;
 }
