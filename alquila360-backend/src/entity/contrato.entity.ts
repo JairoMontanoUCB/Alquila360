@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColum
 import { Propiedad } from "./propiedad.entity";
 import { User } from "./user.entity";
 import { Pago } from "./pago.entity";
+import { Cuota } from "./cuota.entity";
 import { Ticket } from "./ticket.entity";
 import { Exclude } from 'class-transformer';
 
@@ -37,6 +38,9 @@ export class Contrato {
 
   @OneToMany(() => Pago, pago => pago.contrato)
   pagos: Pago[];
+
+  @OneToMany(() => Cuota, cuota => cuota.contrato)
+  cuotas: Cuota[];
 
   @Column({
     type: "enum",

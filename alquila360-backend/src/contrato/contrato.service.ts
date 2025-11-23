@@ -2,6 +2,7 @@ import { BadRequestException, HttpException, HttpStatus, Inject, Injectable } fr
 import AppDataSource from "src/data-source";
 import { Contrato } from "src/entity/contrato.entity";
 import { User } from "src/entity/user.entity";
+import { CuotaService } from "src/cuota/cuota.service";
 import { Propiedad } from "src/entity/propiedad.entity";
 import { DataSource } from "typeorm";
 import { CreateContratoDto } from "./contratoDto/create-contrato.dto";
@@ -14,7 +15,8 @@ import { ContratoRules } from "src/common/Rules/ContratoRules";
 
 @Injectable()
 export class ContratoService {
-    constructor(private readonly pdfService: PdfKitGeneratorService) {}
+    logger: any;
+    constructor(private readonly pdfService: PdfKitGeneratorService,private readonly cuotaService: CuotaService) {}
 
     async createContrato(contrato:Contrato)
     {
@@ -86,6 +88,14 @@ export class ContratoService {
         contrato.estado = "activo";
 
         var contratoGuardado = await AppDataSource.getRepository(Contrato).save(contrato);
+
+        // GENERAR CUOTAS AUTOMÁTICAMENTE
+        try {
+        await this.cuotaService.generarCuotasMensuales(contratoGuardado);
+        } catch (error) {
+        this.logger.error(`Error generando cuotas para contrato ${contratoGuardado.id}:`, error);
+        // No lanzamos error para no revertir la creación del contrato
+        }
 
         // Creacion PDF
 
