@@ -52,6 +52,15 @@ function SidebarTecnico() {
 
 /* ------------------------------- Datos Mock ------------------------------ */
 
+type Movimiento = {
+  id: number;
+  titulo: string;
+  fecha: string;
+  descripcion: string;
+  por: string;
+  color: "blue" | "orange" | "yellow" | "green";
+};
+
 type Ticket = {
   id: string;
   descripcion: string;
@@ -60,6 +69,17 @@ type Ticket = {
   fechaCreacion: string;
   fechaFin: string;
   estado: "Cerrado";
+
+  // datos extra para el modal
+  estadoSub: string;
+  direccion: string;
+  tipoPropiedad: string;
+  tipoTicket: string;
+  solicitanteNombre: string;
+  solicitanteRol: string;
+  solicitanteContacto: string;
+  comentarioSolicitante: string;
+  movimientos: Movimiento[];
 };
 
 const ticketsFinalizados: Ticket[] = [
@@ -71,6 +91,49 @@ const ticketsFinalizados: Ticket[] = [
     fechaCreacion: "2024-11-01",
     fechaFin: "2025-11-22",
     estado: "Cerrado",
+
+    estadoSub: "Pagado",
+    direccion: "Av. Principal 123, Piso 5",
+    tipoPropiedad: "Casa",
+    tipoTicket: "Climatizacion",
+    solicitanteNombre: "Juan Perez",
+    solicitanteRol: "Propietario",
+    solicitanteContacto: "555-1234",
+    comentarioSolicitante: "Sistema de calefaccion no funciona",
+    movimientos: [
+      {
+        id: 1,
+        titulo: "Ticket creado",
+        fecha: "2024-11-01",
+        descripcion: "Ticket generado en el sistema",
+        por: "Juan Perez",
+        color: "blue",
+      },
+      {
+        id: 2,
+        titulo: "Tecnico asignado",
+        fecha: "2024-11-01",
+        descripcion: "Ticket asignado a tecnico",
+        por: "Administrador",
+        color: "orange",
+      },
+      {
+        id: 3,
+        titulo: "En proceso",
+        fecha: "2025-11-22",
+        descripcion: "Trabajo iniciado",
+        por: "Pedro Garcia",
+        color: "yellow",
+      },
+      {
+        id: 4,
+        titulo: "Finalizado",
+        fecha: "2025-11-22",
+        descripcion: "Trabajo completado exitosamente",
+        por: "Pedro Garcia",
+        color: "green",
+      },
+    ],
   },
 ];
 
@@ -124,8 +187,14 @@ export default function HistorialTicketsTecnicoPage() {
             </span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <FiltroSelect label="Propiedad" placeholder="Todas las propiedades" />
-            <FiltroSelect label="Prioridad" placeholder="Todas las prioridades" />
+            <FiltroSelect
+              label="Propiedad"
+              placeholder="Todas las propiedades"
+            />
+            <FiltroSelect
+              label="Prioridad"
+              placeholder="Todas las prioridades"
+            />
             <FiltroSelect label="Mes" placeholder="Todos los meses" />
           </div>
           <div className="mt-4 flex justify-end">
@@ -142,7 +211,8 @@ export default function HistorialTicketsTecnicoPage() {
               Tickets Finalizados
             </span>
             <span className="text-xs text-slate-400">
-              Mostrando {ticketsFinalizados.length} de {ticketsFinalizados.length} tickets
+              Mostrando {ticketsFinalizados.length} de{" "}
+              {ticketsFinalizados.length} tickets
             </span>
           </div>
 
@@ -183,30 +253,18 @@ export default function HistorialTicketsTecnicoPage() {
           </table>
         </section>
 
-        {/* Grafiquitos de barras simples (como en la maqueta) */}
+        {/* Bloques inferiores (Urgentes / Media / Baja) */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <SmallBarCard
-            title="Urgentes"
-            total={1}
-            colorClass="bg-rose-500"
-          />
-          <SmallBarCard
-            title="Media"
-            total={0}
-            colorClass="bg-amber-400"
-          />
-          <SmallBarCard
-            title="Baja"
-            total={0}
-            colorClass="bg-emerald-500"
-          />
+          <SmallBarCard title="Urgentes" total={1} colorClass="bg-rose-500" />
+          <SmallBarCard title="Media" total={0} colorClass="bg-amber-400" />
+          <SmallBarCard title="Baja" total={0} colorClass="bg-emerald-500" />
         </section>
       </section>
 
       {/* Modal Detalles Ticket */}
       {selectedTicket && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-[#f7f5ee] w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-xl shadow-xl border border-emerald-900/20">
+          <div className="bg-[#f7f5ee] w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-xl shadow-xl border border-emerald-900/20">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-emerald-900/20">
               <div>
@@ -219,7 +277,7 @@ export default function HistorialTicketsTecnicoPage() {
               </div>
               <button
                 onClick={() => setSelectedTicket(null)}
-                className="text-slate-500 hover:text-slate-700"
+                className="text-slate-500 hover:text-slate-700 text-lg"
               >
                 ✕
               </button>
@@ -228,40 +286,41 @@ export default function HistorialTicketsTecnicoPage() {
             <div className="px-6 py-4 space-y-4 text-sm">
               {/* Prioridad / Estado */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="border border-emerald-900/20 rounded-lg p-3">
+                <div className="border border-emerald-900/20 rounded-lg p-3 bg-white">
                   <p className="text-xs text-slate-500 mb-1">Prioridad</p>
                   <PrioridadBadge prioridad={selectedTicket.prioridad} />
                 </div>
-                <div className="border border-emerald-900/20 rounded-lg p-3">
+                <div className="border border-emerald-900/20 rounded-lg p-3 bg-white">
                   <p className="text-xs text-slate-500 mb-1">Estado Actual</p>
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-300">
                     Cerrado
                   </span>
                   <p className="mt-2 text-[11px] text-slate-500">
-                    Subestado: Pagado
+                    Subestado: {selectedTicket.estadoSub}
                   </p>
                 </div>
               </div>
 
               {/* Info propiedad */}
-              <div className="border border-emerald-900/20 rounded-lg p-3 bg-white/60">
+              <div className="border border-emerald-900/20 rounded-lg p-3 bg-emerald-50/40">
                 <p className="text-xs text-slate-500 mb-1">
                   Informacion de la Propiedad
                 </p>
-                <p className="text-sm font-semibold text-[#123528]">
-                  Direccion:
-                  <span className="font-normal ml-1">{selectedTicket.propiedad}</span>
+                <p className="text-sm">
+                  <span className="font-semibold">Direccion:</span>{" "}
+                  {selectedTicket.direccion}
                 </p>
                 <p className="text-sm">
-                  Tipo: <span className="text-slate-600">Casa</span>
+                  <span className="font-semibold">Tipo:</span>{" "}
+                  {selectedTicket.tipoPropiedad}
                 </p>
                 <p className="text-sm">
-                  Tipo de Ticket:{" "}
-                  <span className="text-slate-600">Climatizacion</span>
+                  <span className="font-semibold">Tipo de Ticket:</span>{" "}
+                  {selectedTicket.tipoTicket}
                 </p>
               </div>
 
-              {/* Descripcion */}
+              {/* Descripcion problema */}
               <div className="border border-emerald-900/20 rounded-lg p-3 bg-white">
                 <p className="text-xs text-slate-500 mb-1">
                   Descripcion del Problema
@@ -270,9 +329,88 @@ export default function HistorialTicketsTecnicoPage() {
                   {selectedTicket.descripcion}
                 </p>
               </div>
+
+              {/* Info solicitante */}
+              <div className="border border-emerald-900/20 rounded-lg p-3 bg-amber-50/60">
+                <p className="text-xs font-semibold text-slate-600 mb-2">
+                  Informacion del Solicitante
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                  <div>
+                    <p className="text-[11px] text-slate-500">Nombre</p>
+                    <p className="font-semibold">
+                      {selectedTicket.solicitanteNombre}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-slate-500">Rol</p>
+                    <p className="font-semibold">
+                      {selectedTicket.solicitanteRol}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-slate-500">Contacto</p>
+                    <p className="font-semibold">
+                      {selectedTicket.solicitanteContacto}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Comentarios solicitante */}
+              <div className="border border-emerald-900/20 rounded-lg p-3 bg-yellow-50/70">
+                <p className="text-xs font-semibold text-slate-600 mb-2">
+                  Comentarios del Solicitante
+                </p>
+                <p className="text-xs text-slate-700">
+                  {selectedTicket.comentarioSolicitante}
+                </p>
+              </div>
+
+              {/* Historial de movimientos */}
+              <div className="border border-emerald-900/20 rounded-lg p-3 bg-white">
+                <p className="text-xs font-semibold text-slate-600 mb-3">
+                  Historial de Movimientos
+                </p>
+                <div className="relative pl-4">
+                  {/* linea vertical */}
+                  <div className="absolute left-1 top-2 bottom-2 w-px bg-slate-200" />
+                  <div className="space-y-4">
+                    {selectedTicket.movimientos.map((mov) => (
+                      <div key={mov.id} className="relative pl-4 text-xs">
+                        {/* punto de color */}
+                        <span
+                          className={`absolute left-0 top-1 w-3 h-3 rounded-full border-2 border-white shadow ${
+                            mov.color === "blue"
+                              ? "bg-blue-500"
+                              : mov.color === "orange"
+                              ? "bg-orange-500"
+                              : mov.color === "yellow"
+                              ? "bg-amber-400"
+                              : "bg-emerald-500"
+                          }`}
+                        />
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                          <span className="font-semibold">{mov.titulo}</span>
+                          <span className="text-[11px] text-slate-500">
+                            {mov.fecha}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-600">
+                          {mov.descripcion}
+                        </p>
+                        <p className="text-[11px] text-slate-500">
+                          Por: {mov.por}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="flex justify-end gap-3 px-6 py-4 border-t border-emerald-900/10 bg-white/70 rounded-b-xl">
+            {/* Footer */}
+            <div className="flex justify-end px-6 py-4 border-t border-emerald-900/10 bg-white/80 rounded-b-xl">
               <button
                 onClick={() => setSelectedTicket(null)}
                 className="px-4 py-2 rounded-lg text-xs border border-slate-300 hover:bg-slate-100"
@@ -357,3 +495,4 @@ function SmallBarCard({ title, total, colorClass }: SmallBarProps) {
     </div>
   );
 }
+
