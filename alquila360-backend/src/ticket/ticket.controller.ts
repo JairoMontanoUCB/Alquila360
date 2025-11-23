@@ -14,38 +14,45 @@ export class TicketController {
         return this.ticketService.createTicket(ticketDto);
     }
 
-    @Get()
-    getAllTicket() {
-        return this.ticketService.getAllTicket();
-    }
-    @Get('/:id')
-    getTicketById(@Param()param: any) {
-        return this.ticketService.getTicketById(param.id);
-    }
-    @Put('/:id')
-    updateTicket(@Param()param: any, @Body() ticket: Ticket) {
-        return this.ticketService.updateTicket(param.id, ticket);
-    }
-    @Delete('/:id')
-    deleteTicket(@Param()param: any) {
-        return this.ticketService.deleteTicket(param.id);
-    }
+  @UseGuards(JwtAuthGuard)
+  @Post('/crear')
+  @UseInterceptors(
+    FilesInterceptor('fotos', 10, {
+      storage: diskStorage({
+        destination: './storage/tickets',
+        filename: (req, file, cb) => {
+          const name = uuid() + path.extname(file.originalname);
+          cb(null, name);
+        }
+      })
+    })
+  )
+  crear(
+    @Req() req,
+    @Body() body: any,
+    @UploadedFiles() fotos: Express.Multer.File[]
+  ) {
+    return this.ticketService.crearTicket(req.user.id, body, fotos);
+  }
 
-    @Put('/:id/asignar-tecnico')
-    asignarTecnico(
-        @Param('id') id: number,
-        @Body('tecnicoId') tecnicoId: number
-    ) {
-        return this.ticketService.asignarTecnico(id, tecnicoId);
-    }
-    @Put('/:id/estado')
-    actualizarEstado(
-        @Param('id') id: number,
-        @Body('estado') estado: string
-    ) {
-        return this.ticketService.actualizarEstado(id, estado);
-    }
+  @UseGuards(JwtAuthGuard)
+  @Get('mis-tickets')
+  getMisTickets(@Req() req) {
+    return this.ticketService.getTicketsByUsuario(req.user.id);
+  }
 
+  @Patch(':id/prioridad')
+  cambiarPrioridad(@Param('id') id: number, @Body() body: any) {
+    return this.ticketService.cambiarPrioridad(id, body.prioridad);
+  }
+
+  @Patch(':id/estado')
+  cambiarEstado(@Param('id') id: number, @Body() body: any) {
+    return this.ticketService.cambiarEstado(id, body.estado);
+  }
+
+  @Patch(':id/asignar')
+  asignarTecnico(@Param('id') id: number, @Body() body: any) {
+    return this.ticketService.asignarTecnico(id, body.tecnicoId);
+  }
 }
-
-

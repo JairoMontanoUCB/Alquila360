@@ -31,7 +31,11 @@ export class TicketService {
             await AppDataSource.getRepository(TicketFoto).save(fotosArray);
         }
 
-        return ticket;
+    for (const foto of fotos) {
+      const tFoto = new TicketFoto();
+      tFoto.ruta = `/storage/tickets/${foto.filename}`;
+      tFoto.ticket = ticket;
+      await AppDataSource.getRepository(TicketFoto).save(tFoto);
     }
 
     async getAllTicket()

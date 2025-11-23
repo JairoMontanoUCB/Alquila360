@@ -10,5 +10,5 @@ export class TicketFoto {
   ticket: Ticket;
 
   @Column()
-  ruta_foto: string;
+  ruta: string;
 }
