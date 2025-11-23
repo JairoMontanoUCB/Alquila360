@@ -29,3 +29,21 @@ export class UsuarioNoActivoException extends BusinessException {
         super(`El usuario ${usuarioId} no está activo (estado: ${estado})`);
     }
 }
+
+export class CuotaNoEncontradaException extends BusinessException {
+    constructor(cuotaId: number) {
+        super(`Cuota con ID ${cuotaId} no encontrada`);
+    }
+}
+
+export class CuotaNoPendienteException extends BusinessException {
+    constructor(cuotaId: number, estado: string) {
+        super(`La cuota ${cuotaId} no está pendiente (estado: ${estado})`);
+    }
+}
+
+export class MontoNoCoincideException extends BusinessException {
+    constructor(montoPago: number, montoCuota: number) {
+        super(`El monto del pago (${montoPago}) no coincide con el monto de la cuota (${montoCuota})`);
+    }
+}
