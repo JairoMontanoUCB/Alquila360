@@ -17,7 +17,7 @@ type Propiedad = {
   servicios: string[];
 };
 
-const propiedades: Propiedad[] = [
+const propiedadesIniciales: Propiedad[] = [
   {
     img: "/propiedad.png",
     direccion: "Av. Principal 123, Piso 5",
@@ -47,9 +47,39 @@ const propiedades: Propiedad[] = [
 ];
 
 export default function PropiedadesPage() {
+  const [listaPropiedades, setListaPropiedades] =
+    useState<Propiedad[]>(propiedadesIniciales);
+
   const [openAdd, setOpenAdd] = useState(false);
   const [openReport, setOpenReport] = useState(false);
   const [selectedProp, setSelectedProp] = useState<Propiedad | null>(null);
+
+  // --- STATE DEL FORMULARIO NUEVA PROPIEDAD ---
+  const [nombreProp, setNombreProp] = useState(""); // solo para referencia, lo usamos en descripción
+  const [tipoProp, setTipoProp] = useState("Casa");
+  const [direccion, setDireccion] = useState("");
+  const [superficie, setSuperficie] = useState("");
+  const [ambientes, setAmbientes] = useState("");
+  const [estadoProp, setEstadoProp] = useState<"Disponible" | "Ocupada">(
+    "Disponible"
+  );
+  const [precio, setPrecio] = useState("");
+  const [garantia, setGarantia] = useState("");
+  const [descripcion, setDescripcion] = useState("");
+  const [serviciosTexto, setServiciosTexto] = useState("");
+
+  const resetForm = () => {
+    setNombreProp("");
+    setTipoProp("Casa");
+    setDireccion("");
+    setSuperficie("");
+    setAmbientes("");
+    setEstadoProp("Disponible");
+    setPrecio("");
+    setGarantia("");
+    setDescripcion("");
+    setServiciosTexto("");
+  };
 
   const abrirReporte = (prop: Propiedad) => {
     setSelectedProp(prop);
@@ -59,6 +89,40 @@ export default function PropiedadesPage() {
   const cerrarReporte = () => {
     setOpenReport(false);
     setSelectedProp(null);
+  };
+
+  const cerrarModalAdd = () => {
+    setOpenAdd(false);
+    resetForm();
+  };
+
+  const guardarPropiedad = () => {
+    // Validación mínima
+    if (!direccion || !precio) {
+      alert("Completa al menos Dirección y Precio del Alquiler.");
+      return;
+    }
+
+    const serviciosArray = serviciosTexto
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+
+    const nuevaPropiedad: Propiedad = {
+      img: "/propiedad.png", // por ahora usamos la misma imagen
+      direccion,
+      estado: estadoProp,
+      precio,
+      descripcion: descripcion || nombreProp || "Propiedad sin descripción.",
+      tipo: tipoProp,
+      superficie: superficie ? `${superficie} m²` : "Sin dato",
+      ambientes: ambientes ? `${ambientes} ambientes` : "Sin dato",
+      garantia: garantia || "$0",
+      servicios: serviciosArray.length > 0 ? serviciosArray : ["Sin servicios"],
+    };
+
+    setListaPropiedades((prev) => [...prev, nuevaPropiedad]);
+    cerrarModalAdd();
   };
 
   return (
@@ -99,7 +163,7 @@ export default function PropiedadesPage() {
               </tr>
             </thead>
             <tbody>
-              {propiedades.map((prop, index) => (
+              {listaPropiedades.map((prop, index) => (
                 <tr key={index} className="border-t">
                   <td className="p-3">
                     <Image
@@ -147,7 +211,7 @@ export default function PropiedadesPage() {
                         </svg>
                       </button>
 
-                      {/* OJO: mismo reporte por ahora */}
+                      {/* OJO */}
                       <button
                         onClick={() => abrirReporte(prop)}
                         className="h-9 w-9 flex items-center justify-center rounded-lg border border-slate-300 bg-white hover:bg-slate-50 hover:border-slate-400 transition"
@@ -182,7 +246,7 @@ export default function PropiedadesPage() {
           <div className="bg-white w-full max-w-4xl rounded-2xl shadow-xl border border-slate-300 p-6 overflow-y-auto max-h-[90vh] relative">
             {/* BOTÓN CERRAR */}
             <button
-              onClick={() => setOpenAdd(false)}
+              onClick={cerrarModalAdd}
               className="absolute top-4 right-4 text-slate-600 hover:text-black text-xl"
             >
               ✕
@@ -197,14 +261,22 @@ export default function PropiedadesPage() {
                   <label className="text-sm font-medium">
                     Nombre de la Propiedad
                   </label>
-                  <input className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100" />
+                  <input
+                    className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100"
+                    value={nombreProp}
+                    onChange={(e) => setNombreProp(e.target.value)}
+                  />
                 </div>
 
                 <div>
                   <label className="text-sm font-medium">
                     Tipo de Propiedad
                   </label>
-                  <select className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100">
+                  <select
+                    className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100"
+                    value={tipoProp}
+                    onChange={(e) => setTipoProp(e.target.value)}
+                  >
                     <option>Casa</option>
                     <option>Departamento</option>
                     <option>Local</option>
@@ -215,7 +287,11 @@ export default function PropiedadesPage() {
               {/* DIRECCIÓN */}
               <div>
                 <label className="text-sm font-medium">Dirección Exacta</label>
-                <input className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100" />
+                <input
+                  className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100"
+                  value={direccion}
+                  onChange={(e) => setDireccion(e.target.value)}
+                />
               </div>
 
               {/* SUPERFICIE - AMBIENTES - ESTADO */}
@@ -224,21 +300,35 @@ export default function PropiedadesPage() {
                   <label className="text-sm font-medium">
                     Superficie (m²)
                   </label>
-                  <input className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100" />
+                  <input
+                    className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100"
+                    value={superficie}
+                    onChange={(e) => setSuperficie(e.target.value)}
+                  />
                 </div>
 
                 <div>
                   <label className="text-sm font-medium">
                     Número de Ambientes
                   </label>
-                  <input className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100" />
+                  <input
+                    className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100"
+                    value={ambientes}
+                    onChange={(e) => setAmbientes(e.target.value)}
+                  />
                 </div>
 
                 <div>
                   <label className="text-sm font-medium">Estado Actual</label>
-                  <select className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100">
-                    <option>Disponible</option>
-                    <option>Ocupada</option>
+                  <select
+                    className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100"
+                    value={estadoProp}
+                    onChange={(e) =>
+                      setEstadoProp(e.target.value as "Disponible" | "Ocupada")
+                    }
+                  >
+                    <option value="Disponible">Disponible</option>
+                    <option value="Ocupada">Ocupada</option>
                   </select>
                 </div>
               </div>
@@ -249,21 +339,33 @@ export default function PropiedadesPage() {
                   <label className="text-sm font-medium">
                     Precio del Alquiler
                   </label>
-                  <input className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100" />
+                  <input
+                    className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100"
+                    value={precio}
+                    onChange={(e) => setPrecio(e.target.value)}
+                  />
                 </div>
 
                 <div>
                   <label className="text-sm font-medium">
                     Precio de la Garantía
                   </label>
-                  <input className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100" />
+                  <input
+                    className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100"
+                    value={garantia}
+                    onChange={(e) => setGarantia(e.target.value)}
+                  />
                 </div>
               </div>
 
               {/* DESCRIPCIÓN */}
               <div>
                 <label className="text-sm font-medium">Descripción</label>
-                <textarea className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100 h-24" />
+                <textarea
+                  className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100 h-24"
+                  value={descripcion}
+                  onChange={(e) => setDescripcion(e.target.value)}
+                />
               </div>
 
               {/* SERVICIOS */}
@@ -274,10 +376,12 @@ export default function PropiedadesPage() {
                 <input
                   className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100"
                   placeholder="Ej: WiFi, Gas, Agua, Luz, Cable, Estacionamiento"
+                  value={serviciosTexto}
+                  onChange={(e) => setServiciosTexto(e.target.value)}
                 />
               </div>
 
-              {/* IMÁGENES */}
+              {/* IMÁGENES (dummy por ahora) */}
               <div>
                 <label className="text-sm font-medium">
                   Imágenes de la Propiedad
@@ -297,13 +401,16 @@ export default function PropiedadesPage() {
               {/* BOTONES */}
               <div className="flex justify-end gap-3 mt-4">
                 <button
-                  onClick={() => setOpenAdd(false)}
+                  onClick={cerrarModalAdd}
                   className="px-4 py-2 border rounded-lg bg-slate-200 hover:bg-slate-300"
                 >
                   Cancelar
                 </button>
 
-                <button className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-black rounded-lg font-semibold">
+                <button
+                  onClick={guardarPropiedad}
+                  className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-black rounded-lg font-semibold"
+                >
                   Guardar Propiedad
                 </button>
               </div>
@@ -344,9 +451,7 @@ export default function PropiedadesPage() {
                     <p className="text-xs text-slate-500 mb-1">
                       Tipo de Propiedad
                     </p>
-                    <p className="text-sm font-medium">
-                      {selectedProp.tipo}
-                    </p>
+                    <p className="text-sm font-medium">{selectedProp.tipo}</p>
                   </div>
 
                   <div className="bg-[#faf7f0] border border-slate-200 rounded-xl p-4">
