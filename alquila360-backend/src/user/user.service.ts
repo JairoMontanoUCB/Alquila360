@@ -1,31 +1,25 @@
 import { Injectable } from "@nestjs/common";
 import AppDataSource from "src/data-source";
 import { User } from "src/entity/user.entity";
-import { UserRating } from "src/entity/user_rating.entity";
-import { CreateUserDto } from "./userDto/create-user.dto";
-import * as bcrypt from "bcryptjs";
+import { CreateUserDto } from "src/auth/dto/userDto/create-user.dto";
 
 @Injectable()
 export class UserService {
     
     async createUser(dto: CreateUserDto) {
-    const repo = AppDataSource.getRepository(User);
-    const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(dto.password, salt);
+        const repo = AppDataSource.getRepository(User);
 
+        const newUser = repo.create({
+            nombre: dto.nombre,
+            apellido: dto.apellido,
+            email: dto.email,
+            rol: dto.rol,
+            estado: 'activo',
+            password_hash: dto.password, // luego le hacemos hash
+        });
 
-    const newUser = repo.create({
-        nombre: dto.nombre,
-        apellido: dto.apellido,
-        email: dto.email,
-        rol: 'inquilino',   // <--- rol fijo
-        estado: 'activo',
-        password_hash: hashedPassword,
-        fecha_registro: new Date()
-    });
-
-    return repo.save(newUser);
-}
+        return repo.save(newUser);
+    }
 
     async getAllUsers() {
         return await AppDataSource.getRepository(User).find();

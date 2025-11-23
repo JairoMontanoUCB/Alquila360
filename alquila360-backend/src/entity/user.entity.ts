@@ -3,7 +3,6 @@ import { Propiedad } from "./propiedad.entity";
 import { Contrato } from "./contrato.entity";
 import { Pago } from "./pago.entity";
 import { Ticket } from "./ticket.entity";
-import { UserRating } from "./user_rating.entity";
 
 @Entity("usuarios")
 export class User {
@@ -48,25 +47,6 @@ export class User {
   @OneToMany(() => Pago, pago => pago.inquilino)
   pagos: Pago[];
 
-  @OneToMany(() => UserRating, rating => rating.usuario)
-calificacionesRecibidas: UserRating[];
-
-@OneToMany(() => UserRating, rating => rating.autor)
-calificacionesRealizadas: UserRating[];
-
-@Column({ type: "float", default: 0 })
-ratingPromedio: number;
-
-@Column({ type: "int", default: 0 })
-ratingTotal: number; // suma de todas las estrellas
-
-@Column({ type: "int", default: 0 })
-ratingCount: number; // número de calificaciones hechas
-
-// Tickets creados por este usuario (inquilino)
-  @OneToMany(() => Ticket, ticket => ticket.usuario)
-tickets: Ticket[];
-
-@OneToMany(() => Ticket, ticket => ticket.tecnico)
-ticketsAsignados:  Ticket[];
+  @OneToMany(() => Ticket, ticket => ticket.inquilino)
+  tickets: Ticket[];
 }

@@ -11,14 +11,7 @@ import { AuthModule } from './auth/auth.module';
 
 
 @Module({
-imports: [
-  UserModule,
-  PropiedadModule,
-  ContratoModule,
-  TicketModule,
-  PagoModule,
-  AuthModule
-],
+  imports: [UserModule,PropiedadModule,ContratoModule,TicketModule,PagoModule,AuthModule],
   controllers: [AppController],
   providers: [AppService],
 })
