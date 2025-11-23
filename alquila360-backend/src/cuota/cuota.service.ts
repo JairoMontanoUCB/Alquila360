@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import AppDataSource from "src/data-source";
 import { Cuota } from "src/entity/cuota.entity";
 import { Contrato } from "src/entity/contrato.entity";
+import { CreateExpensaDto } from "./cuotaDto/create-expensa.dto";
 
 @Injectable()
 export class CuotaService {
@@ -142,4 +143,48 @@ export class CuotaService {
 
     return cuotasVencidas.length;
   }
+
+  //CAMBIOS PARA EXPENSAS
+  async registrarExpensa(createExpensaDto: CreateExpensaDto): Promise<Cuota> {
+    // 1. Crear una nueva Cuota
+    const cuotaRepository = AppDataSource.getRepository(Cuota);
+    const nuevaExpensa = cuotaRepository.create({
+      contrato_id: createExpensaDto.contratoId,
+      fecha_vencimiento: createExpensaDto.fechaVencimiento,
+      monto: createExpensaDto.monto,
+      // 2. CLAVE: Marcar el tipo como EXPENSA
+      tipo: 'EXPENSA',
+      estado: 'pendiente',
+      // 3. Generar número de referencia. (Necesitarás implementar esta lógica)
+      numero_referencia: this.generarReferenciaExpensa(createExpensaDto.contratoId, createExpensaDto.fechaVencimiento), // <- Reemplazar con tu lógica
+    });
+    
+    // 4. Guardar en la BD
+    return cuotaRepository.save(nuevaExpensa);
+  }
+
+  //////// funcion para consultarExpensasPorContrato 
+  async consultarExpensasPorContrato(contratoId: number): Promise<Cuota[]> {
+    // 1. Consultar y filtrar por tipo = 'EXPENSA'
+    return AppDataSource.getRepository(Cuota).find({
+      where: {
+        contrato_id: contratoId,
+        tipo: 'EXPENSA', // <-- Filtro por tipo
+      },
+      order: { fecha_vencimiento: 'DESC' },
+      // Aquí puedes añadir relaciones si necesitas mostrar datos del Contrato, etc.
+      // relations: ['contrato']
+    });
+  }
+  ///////
+  private generarReferenciaExpensa(contratoId: number, fechaVencimiento: Date): string {
+  const fecha = new Date(fechaVencimiento);
+  const year = fecha.getFullYear();
+  // El mes es base 0, por eso se suma 1. PadStart asegura dos dígitos.
+  const month = (fecha.getMonth() + 1).toString().padStart(2, '0');
+  
+  // Usamos 'E' para Expensa y el año/mes de vencimiento para identificarla.
+  return `E${contratoId.toString().padStart(6, '0')}-${year}${month}`; 
+}
+
 }

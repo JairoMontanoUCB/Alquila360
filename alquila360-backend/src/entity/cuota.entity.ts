@@ -37,4 +37,12 @@ export class Cuota {
 
   @Column({ type: "date", nullable: true })
   fecha_pago: Date;
+
+  //CAMBIOS PARA EXPENSAS
+  @Column({
+    type: "enum",
+    enum: ["ALQUILER", "EXPENSA"], // Indica el tipo de obligación
+    default: "ALQUILER"
+  })
+  tipo: string; 
 }
