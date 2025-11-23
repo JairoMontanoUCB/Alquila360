@@ -862,5 +862,6 @@ export default function MisPropiedades() {
         </div>
       )}
     </div>
-  );
+  );qqq
+  
 }
