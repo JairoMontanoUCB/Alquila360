@@ -1,186 +1,183 @@
-const sidebarBg = "#f4b000";       // amarillo
-const mainBg = "#f6f3e8";           // fondo crema
-const cardBg = "#8d9ea6";           // gris azulado de las tarjetas;
+"use client";
 
-export default function TecnicosPage() {
+import React from "react";
+import Link from "next/link";
+
+export default function TecnicoDashboardPage() {
   return (
-    <div style={{ display: "flex", minHeight: "100vh", backgroundColor: mainBg }}>
+    <main className="min-h-screen flex bg-[#0b3b2c] text-slate-900">
       {/* SIDEBAR */}
-      <aside
-        style={{
-          width: 260,
-          backgroundColor: sidebarBg,
-          color: "#fff",
-          padding: "32px 24px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 40,
-          boxShadow: "4px 0 10px rgba(0,0,0,0.25)",
-        }}
-      >
-        <div style={{ fontWeight: 800, fontSize: 28 }}>Alquila360</div>
+      <aside className="w-64 bg-[#0b3b2c] text-white flex flex-col py-6 px-4">
+        <div className="text-2xl font-bold tracking-wide mb-10 px-2">
+          ALQUILA 360
+        </div>
 
-        <nav>
-          <ul
-            style={{
-              listStyle: "none",
-              display: "flex",
-              flexDirection: "column",
-              gap: 20,
-              padding: 0,
-              margin: 0,
-            }}
+        <nav className="flex-1 space-y-1">
+          {/* Home (ACTIVO en esta pagina) */}
+          <Link
+            href="/tecnicos"
+            className="w-full block px-3 py-2 rounded-lg text-sm bg-[#4b7f5e] font-semibold"
           >
-            <SidebarItem icon="👤" label="Cuenta" />
-            <SidebarItem icon="🔔" label="Notificaciones" />
-            <SidebarItem icon="📄" label="Contratos" />
-            <SidebarItem icon="🛠️" label="Mantenimiento" />
-            <SidebarItem icon="📊" label="Reportes" />
-            <SidebarItem icon="💳" label="Pagos" />
-          </ul>
+            Home
+          </Link>
+
+          {/* Tickets Asignados */}
+          <Link
+            href="/tecnicos/tickets"
+            className="w-full block px-3 py-2 rounded-lg text-sm text-slate-100 hover:bg-[#164332]"
+          >
+            Tickets Asignados
+          </Link>
+
+          {/* Historial */}
+          <Link
+            href="/tecnicos/historial"
+            className="w-full block px-3 py-2 rounded-lg text-sm text-slate-100 hover:bg-[#164332]"
+          >
+            Historial
+          </Link>
+
+          {/* Perfil */}
+          <Link
+            href="/tecnicos/perfil"
+            className="w-full block px-3 py-2 rounded-lg text-sm text-slate-100 hover:bg-[#164332]"
+          >
+            Perfil
+          </Link>
         </nav>
+
+        <div className="mt-8 border-t border-white/10 pt-4 text-xs px-2 space-y-1">
+          <div className="text-slate-300">Tecnico</div>
+          <button className="flex items-center gap-2 text-slate-200 hover:text-white text-xs">
+            <span>↪</span>
+            <span>Cerrar Sesion</span>
+          </button>
+        </div>
       </aside>
 
-      {/* CONTENIDO PRINCIPAL */}
-      <main
-        style={{
-          flex: 1,
-          padding: "40px 80px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 32,
-        }}
-      >
-        <h1
-          style={{
-            fontSize: 28,
-            fontWeight: 700,
-            textAlign: "center",
-            marginBottom: 24,
-            color: "#0d1b2a",
-          }}
-        >
-          Hola, aqui tienes tus tareas pendientes para hoy.
-        </h1>
+      {/* CONTENIDO PRINCIPAL – Dashboard del tecnico */}
+      <section className="flex-1 bg-[#f7f5ee] px-10 py-8 overflow-y-auto">
+        <header className="mb-6">
+          <h1 className="text-3xl font-extrabold text-[#123528]">
+            Dashboard del Tecnico
+          </h1>
+          <p className="text-sm text-slate-500">
+            Resumen de tus asignaciones
+          </p>
+        </header>
 
-        {/* FILA SUPERIOR DE TARJETAS */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, minmax(260px, 1fr))",
-            gap: 32,
-            marginBottom: 24,
-          }}
-        >
-          {/* Tickets asignados */}
-          <section style={cardStyle()}>
-            <h2 style={cardTitleStyle()}>Tickets asignados</h2>
-            <div style={ticketRowStyle()}>
-              <div style={ticketStyle("red")}>2</div>
-              <div style={ticketStyle("orange")}>5</div>
-              <div style={ticketStyle("green")}>3</div>
-            </div>
-          </section>
+        {/* Tarjetas resumen superiores */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <DashboardCard title="Tickets Asignados" value="1" />
+          <DashboardCard title="En Proceso" value="1" />
+          <DashboardCard title="Finalizados" value="1" />
+        </section>
 
-          {/* Tickets en proceso */}
-          <section style={cardStyle()}>
-            <h2 style={cardTitleStyle()}>Tickets en proceso</h2>
-            <div style={ticketRowStyle()}>
-              <div style={ticketStyle("red")}>0</div>
-              <div style={ticketStyle("orange")}>5</div>
-              <div style={ticketStyle("green")}>1</div>
-            </div>
-          </section>
-        </div>
+        {/* Tickets recientes + urgentes + estadisticas (puedes ajustar como quieras) */}
+        {/* Aqui deja el contenido que ya tenias, o usa este ejemplo simplificado */}
 
-        {/* TARJETA INFERIOR */}
-        <div style={{ maxWidth: "60%", margin: "0 auto" }}>
-          <section style={cardStyle()}>
-            <h2 style={cardTitleStyle()}>Tickets finalizados</h2>
-            <div style={ticketRowStyle()}>
-              <div style={ticketStyle("red")}>0</div>
-              <div style={ticketStyle("orange")}>1</div>
-              <div style={ticketStyle("green")}>6</div>
+        {/* Tickets recientes */}
+        <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6">
+          <h2 className="font-semibold text-[#123528] mb-3">
+            Tickets Recientes
+          </h2>
+
+          <div className="space-y-3 text-sm">
+            <TicketItem
+              codigo="TKT-001"
+              prioridad="Urgente"
+              descripcion="Fuga de agua en el bano principal"
+              estado="Abierto"
+            />
+            <TicketItem
+              codigo="TKT-002"
+              prioridad="Media"
+              descripcion="La puerta de entrada no cierra correctamente"
+              estado="En proceso"
+            />
+            <TicketItem
+              codigo="TKT-004"
+              prioridad="Urgente"
+              descripcion="Sistema de calefaccion no funciona"
+              estado="Cerrado"
+            />
+          </div>
+        </section>
+
+        {/* Estadisticas del mes y tickets urgentes (simplificado) */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+            <h2 className="font-semibold text-[#123528] mb-3">
+              Estadisticas del Mes
+            </h2>
+            <div className="space-y-2 text-sm">
+              <StatRow label="Total Atendidos" value="2" />
+              <StatRow label="Pendientes" value="1" />
+              <StatRow label="Tasa de Resolucion" value="33%" />
             </div>
-          </section>
-        </div>
-      </main>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+            <h2 className="font-semibold text-[#123528] mb-3">
+              Tickets Urgentes
+            </h2>
+            <p className="text-sm text-slate-600">
+              TKT-001 - Fuga de agua en el bano principal (Abierto)
+            </p>
+          </div>
+        </section>
+      </section>
+    </main>
+  );
+}
+
+/* ---------- componentes auxiliares ---------- */
+
+type DashboardCardProps = {
+  title: string;
+  value: string;
+};
+
+function DashboardCard({ title, value }: DashboardCardProps) {
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-col justify-between">
+      <span className="text-xs text-slate-500">{title}</span>
+      <span className="text-2xl font-bold text-[#1f5237] mt-2">{value}</span>
     </div>
   );
 }
 
-/* ---------- COMPONENTES Y ESTILOS AUXILIARES ---------- */
+type TicketItemProps = {
+  codigo: string;
+  prioridad: string;
+  descripcion: string;
+  estado: string;
+};
 
-function SidebarItem({ icon, label }: { icon: string; label: string }) {
+function TicketItem({ codigo, prioridad, descripcion, estado }: TicketItemProps) {
   return (
-    <li
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        fontSize: 15,
-        cursor: "pointer",
-      }}
-    >
-      <span style={{ fontSize: 22 }}>{icon}</span>
-      <span>{label}</span>
-    </li>
+    <div className="border border-slate-200 rounded-lg px-3 py-2 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+      <div>
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-[#123528] text-sm">{codigo}</span>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">
+            {prioridad}
+          </span>
+        </div>
+        <p className="text-xs text-slate-500">{descripcion}</p>
+      </div>
+      <span className="text-xs px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 self-start md:self-auto">
+        {estado}
+      </span>
+    </div>
   );
 }
 
-function cardStyle(): React.CSSProperties {
-  return {
-    backgroundColor: cardBg,
-    borderRadius: 20,
-    padding: "24px 32px",
-    boxShadow: "0 6px 16px rgba(0,0,0,0.25)",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    minHeight: 160,
-  };
+function StatRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-slate-600">{label}</span>
+      <span className="font-semibold text-[#123528]">{value}</span>
+    </div>
+  );
 }
-
-function cardTitleStyle(): React.CSSProperties {
-  return {
-    fontSize: 18,
-    textAlign: "center",
-    marginBottom: 20,
-    color: "#111",
-    fontWeight: 500,
-  };
-}
-
-function ticketRowStyle(): React.CSSProperties {
-  return {
-    display: "flex",
-    justifyContent: "center",
-    gap: 20,
-    alignItems: "center",
-  };
-}
-
-function ticketStyle(
-  color: "red" | "orange" | "green"
-): React.CSSProperties {
-  const colors: Record<typeof color, string> = {
-    red: "#b60000",
-    orange: "#e27b11",
-    green: "#0e8c2c",
-  };
-
-  return {
-    width: 52,
-    height: 46,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    border: `3px solid ${colors[color]}`,
-    color: colors[color],
-    fontSize: 20,
-    fontWeight: 700,
-    backgroundColor: "transparent",
-    borderRadius: 6,
-  };
-}
-
