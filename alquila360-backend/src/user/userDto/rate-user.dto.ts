@@ -1,7 +1,6 @@
-import { IsInt, IsOptional, IsString, Min, Max } from "class-validator";
+import { IsInt, Min, Max, IsOptional, IsString } from "class-validator";
 
 export class RateUserDto {
-
   @IsInt()
   @Min(1)
   @Max(5)

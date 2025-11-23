@@ -28,7 +28,7 @@ export class Propiedad {
   estado: string;
 
   @Column({ type: "text", nullable: true })
-  descripcion: string;
+descripcion: string | null;
 
   @Column({ type: "decimal", nullable: true })
   precio_referencia: number;

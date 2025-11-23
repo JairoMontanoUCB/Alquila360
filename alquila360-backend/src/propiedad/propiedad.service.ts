@@ -10,47 +10,40 @@ import { PropiedadRules } from "src/common/Rules/PropiedadRules";
 @Injectable()
 export class PropiedadService {
 
-    async createPropiedad(propiedadDto: CreatePropiedadDto) {
-        var propietario = await AppDataSource.getRepository(User).findOneBy({ 
-            id: propiedadDto.propietarioId 
-        });
+async createPropiedad(propiedadDto: CreatePropiedadDto, fotos: Express.Multer.File[]) {
+ const propiedadRepo = AppDataSource.getRepository(Propiedad);
+const fotoRepo = AppDataSource.getRepository(PropiedadFoto);
 
-        // validar propietario
-        PropiedadRules.ValidarPropietario(propietario!);
+// Crear propiedad
+const propiedad = propiedadRepo.create({
+    direccion: propiedadDto.direccion,
+    ciudad: propiedadDto.ciudad,
+    tipo: propiedadDto.tipo,
+    estado: "disponible",
+    descripcion: propiedadDto.descripcion ?? null,
+    precio_referencia: propiedadDto.precio_referencia,
+    propietario: { id: propiedadDto.propietarioId }
+});
 
-        if(propietario?.rol == 'inquilino'){
-            propietario.rol = 'propietario';
+await propiedadRepo.save(propiedad);
 
-            await AppDataSource.getRepository(User).save(propietario);
-        }
+// Guardar fotos
+if (fotos && fotos.length > 0) {
+    for (const foto of fotos) {
+        const nuevaFoto = fotoRepo.create({
+    ruta_foto: `/storage/propiedades/${foto.filename}`,
+    propiedad: propiedad
+});
 
-        PropiedadRules.ValidarDatosContrato(propiedadDto);
-        
-        // Crea propiedad
-        const propiedad = await AppDataSource.getRepository(Propiedad).save({
-            direccion: propiedadDto.direccion,
-            ciudad: propiedadDto.ciudad,
-            tipo: propiedadDto.tipo,
-            estado: 'disponible', 
-            descripcion: propiedadDto.descripcion,
-            precio_referencia: propiedadDto.precio_referencia,
-            propietario: { id: propiedadDto.propietarioId }
-        });
-    
-        // Guardar fotos 
-        if (propiedadDto.UrlFotos && propiedadDto.UrlFotos.length > 0) {
-            const fotoRepo = AppDataSource.getRepository(PropiedadFoto);
-            
-            const fotosAInsertar = propiedadDto.UrlFotos.map((ruta: string) => ({
-                ruta_foto: ruta,
-                propiedad: { id: propiedad.id } 
-            }));
-    
-            await fotoRepo.save(fotosAInsertar);
-        }
-
-        return propiedad;
+        await fotoRepo.save(nuevaFoto);
     }
+}
+
+  return {
+    message: 'Propiedad creada correctamente',
+    id: propiedad.id,
+  };
+}
 
 
     async getAllPropiedad() {

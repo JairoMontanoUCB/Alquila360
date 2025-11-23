@@ -1,25 +1,44 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  Patch,
+  Req,
+  UseGuards,
+  UseInterceptors,
+  UploadedFiles
+} from "@nestjs/common";
+
 import { TicketService } from "./ticket.service";
-import { Ticket } from "src/entity/ticket.entity";
-import { get } from "http";
 import { CreateTicketDto } from "./ticketDto/create-ticket.dto";
 
-@Controller('/ticket')
-export class TicketController {
-    constructor(private readonly ticketService : TicketService) {
-    }
-    
-    @Post()
-    createTicket(@Body() ticketDto : CreateTicketDto) {
-        return this.ticketService.createTicket(ticketDto);
-    }
+import { JwtAuthGuard } from "src/auth/jwt-auth.guard";
+import { FilesInterceptor } from "@nestjs/platform-express";
+import { diskStorage } from "multer";
+import * as path from "path";
+import { v4 as uuid } from "uuid";
 
+@Controller("/ticket")
+export class TicketController {
+  constructor(private readonly ticketService: TicketService) {}
+
+  // ✔ Crear ticket SIN fotos usando DTO
+ createTicket(@Body() ticketDto: CreateTicketDto) {
+  return this.ticketService.createTicket(ticketDto);
+}
+
+
+  // ✔ Crear ticket CON fotos
   @UseGuards(JwtAuthGuard)
-  @Post('/crear')
+  @Post("/crear")
   @UseInterceptors(
-    FilesInterceptor('fotos', 10, {
+    FilesInterceptor("fotos", 10, {
       storage: diskStorage({
-        destination: './storage/tickets',
+        destination: "./storage/tickets",
         filename: (req, file, cb) => {
           const name = uuid() + path.extname(file.originalname);
           cb(null, name);
@@ -32,27 +51,27 @@ export class TicketController {
     @Body() body: any,
     @UploadedFiles() fotos: Express.Multer.File[]
   ) {
-    return this.ticketService.crearTicket(req.user.id, body, fotos);
+    return this.ticketService.crearTicketConFotos(req.user.id, body, fotos);
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('mis-tickets')
+  @Get("mis-tickets")
   getMisTickets(@Req() req) {
     return this.ticketService.getTicketsByUsuario(req.user.id);
   }
 
-  @Patch(':id/prioridad')
-  cambiarPrioridad(@Param('id') id: number, @Body() body: any) {
+  @Patch(":id/prioridad")
+  cambiarPrioridad(@Param("id") id: number, @Body() body: any) {
     return this.ticketService.cambiarPrioridad(id, body.prioridad);
   }
 
-  @Patch(':id/estado')
-  cambiarEstado(@Param('id') id: number, @Body() body: any) {
+  @Patch(":id/estado")
+  cambiarEstado(@Param("id") id: number, @Body() body: any) {
     return this.ticketService.cambiarEstado(id, body.estado);
   }
 
-  @Patch(':id/asignar')
-  asignarTecnico(@Param('id') id: number, @Body() body: any) {
+  @Patch(":id/asignar")
+  asignarTecnico(@Param("id") id: number, @Body() body: any) {
     return this.ticketService.asignarTecnico(id, body.tecnicoId);
   }
 }

@@ -8,7 +8,9 @@ import { PropiedadFoto } from "./entity/propiedad_foto.entity";
 import { TicketFoto } from "./entity/ticket_foto.entity";
 import { UserRating } from "./entity/user_rating.entity";  // ← FALTA ESTA IMPORTACIÓN
 
+
 import "reflect-metadata";
+import { Cuota } from "./entity/cuota.entity";
 
 const AppDataSource = new DataSource({
     type: "mysql",
@@ -25,7 +27,8 @@ const AppDataSource = new DataSource({
         Ticket,
         PropiedadFoto,
         TicketFoto,
-        UserRating,   // ← AGREGA ESTO
+        UserRating,
+        Cuota   // ← AGREGA ESTO
     ],
     synchronize: true,
     logging: true,

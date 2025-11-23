@@ -1,37 +1,62 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from "@nestjs/common";
-import { PropiedadService } from "./propiedad.service";
-import { Propiedad } from "src/entity/propiedad.entity";
-import { get } from "http";
-import { CreatePropiedadDto } from "./propiedadDto/create-propiedad.dto";
+import {
+  Body,
+  Controller,
+  Post,
+  Get,
+  Param,
+  Put,
+  Delete,
+  UploadedFiles,
+  UseInterceptors,
+} from '@nestjs/common';
+
+import { PropiedadService } from './propiedad.service';
+import { CreatePropiedadDto } from './propiedadDto/create-propiedad.dto';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { v4 as uuid } from 'uuid';
+import * as path from 'path';
 
 @Controller('/propiedad')
 export class PropiedadController {
-    constructor(private readonly propiedadService : PropiedadService) {
+  constructor(private readonly propiedadService: PropiedadService) {}
 
+  @Post('crear')
+  @UseInterceptors(
+    FilesInterceptor('fotos', 10, {
+      storage: diskStorage({
+        destination: './storage/propiedades',
+        filename: (req, file, cb) => {
+          const name = uuid() + path.extname(file.originalname);
+          cb(null, name);
+        },
+      }),
+    }),
+  )
+  crearPropiedad(
+    @Body() dto: CreatePropiedadDto,
+    @UploadedFiles() fotos: Express.Multer.File[],
+  ) {
+    return this.propiedadService.createPropiedad(dto, fotos);
+  }
 
-    }
-    
-    @Post()
-    createPropiedad(@Body() propiedadDto : CreatePropiedadDto) {
-        return this.propiedadService.createPropiedad(propiedadDto);
-    }
+  @Get()
+  getAll() {
+    return this.propiedadService.getAllPropiedad();
+  }
 
-    @Get()
-    getAllPropiedad() {
-        return this.propiedadService.getAllPropiedad();
-    }
-    @Get('/:id')
-    getPropiedadById(@Param()param: any) {
-        return this.propiedadService.getPropiedadById(param.id);
-    }
-    @Put('/:id')
-    updatePropiedad(@Param()param: any, @Body() propiedad: Propiedad) {
-        return this.propiedadService.updatePropiedad(param.id, propiedad);
-    }
-    @Delete('/:id')
-    deletePropiedad(@Param()param: any) {
-        return this.propiedadService.deletePropiedad(param.id);
-    }
+  @Get(':id')
+  getById(@Param('id') id: number) {
+    return this.propiedadService.getPropiedadById(id);
+  }
+
+  @Put(':id')
+  update(@Param('id') id: number, @Body() body: any) {
+    return this.propiedadService.updatePropiedad(id, body);
+  }
+
+  @Delete(':id')
+  delete(@Param('id') id: number) {
+    return this.propiedadService.deletePropiedad(id);
+  }
 }
-
-
