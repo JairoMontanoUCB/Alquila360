@@ -1,129 +1,195 @@
 "use client";
 
-export default function DashboardInquilino() {
-  // Datos fijos por ahora, luego los traen del backend
-  const resumen = {
-    contratosActivos: 3,
-    proximoPago: "15/12/2025",
-    cuotasPendientes: 1,
-    totalPendiente: 300,
-    tickets: {
-      urgentes: 0,
-      enProceso: 0,
-      resueltos: 4,
-    },
-  };
+import { useState } from "react";
+import Link from "next/link";
 
-  const menuItems = [
-    { label: "Cuenta", icon: "👤" },
-    { label: "Notificaciones", icon: "🔔" },
-    { label: "Contratos", icon: "📄" },
-    { label: "Mantenimiento", icon: "🛠️" },
-    { label: "Reportes", icon: "📑" },
-    { label: "Pagos", icon: "💳" },
-  ];
+export default function InquilinoDashboard() {
+  const [contratoActivo] = useState({
+    estado: "Vigente",
+    fechaInicio: "31/12/2023",
+    fechaFin: "31/12/2024",
+    cuotaMensual: 2500
+  });
+
+  const [proximoPago] = useState({
+    monto: 2500,
+    fecha: "Diciembre 2024",
+    vencimiento: "2024-12-10"
+  });
+
+  const [tickets] = useState({
+    abiertos: 3,
+    pendientes: 1
+  });
 
   return (
-    <div className="min-h-screen flex bg-[#f7f5ee]">
-
-      {/* SIDEBAR */}
-      <aside className="w-64 bg-[#c45a00] text-white flex flex-col">
-        <div className="px-8 py-6 border-b border-white/10">
-          <h1 className="text-3xl font-extrabold tracking-wide text-[#ffcc00]">
-            Alquila360
-          </h1>
+    <div className="min-h-screen bg-gray-50 flex">
+      <aside className="fixed left-0 top-0 h-full w-64 bg-[#1a5f4a] text-white flex flex-col">
+        <div className="p-6">
+          <h1 className="text-2xl font-bold">ALQUILA 360</h1>
         </div>
-
-        <nav className="flex-1 px-4 py-6 space-y-2">
-          {menuItems.map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-white hover:bg-white/10 transition"
-            >
-              <span className="text-xl">{item.icon}</span>
-              <span className="font-medium">{item.label}</span>
-            </button>
-          ))}
+        
+        <nav className="flex-1 px-4 space-y-2">
+          <Link href="/inquilino" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[#156b52]">
+            <span>🏠</span>
+            <span>Home</span>
+          </Link>
+          <Link href="/inquilino/contratos" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#156b52]">
+            <span>📄</span>
+            <span>Contrato</span>
+          </Link>
+          <Link href="/inquilino/pagos" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#156b52]">
+            <span>💳</span>
+            <span>Pagos</span>
+          </Link>
+          <Link href="/inquilino/ticket" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#156b52]">
+            <span>🔧</span>
+            <span>Tickets</span>
+          </Link>
+          <Link href="/inquilino/expensas" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#156b52]">
+            <span>📊</span>
+            <span>Expensas</span>
+          </Link>
+          <Link href="/inquilino/perfil" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#156b52]">
+            <span>👤</span>
+            <span>Perfil</span>
+          </Link>
         </nav>
+
+        <div className="p-4 border-t border-[#156b52]">
+          <p className="text-sm text-gray-300 mb-2">Inquilino</p>
+          <button className="flex items-center gap-3 px-4 py-3 w-full rounded-lg hover:bg-[#156b52]">
+            <span>🚪</span>
+            <span>Cerrar Sesión</span>
+          </button>
+        </div>
       </aside>
 
-      {/* CONTENIDO PRINCIPAL */}
-      <main className="flex-1 px-10 py-8">
-        <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-10">
-          Hola, aquí puedes revisar tus contratos y próximos pagos.
-        </h2>
+      <main className="ml-64 flex-1 p-8">
+        <header className="mb-8">
+          <h2 className="text-3xl font-bold text-gray-800">Mi Dashboard</h2>
+          <p className="text-gray-600">Resumen de tu alquiler</p>
+        </header>
 
-        {/* GRID 2x2 */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl">
-          {/* Contrato activo */}
-          <div className="bg-[#93a3a7] rounded-xl shadow-md px-8 py-6 flex flex-col justify-between">
-            <h3 className="text-lg font-medium text-gray-900 mb-4 text-center">
-              Contrato activo
-            </h3>
-            <div className="flex items-center justify-center gap-6">
-              <span className="text-5xl font-bold text-white">
-                {resumen.contratosActivos}
-              </span>
-              <span className="text-5xl">📄</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-gray-600 font-medium">Contrato Activo</h3>
+              <span className="text-2xl">📄</span>
             </div>
+            <p className="text-3xl font-bold text-green-600">{contratoActivo.estado}</p>
           </div>
 
-          {/* Próximo pago */}
-          <div className="bg-[#93a3a7] rounded-xl shadow-md px-8 py-6 flex flex-col justify-between">
-            <h3 className="text-lg font-medium text-gray-900 mb-4 text-center">
-              Próximo pago
-            </h3>
-            <div className="flex items-center justify-center gap-6">
-              <span className="text-3xl font-semibold text-white">
-                {resumen.proximoPago}
-              </span>
-              <span className="text-5xl">📅</span>
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-gray-600 font-medium">Próximo Pago</h3>
+              <span className="text-2xl">💰</span>
             </div>
+            <p className="text-3xl font-bold text-yellow-600">${proximoPago.monto}</p>
           </div>
 
-          {/* Cuotas pendientes */}
-          <div className="bg-[#93a3a7] rounded-xl shadow-md px-8 py-6 flex flex-col justify-between">
-            <h3 className="text-lg font-medium text-gray-900 mb-3 text-center">
-              Cuotas pendientes
-            </h3>
-            <div className="flex flex-col items-center">
-              <span className="text-5xl font-bold text-white mb-2">
-                {resumen.cuotasPendientes}
-              </span>
-              <span className="text-2xl font-bold text-red-700">
-                Total: ${resumen.totalPendiente}
-              </span>
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-gray-600 font-medium">Tickets Abiertos</h3>
+              <span className="text-2xl">🔧</span>
             </div>
+            <p className="text-3xl font-bold text-gray-800">{tickets.abiertos}</p>
           </div>
 
-          {/* Tickets abiertos */}
-          <div className="bg-[#93a3a7] rounded-xl shadow-md px-8 py-6 flex flex-col">
-            <h3 className="text-lg font-medium text-gray-900 mb-4 text-center">
-              Tickets abiertos
-            </h3>
-            <div className="flex justify-center gap-6">
-              {/* Urgentes */}
-              <div className="border-4 rounded-md px-5 py-2 border-red-700 flex items-center justify-center">
-                <span className="text-2xl font-semibold text-red-700">
-                  {resumen.tickets.urgentes}
-                </span>
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-gray-600 font-medium">Expensas Pendientes</h3>
+              <span className="text-2xl">📊</span>
+            </div>
+            <p className="text-3xl font-bold text-red-600">{tickets.pendientes}</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
+          <h3 className="text-xl font-semibold text-gray-800 mb-4">Mi Contrato Actual</h3>
+          <div className="grid grid-cols-3 gap-6">
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Fecha Inicio</p>
+              <p className="font-semibold">{contratoActivo.fechaInicio}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Fecha Fin</p>
+              <p className="font-semibold">{contratoActivo.fechaFin}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Cuota Mensual</p>
+              <p className="font-semibold">${contratoActivo.cuotaMensual}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-yellow-50 border-2 border-yellow-400 rounded-xl p-6 mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center">
+                <span className="text-2xl">⚠️</span>
               </div>
-              {/* En proceso */}
-              <div className="border-4 rounded-md px-5 py-2 border-orange-500 flex items-center justify-center">
-                <span className="text-2xl font-semibold text-orange-500">
-                  {resumen.tickets.enProceso}
-                </span>
-              </div>
-              {/* Resueltos */}
-              <div className="border-4 rounded-md px-5 py-2 border-green-600 flex items-center justify-center bg-white/5">
-                <span className="text-2xl font-semibold text-green-600">
-                  {resumen.tickets.resueltos}
-                </span>
+              <div>
+                <p className="font-semibold text-gray-800">Próximo Pago</p>
+                <p className="text-sm text-gray-600">{proximoPago.fecha} - Vence el {proximoPago.vencimiento}</p>
               </div>
             </div>
+            <div className="flex items-center gap-4">
+              <p className="text-2xl font-bold text-gray-800">${proximoPago.monto}</p>
+              <button className="px-6 py-2 bg-yellow-400 text-gray-800 rounded-lg hover:bg-yellow-500 transition font-semibold">
+                Pagar Ahora
+              </button>
+            </div>
           </div>
-        </section>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-semibold text-gray-800">Reportar Problema</h3>
+            <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2">
+              <span>➕</span>
+              <span>Nuevo Ticket</span>
+            </button>
+          </div>
+          <p className="text-gray-600">
+            ¿Tienes algún problema en tu vivienda? Crea un ticket de mantenimiento y nos encargaremos de solucionarlo.
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h3 className="text-xl font-semibold text-gray-800 mb-4">Mis Tickets Recientes</h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex-1">
+                <p className="font-semibold text-gray-800">TKT-001 - Fuga de agua en el baño principal</p>
+                <p className="text-sm text-gray-600">2024-11-18</p>
+              </div>
+              <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                Abierto
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex-1">
+                <p className="font-semibold text-gray-800">TKT-002 - La puerta de entrada no cierra correctamente</p>
+                <p className="text-sm text-gray-600">2024-11-15</p>
+              </div>
+              <span className="px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+                En proceso
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex-1">
+                <p className="font-semibold text-gray-800">TKT-003 - Pintura descascarada en la pared del dormitorio</p>
+                <p className="text-sm text-gray-600">2024-11-10</p>
+              </div>
+              <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                Abierto
+              </span>
+            </div>
+          </div>
+        </div>
       </main>
     </div>
   );
