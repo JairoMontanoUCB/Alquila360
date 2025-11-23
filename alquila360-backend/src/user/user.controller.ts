@@ -42,4 +42,8 @@ export class UserController {
   ) {
     return this.userService.calificarUsuario(usuarioId, dto);
   }
+  @Post('RegistrarTecnico')
+  RegistrarTecnico(@Body() createUserDto: CreateUserDto) {
+    return this.userService.RegistrarTecnico(createUserDto);
+  }
 }
