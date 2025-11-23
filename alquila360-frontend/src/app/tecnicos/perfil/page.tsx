@@ -1,8 +1,19 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function PerfilTecnicoPage() {
+  const pathname = usePathname();
+
+  const linkClasses = (href: string) =>
+    `w-full block px-3 py-2 rounded-lg text-sm transition ${
+      pathname === href
+        ? "bg-[#4b7f5e] font-semibold text-white"
+        : "text-slate-100 hover:bg-[#164332]"
+    }`;
+
   return (
     <main className="min-h-screen flex bg-[#0b3b2c] text-slate-900">
       {/* SIDEBAR TECNICO */}
@@ -12,10 +23,30 @@ export default function PerfilTecnicoPage() {
         </div>
 
         <nav className="flex-1 space-y-1">
-          <SidebarItem label="Home" />
-          <SidebarItem label="Tickets Asignados" />
-          <SidebarItem label="Historial" />
-          <SidebarItem label="Perfil" active />
+          <Link href="/tecnicos" className={linkClasses("/tecnicos")}>
+            Home
+          </Link>
+
+          <Link
+            href="/tecnicos/tickets"
+            className={linkClasses("/tecnicos/tickets")}
+          >
+            Tickets Asignados
+          </Link>
+
+          <Link
+            href="/tecnicos/historial"
+            className={linkClasses("/tecnicos/historial")}
+          >
+            Historial
+          </Link>
+
+          <Link
+            href="/tecnicos/perfil"
+            className={linkClasses("/tecnicos/perfil")}
+          >
+            Perfil
+          </Link>
         </nav>
 
         <div className="mt-8 border-t border-white/10 pt-4 text-xs px-2 space-y-1">
@@ -56,25 +87,6 @@ export default function PerfilTecnicoPage() {
 
 /* -------- componentes auxiliares -------- */
 
-type SidebarItemProps = {
-  label: string;
-  active?: boolean;
-};
-
-function SidebarItem({ label, active }: SidebarItemProps) {
-  return (
-    <button
-      className={`w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 text-sm transition ${
-        active
-          ? "bg-[#4b7f5e] font-semibold"
-          : "hover:bg-[#164332] text-slate-100"
-      }`}
-    >
-      <span>{label}</span>
-    </button>
-  );
-}
-
 function ProfileRow({
   label,
   value,
@@ -91,4 +103,3 @@ function ProfileRow({
     </div>
   );
 }
-
