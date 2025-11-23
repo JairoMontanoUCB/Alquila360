@@ -58,7 +58,7 @@ export class TicketService {
       });
       await repoFoto.save(foto);
     }
-}
+
 
     return ticket;
   }
