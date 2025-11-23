@@ -59,4 +59,21 @@ export class ContratoRules {
             throw new BusinessException('No se pudo cargar el contrato completo');
         }
     }
+
+    static validarEstadoContratoNoFinalizado(estado: string): void {
+        if (estado !== 'activo') {
+            throw new BusinessException('El contrato ya ha sido finalizado y no se pueden realizar más acciones sobre él');
+        }
+    }
+
+    static validarDescuentoGarantia(nuevaGarantia: number): void {
+        // Si la nueva garantia es negativa, ajustar la ultima cuota
+
+        if (nuevaGarantia < 0) {
+            var cantidadAdeudada = Math.abs(nuevaGarantia);
+            // Aqui cambiar el monto de la ultima cuota 
+            throw new BusinessException(`La garantia no alcanzo para el ultimo mes. Queda una deuda de ${cantidadAdeudada}`);
+        }
+    }
+
 }

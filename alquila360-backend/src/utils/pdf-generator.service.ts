@@ -2,12 +2,14 @@ import { Injectable } from "@nestjs/common";
 import * as fs from "fs";
 import * as path from "path";
 import PDFDocument = require("pdfkit");
+import { Contrato } from "src/entity/contrato.entity";
 import { Propiedad } from "src/entity/propiedad.entity";
 import { User } from "src/entity/user.entity";
 
 @Injectable()
 export class PdfKitGeneratorService {
 
+  //#region PaymentPDF
   async generatePaymentPDF(data: {
     id: number;
     fecha: Date;
@@ -81,6 +83,8 @@ export class PdfKitGeneratorService {
       writeStream.on("error", reject);
     });
   }
+  //#endregion
+  //#region ContractPDF
   async generateContractPDF(data: {
         Id : number;
         Inquilino : User;
@@ -174,5 +178,83 @@ export class PdfKitGeneratorService {
       writeStream.on("error", reject);
     });
   }
+  //#endregion
+  //#region FinalReceiptPDF
+  async generateFinalReceiptPDF(data: {
+    contrato: Contrato, 
+    ultimoAlquiler: number, 
+    garantiaFinal: number,
+    tiempoContrato: number,
+    Inquilino: User,
+    Propiedad: Propiedad
+  }): Promise<string> {
 
+    // Ruta del archivo
+    const storageDir = path.join(process.cwd(), "storage/RecibosFinales");
+    if (!fs.existsSync(storageDir)) {
+      fs.mkdirSync(storageDir, { recursive: true });
+    }
+
+    const pdfPath = path.join(storageDir, `ReciboFinal-${data.contrato.id}.pdf`);
+
+    // Crear documento PDF
+    const doc = new PDFDocument();
+
+    // Guardar PDF en la ruta
+    const writeStream = fs.createWriteStream(pdfPath);
+    doc.pipe(writeStream);
+
+    // ------------------------------------
+    //  CABECERA
+    // ------------------------------------
+    doc.fontSize(22).text("RECIBO FINAL", { align: "center" });
+    doc.moveDown();
+
+    // ------------------------------------
+    //  INFORMACIÓN DEL PAGO
+    // ------------------------------------
+    doc.fontSize(16).text("Datos del recibo final del contrato");
+    doc.fontSize(12)
+      .text(`Tiempo de contrato: ${data.tiempoContrato}`)
+      .text(`Montos mensuales de las cuotas: Bs. ${data.ultimoAlquiler}`)
+      .text(`Garantia Restante:${data.garantiaFinal}`)
+      .moveDown();
+    doc.moveDown();
+
+    // ------------------------------------
+    //  PROPIEDAD
+    // ------------------------------------
+    doc.fontSize(16).text("Propiedad");
+    doc.fontSize(12)
+      .text(`Descripción: ${data.Propiedad.descripcion}`)
+      .text(`Dirección: ${data.Propiedad.direccion}`)
+      .text(`Dueño: ${data.Propiedad.propietario?.nombre ?? 'No especificado'} ${data.Propiedad.propietario?.apellido ?? ''}`);
+    doc.moveDown();
+
+    // ------------------------------------
+    //  INQUILINO
+    // ------------------------------------
+    doc.fontSize(16).text("Postulante a Inquilino");
+    doc.fontSize(12)
+      .text(`Nombre: ${data.Inquilino.nombre} ${data.Inquilino.apellido}`)
+      .text(`Email: ${data.Inquilino.email}`)
+    doc.moveDown();
+
+    // ------------------------------------
+    //  PIE DE PÁGINA
+    // ------------------------------------
+    doc.text("Gracias por preferirnos. Equipo Alquila360", {
+      align: "center"
+    });
+
+
+    // Cerrar PDF
+    doc.end();
+
+    return new Promise((resolve, reject) => {
+      writeStream.on("finish", () => resolve(pdfPath));
+      writeStream.on("error", reject);
+    });
+  }
+  //#endregion
 }

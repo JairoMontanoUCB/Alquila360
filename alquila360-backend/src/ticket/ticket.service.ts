@@ -37,6 +37,7 @@ export class TicketService {
       tFoto.ticket = ticket;
       await AppDataSource.getRepository(TicketFoto).save(tFoto);
     }
+}
 
     async getAllTicket()
     {

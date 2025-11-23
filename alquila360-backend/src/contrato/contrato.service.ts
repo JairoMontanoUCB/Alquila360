@@ -174,7 +174,45 @@ export class ContratoService {
         return monto * porcentajeFinal; // La garantia se calcula en base al monto mensual y la cantidad de meses
     }
 
-    // FALTA CREAR EL CIERRE DE CONTRATO
+    async FinalizarContrato(contratoId : number){
+        // AUI CARGAR ULTIMA CUOTA
+        
+        // Conseguir Contrato
+        
+        var contrato = await this.getContratoById(contratoId);
+        if (!contrato) {
+            throw new BadRequestException(`El contrato con ID ${contratoId} no existe.`);
+        }
+
+        // Verificar estado actual
+        ContratoRules.validarEstadoContratoNoFinalizado(contrato.estado);
+        
+        // Calculos descuento
+        var ultimoAlquiler = contrato.monto_mensual;
+        var nuevaGarantia = contrato.garantia - ultimoAlquiler;
+        contrato.garantia = nuevaGarantia;
+
+        ContratoRules.validarGarantia(nuevaGarantia);
+
+
+        // Actualizar estado a "finalizado"
+        contrato.estado = "finalizado";
+        contrato.fecha_fin = new Date(); // Fecha de finalizacion es hoy
+
+        await this.updateContrato(contratoId, contrato);
+
+        const pdfPath = await this.pdfService.generateFinalReceiptPDF({
+            contrato: contrato, 
+            ultimoAlquiler: ultimoAlquiler, 
+            garantiaFinal: nuevaGarantia,
+            tiempoContrato: this.CalcularMesesContrato(contrato.fecha_inicio, new Date()),
+            Inquilino: contrato.inquilino,
+            Propiedad: contrato.propiedad
+        });
+
+        return { message: `El contrato con ID ${contratoId} ha sido finalizado.` };
+
+    }
 
     private toResponseDto(contrato: Contrato): ResponseContratoDto {
         const response = new ResponseContratoDto();
