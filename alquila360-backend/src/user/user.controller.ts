@@ -42,6 +42,7 @@ export class UserController {
   ) {
     return this.userService.calificarUsuario(usuarioId, dto);
   }
+  // Agregar solo para que admin use
   @Post('RegistrarTecnico')
   RegistrarTecnico(@Body() createUserDto: CreateUserDto) {
     return this.userService.RegistrarTecnico(createUserDto);
