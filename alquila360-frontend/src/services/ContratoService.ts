@@ -9,6 +9,7 @@ const api = axios.create({
   },
 });
 
+
 export type ContratoBackend = {
   id: number;
   fecha_inicio: string;
@@ -17,6 +18,13 @@ export type ContratoBackend = {
   garantia: number;
   estado: string;
   archivo_pdf?: string;
+  id_propiedad: number;    
+  inquilino: {
+    id: number;
+    nombre: string;
+    apellido: string;
+    email: string;
+  };
   propiedad: {
     id: number;
     direccion: string;
@@ -28,12 +36,6 @@ export type ContratoBackend = {
       email: string;
     };
   };
-  inquilino: {
-    id: number;
-    nombre: string;
-    apellido: string;
-    email: string;
-  };
 };
 
 export type CreateContratoDto = {
@@ -42,6 +44,16 @@ export type CreateContratoDto = {
   monto_mensual: number;
   fecha_inicio: string;
   fecha_fin: string;
+};
+
+export type UpdateContratoDto = {
+  propiedadId?: number;
+  inquilinoId?: number;
+  monto_mensual?: number;
+  fecha_inicio?: string;
+  fecha_fin?: string;
+  garantia?: number;
+  estado?: string;
 };
 
 export type PropiedadBackend = {
@@ -68,10 +80,6 @@ export type InquilinoBackend = {
   email: string;
   rol: string;
   estado: string;
-  // Agrega estos campos si existen en tu frontend
-  telefono?: string;
-  dni?: string;
-  fecha_registro?: string;
 };
 
 export type PropietarioBackend = {
@@ -85,59 +93,57 @@ export type PropietarioBackend = {
 //Contratos
 
   // Obtener todos los contratos
-export const contratoService = {
-  async getContratos(): Promise<ContratoBackend[]> {
-    const response = await api.get('');
-    return response.data;
-  },
-
-  // Obtener contrato por ID
-  async getContratoById(id: number): Promise<ContratoBackend> {
-    const response = await api.get(`/${id}`);
-    return response.data;
-  },
-
-  // Registrar nuevo contrato
-  async registrarContrato(contratoData: CreateContratoDto): Promise<ContratoBackend> {
-    const response = await api.post('/registrar', contratoData);
-    return response.data;
-  },
-
-  // Finalizar contrato
-  async finalizarContrato(id: number): Promise<any> {
-    const response = await api.post(`/TerminarContrato/${id}`);
-    return response.data;
-  },
-
-// Propiedades
-
-  async getPropiedadesDisponibles(): Promise<PropiedadBackend[]> {
-    const response = await api.get('/propiedad/disponibles/contratos');
-    return response.data;
-  },
-
-  async getPropiedades(): Promise<PropiedadBackend[]> {
-    const response = await api.get('/propiedad');
-    return response.data;
-  },
-// Inquilinos y Propietarios
-
-  async getInquilinos(): Promise<InquilinoBackend[]> {
-    const response = await api.get('/user/rol/inquilinos');
-    return response.data;
-  },
-
-  async getPropietarios(): Promise<PropietarioBackend[]> {
-    const response = await api.get('/user/rol/propietarios');
-    return response.data;
-  },
-
-  async getUsuariosActivos(): Promise<(InquilinoBackend | PropietarioBackend)[]> {
-    const response = await api.get('/user/activos');
-    return response.data;
-  }
+  export const contratoService = {
+    // Contratos - RUTAS CORREGIDAS
+    async getContratos(): Promise<ContratoBackend[]> {
+      const response = await api.get('/contrato');
+      return response.data;
+    },
   
-
-  // Obtener propietarios activos
+    async getContratoById(id: number): Promise<ContratoBackend> {
+      const response = await api.get(`/contrato/${id}`);
+      return response.data;
+    },
   
-};
+    async registrarContrato(contratoData: CreateContratoDto): Promise<ContratoBackend> {
+      const response = await api.post('/contrato/registrar', contratoData);
+      return response.data;
+    },
+  
+    async finalizarContrato(id: number): Promise<any> {
+      const response = await api.post(`/contrato/TerminarContrato/${id}`);
+      return response.data;
+    },
+  
+    async updateContrato(id: number, contratoData: UpdateContratoDto): Promise<ContratoBackend> {
+      const response = await api.put(`/contrato/${id}`, contratoData);
+      return response.data;
+    },
+  
+    // Propiedades - RUTAS CORREGIDAS
+    async getPropiedadesDisponibles(): Promise<PropiedadBackend[]> {
+      const response = await api.get('/propiedad/disponibles/contratos');
+      return response.data;
+    },
+  
+    async getPropiedades(): Promise<PropiedadBackend[]> {
+      const response = await api.get('/propiedad');
+      return response.data;
+    },
+  
+    // Inquilinos - RUTAS CORREGIDAS
+    async getInquilinos(): Promise<InquilinoBackend[]> {
+      const response = await api.get('/user/rol/inquilinos');
+      return response.data;
+    },
+  
+    async getPropietarios(): Promise<InquilinoBackend[]> {
+      const response = await api.get('/user/rol/propietarios');
+      return response.data;
+    },
+  
+    async getUsuariosActivos(): Promise<InquilinoBackend[]> {
+      const response = await api.get('/user/activos');
+      return response.data;
+    }
+  };

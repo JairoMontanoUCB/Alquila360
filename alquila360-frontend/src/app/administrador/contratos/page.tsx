@@ -83,43 +83,58 @@ export default function ContratosPage() {
     try {
       setLoading(true);
       setError(null);
-
-        // Cargar todos los datos en paralelo
+  
+      // Cargar todos los datos
       const [contratosData, propiedadesData, inquilinosData] = await Promise.all([
         contratoService.getContratos(),
         contratoService.getPropiedadesDisponibles(),
         contratoService.getInquilinos()        
       ]);
+  
+      // Asegurar que sean arrays
+      const contratosArray = Array.isArray(contratosData) ? contratosData : [];
+      const propiedadesArray = Array.isArray(propiedadesData) ? propiedadesData as PropiedadBackend[] : [];
+      const inquilinosArray = Array.isArray(inquilinosData) ? inquilinosData as InquilinoBackend[] : [];
+  
+      // CONVERTIR CONTRATOS - SOLUCIÓN TEMPORAL
+      let contratosFrontend: Contrato[] = [];
       
-       // Convertir contratos del backend al formato frontend
-      const contratosFrontend = contratosData.map(contrato => ({
-        id: `C-${String(contrato.id).padStart(3, "0")}`,
-        propiedad: contrato.propiedad.direccion,
-        inquilino: `${contrato.inquilino.nombre} ${contrato.inquilino.apellido}`,
-        propietario: `${contrato.propiedad.propietario.nombre} ${contrato.propiedad.propietario.apellido}`,
-        fechaInicio: contrato.fecha_inicio,
-        fechaFin: contrato.fecha_fin,
-        montoAlquiler: contrato.monto_mensual.toString(),
-        montoGarantia: contrato.garantia.toString(),
-        frecuenciaCobro: "Mensual",
-        numeroCuotas: "12", 
-        diaVencimiento: "10",
-        penalidades: "Mora del 2% por día de atraso en el pago. El locatario será responsable de los costos de reparación por daños causados.",
-        clausulas: "El locatario se compromete a mantener la propiedad en buen estado. No se permiten modificaciones estructurales sin autorización escrita.",
-        estado: contrato.estado === 'activo' ? 'Vigente' : 'Finalizado' as EstadoContrato 
-      }));
+      if (contratosArray.length > 0) {
+        contratosFrontend = contratosArray.map((contrato, index) => {
+          // BUSCAR PROPIEDAD
+          const propiedadEncontrada = propiedadesArray.find(p => p.id === contrato.id_propiedad);
+
+          const inquilinoEncontrado = inquilinosArray[index] || inquilinosArray[0];
+  
+          return {
+            id: `C-${String(contrato.id).padStart(3, "0")}`,
+            propiedad: propiedadEncontrada?.direccion || `Propiedad ID: ${contrato.id_propiedad}`,
+            inquilino: inquilinoEncontrado ? 
+              `${inquilinoEncontrado.nombre} ${inquilinoEncontrado.apellido}` : 
+              'Inquilino no disponible',
+            propietario: propiedadEncontrada?.propietario ?
+              `${propiedadEncontrada.propietario.nombre} ${propiedadEncontrada.propietario.apellido}` :
+              'Propietario no disponible',
+            fechaInicio: contrato.fecha_inicio,
+            fechaFin: contrato.fecha_fin,
+            montoAlquiler: contrato.monto_mensual?.toString() || "0",
+            montoGarantia: contrato.garantia?.toString() || "0",
+            frecuenciaCobro: "Mensual",
+            numeroCuotas: "12", 
+            diaVencimiento: "10",
+            penalidades: "Mora del 2% por día de atraso...",
+            clausulas: "El locatario se compromete...",
+            estado: contrato.estado === 'activo' ? 'Vigente' : 'Finalizado' as EstadoContrato 
+          };
+        });
+      }
       
       setContratos(contratosFrontend);
-      setPropiedades(propiedadesData);
-      setInquilinos(inquilinosData);
+      setPropiedades(propiedadesArray);
+      setInquilinos(inquilinosArray);
       
-    } catch (err) {
-      console.error("Error cargando datos:", err);
-      setError("No se pudieron cargar los datos del sistema");
-      // En caso de error, dejar arrays vacíos en lugar de datos mock
-      setContratos([]);
-      setPropiedades([]);
-      setInquilinos([]);
+    } catch (err: any) {
+      setError(`Error cargando datos: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -191,108 +206,74 @@ export default function ContratosPage() {
   };
 
   // Crear contrato en backend
-  const crearContratoBackend = async () => {
-    try {
-      // Validaciones
-      if (!formPropiedad || !formInquilino || !formFechaInicio || !formFechaFin) {
-        alert("Por favor completa todos los campos obligatorios");
-        return;
-      }
-
-      // Encontrar los id 
-      const propiedadSeleccionada = propiedades.find(p => 
-        p.direccion === formPropiedad
-      );
-      const inquilinoSeleccionado = inquilinos.find(i => 
-        `${i.nombre} ${i.apellido}` === formInquilino
-      );
-
-      if (!propiedadSeleccionada || !inquilinoSeleccionado) {
-        alert("Por favor selecciona una propiedad e inquilino válidos");
-        return;
-      }
-
-      const contratoData: CreateContratoDto = {
-        propiedadId: propiedadSeleccionada.id,
-        inquilinoId: inquilinoSeleccionado.id,
-        monto_mensual: Number(formMontoAlquiler),
-        fecha_inicio: formFechaInicio,
-        fecha_fin: formFechaFin
-      };
-
-      await contratoService.registrarContrato(contratoData);
-      
-      // Recargar datos
-      await cargarDatosIniciales();
-      
-      setOpenFormModal(false);
-      resetForm();
-      alert("Contrato creado exitosamente");
-      
-    } catch (error: any) {
-      console.error("Error creando contrato:", error);
-      alert(`Error al crear el contrato: ${error.response?.data?.message || error.message}`);
-    }
-  };
-
-  // ---- GUARDAR CONTRATO (CREAR / EDITAR) ----
-  const guardarContrato = () => {
-    if (!formPropiedad || !formInquilino) {
-      alert("Completa al menos Propiedad e Inquilino para guardar el contrato.");
+const crearContratoBackend = async () => {
+  try {
+    
+    // Validaciones
+    if (!formPropiedad || !formInquilino || !formFechaInicio || !formFechaFin) {
+      alert("Por favor completa todos los campos obligatorios");
       return;
     }
 
-    if (formMode === "crear") {
-      const nextNumber = contratos.length + 1;
-      const nuevoId = `C-${String(nextNumber).padStart(3, "0")}`;
+    // Encontrar los IDs basados en la selección
+    const propiedadSeleccionada = propiedades.find(p => 
+      p.direccion === formPropiedad
+    );
+    const inquilinoSeleccionado = inquilinos.find(i => 
+      `${i.nombre} ${i.apellido}` === formInquilino
+    );
 
-      const nuevoContrato: Contrato = {
-        id: nuevoId,
-        propiedad: formPropiedad,
-        inquilino: formInquilino,
-        propietario: formPropietario || "Propietario sin definir",
-        fechaInicio: formFechaInicio,
-        fechaFin: formFechaFin,
-        montoAlquiler: formMontoAlquiler,
-        montoGarantia: formMontoGarantia,
-        frecuenciaCobro: formFrecuenciaCobro,
-        numeroCuotas: formNumeroCuotas,
-        diaVencimiento: formDiaVencimiento,
-        penalidades: formPenalidades,
-        clausulas: formClausulas,
-        estado: "Vigente",
-      };
-
-      setContratos((prev) => [...prev, nuevoContrato]);
-      setSelectedContrato(nuevoContrato);
+    if (!propiedadSeleccionada || !inquilinoSeleccionado) {
+      alert("Por favor selecciona una propiedad e inquilino válidos");
+      return;
     }
 
-    if (formMode === "editar" && selectedContrato) {
-      const actualizado: Contrato = {
-        ...selectedContrato,
-        propiedad: formPropiedad,
-        inquilino: formInquilino,
-        propietario: formPropietario,
-        fechaInicio: formFechaInicio,
-        fechaFin: formFechaFin,
-        montoAlquiler: formMontoAlquiler,
-        montoGarantia: formMontoGarantia,
-        frecuenciaCobro: formFrecuenciaCobro,
-        numeroCuotas: formNumeroCuotas,
-        diaVencimiento: formDiaVencimiento,
-        penalidades: formPenalidades,
-        clausulas: formClausulas,
-      };
+    const contratoData: CreateContratoDto = {
+      propiedadId: propiedadSeleccionada.id,
+      inquilinoId: inquilinoSeleccionado.id,
+      monto_mensual: Number(formMontoAlquiler),
+      fecha_inicio: formFechaInicio,
+      fecha_fin: formFechaFin
+    };
+    
+    // Llamar al servicio para crear en el backend
+    const nuevoContrato = await contratoService.registrarContrato(contratoData);
 
-      setContratos((prev) =>
-        prev.map((c) => (c.id === actualizado.id ? actualizado : c))
-      );
-      setSelectedContrato(actualizado);
-    }
-
+    // Recargar datos
+    await cargarDatosIniciales();
+    
     setOpenFormModal(false);
-    setFormMode(null);
-  };
+    resetForm();
+    
+  } catch (error: any) {
+    alert(`Error al crear el contrato: ${error.response?.data?.message || error.message}`);
+  }
+};
+
+// ---- GUARDAR CONTRATO (CREAR / EDITAR) ----
+const guardarContrato = async () => {
+
+  // Validaciones
+  if (!formPropiedad || !formInquilino || !formFechaInicio || !formFechaFin) {
+    alert("Completa todos los campos obligatorios: Propiedad, Inquilino, Fechas de inicio y fin.");
+    return;
+  }
+
+  try {
+    // SOLO para crear - llamar a la función del backend
+    if (formMode === "crear") {
+      await crearContratoBackend();
+    } else {
+      // Para editar, por ahora mensaje temporal
+      alert("La edición de contratos estará disponible pronto");
+      setOpenFormModal(false);
+      setFormMode(null);
+    }
+  } catch (error: any) {
+    console.error(" Error en guardarContrato:", error);
+    alert(`Error: ${error.response?.data?.message || error.message}`);
+  }
+};
 
   return (
     <div className="min-h-screen flex bg-[#0b3b2c] text-slate-900">
