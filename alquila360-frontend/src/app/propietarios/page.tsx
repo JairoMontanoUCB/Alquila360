@@ -1,6 +1,6 @@
 "use client";
 
-import Sidebar from "../components/sideBarPropietario"; // ajusta la ruta si tu carpeta es distinta
+import Sidebar from "../components/sideBarPropietario"; 
 
 export default function DashboardPropietario() {
   // Datos de ejemplo (luego vendrán del backend)
