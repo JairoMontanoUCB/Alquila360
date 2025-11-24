@@ -147,7 +147,7 @@ export default function ExpensasPage() {
         <header className="mb-4 flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-extrabold text-[#123528]">
-              Gestion de Expensas
+              Gestion de Cuotas
             </h1>
             <p className="text-sm text-slate-500">Gastos por inmueble</p>
           </div>
