@@ -13,9 +13,9 @@ type Contrato = {
   inquilino: string;
   propietario: string;
   fechaInicio: string; // YYYY-MM-DD
-  fechaFin: string;    // YYYY-MM-DD
-  montoAlquiler: string;   // solo número, ej: "85000"
-  montoGarantia: string;   // solo número
+  fechaFin: string; // YYYY-MM-DD
+  montoAlquiler: string; // solo número, ej: "85000"
+  montoGarantia: string; // solo número
   frecuenciaCobro: string; // Mensual / Trimestral / Anual
   numeroCuotas: string;
   diaVencimiento: string;
@@ -23,6 +23,19 @@ type Contrato = {
   clausulas: string;
   estado: EstadoContrato;
 };
+
+// 🔹 Texto estático de cláusulas
+const CLAUSULAS_BASE = [
+  "1. El inquilino se compromete a pagar el monto mensual acordado en la fecha establecida.",
+  "2. El propietario se compromete a mantener la propiedad en condiciones habitables.",
+  "3. Cualquier daño a la propiedad será responsabilidad del inquilino, salvo desgaste por uso normal.",
+  "4. El contrato podrá ser renovado previo acuerdo entre ambas partes.",
+  "5. Cualquier disputa será resuelta conforme a las leyes vigentes.",
+].join("\n");
+
+// 🔹 Valores fijos para garantía y cuotas
+const MONTO_GARANTIA_FIJA = "0";
+const NUMERO_CUOTAS_FIJAS = "0";
 
 const contratosIniciales: Contrato[] = [
   {
@@ -33,14 +46,13 @@ const contratosIniciales: Contrato[] = [
     fechaInicio: "2024-01-01",
     fechaFin: "2024-12-31",
     montoAlquiler: "85000",
-    montoGarantia: "170000",
+    montoGarantia: MONTO_GARANTIA_FIJA,
     frecuenciaCobro: "Mensual",
-    numeroCuotas: "12",
+    numeroCuotas: NUMERO_CUOTAS_FIJAS,
     diaVencimiento: "10",
     penalidades:
       "Mora del 2% por día de atraso en el pago. El locatario será responsable de los costos de reparación por daños causados.",
-    clausulas:
-      "El locatario se compromete a mantener la propiedad en buen estado. No se permiten modificaciones estructurales sin autorización escrita. Los gastos de servicios públicos correrán por cuenta del locatario.",
+    clausulas: CLAUSULAS_BASE,
     estado: "Vigente",
   },
 ];
@@ -83,17 +95,14 @@ export default function ContratosPage() {
   const [formFechaFin, setFormFechaFin] = useState("");
 
   const [formMontoAlquiler, setFormMontoAlquiler] = useState("85000");
-  const [formMontoGarantia, setFormMontoGarantia] = useState("170000");
-
+  // 🔹 Garantía y cuotas FIJAS en 0 (no se pueden editar)
+  const [formMontoGarantia] = useState(MONTO_GARANTIA_FIJA);
   const [formFrecuenciaCobro, setFormFrecuenciaCobro] = useState("Mensual");
-  const [formNumeroCuotas, setFormNumeroCuotas] = useState("12");
+  const [formNumeroCuotas] = useState(NUMERO_CUOTAS_FIJAS);
   const [formDiaVencimiento, setFormDiaVencimiento] = useState("10");
 
   const [formPenalidades, setFormPenalidades] = useState(
     "Ej: Mora del 2% por día de atraso. Costo de reparaciones por daños..."
-  );
-  const [formClausulas, setFormClausulas] = useState(
-    "Agregue cualquier cláusula adicional del contrato..."
   );
 
   // ---- HELPERS PARA FORM ----
@@ -104,15 +113,11 @@ export default function ContratosPage() {
     setFormFechaInicio("");
     setFormFechaFin("");
     setFormMontoAlquiler("85000");
-    setFormMontoGarantia("170000");
+    // Garantía y cuotas siguen siendo las constantes (0)
     setFormFrecuenciaCobro("Mensual");
-    setFormNumeroCuotas("12");
     setFormDiaVencimiento("10");
     setFormPenalidades(
       "Ej: Mora del 2% por día de atraso. Costo de reparaciones por daños..."
-    );
-    setFormClausulas(
-      "Agregue cualquier cláusula adicional del contrato..."
     );
   };
 
@@ -123,12 +128,10 @@ export default function ContratosPage() {
     setFormFechaInicio(c.fechaInicio);
     setFormFechaFin(c.fechaFin);
     setFormMontoAlquiler(c.montoAlquiler);
-    setFormMontoGarantia(c.montoGarantia);
+    // Garantía y cuotas se mantienen fijas (no se cargan desde el contrato)
     setFormFrecuenciaCobro(c.frecuenciaCobro);
-    setFormNumeroCuotas(c.numeroCuotas);
     setFormDiaVencimiento(c.diaVencimiento);
     setFormPenalidades(c.penalidades);
-    setFormClausulas(c.clausulas);
   };
 
   // ---- ABRIR / CERRAR MODALES ----
@@ -180,12 +183,12 @@ export default function ContratosPage() {
         fechaInicio: formFechaInicio,
         fechaFin: formFechaFin,
         montoAlquiler: formMontoAlquiler,
-        montoGarantia: formMontoGarantia,
+        montoGarantia: MONTO_GARANTIA_FIJA, // siempre 0
         frecuenciaCobro: formFrecuenciaCobro,
-        numeroCuotas: formNumeroCuotas,
+        numeroCuotas: NUMERO_CUOTAS_FIJAS, // siempre 0
         diaVencimiento: formDiaVencimiento,
         penalidades: formPenalidades,
-        clausulas: formClausulas,
+        clausulas: CLAUSULAS_BASE, // siempre las mismas cláusulas
         estado: "Vigente",
       };
 
@@ -202,12 +205,12 @@ export default function ContratosPage() {
         fechaInicio: formFechaInicio,
         fechaFin: formFechaFin,
         montoAlquiler: formMontoAlquiler,
-        montoGarantia: formMontoGarantia,
+        montoGarantia: MONTO_GARANTIA_FIJA, // permanece 0
         frecuenciaCobro: formFrecuenciaCobro,
-        numeroCuotas: formNumeroCuotas,
+        numeroCuotas: NUMERO_CUOTAS_FIJAS, // permanece 0
         diaVencimiento: formDiaVencimiento,
         penalidades: formPenalidades,
-        clausulas: formClausulas,
+        clausulas: CLAUSULAS_BASE, // no se puede editar
       };
 
       setContratos((prev) =>
@@ -226,7 +229,7 @@ export default function ContratosPage() {
 
       {/* CONTENIDO PRINCIPAL */}
       <section className="flex-1 bg-[#f7f5ee] px-10 py-8 overflow-y-auto">
-        <header className="mb-4flex justify-between items-start flex mb-4 justify-between">
+        <header className="flex justify-between items-start mb-4">
           <div>
             <h1 className="text-3xl font-extrabold text-[#123528]">
               Contratos
@@ -678,8 +681,11 @@ export default function ContratosPage() {
                   <input
                     className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
                     value={formMontoGarantia}
-                    onChange={(e) => setFormMontoGarantia(e.target.value)}
+                    readOnly
                   />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Valor fijo (no editable en este módulo).
+                  </p>
                 </div>
               </div>
             </section>
@@ -711,8 +717,11 @@ export default function ContratosPage() {
                   <input
                     className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
                     value={formNumeroCuotas}
-                    onChange={(e) => setFormNumeroCuotas(e.target.value)}
+                    readOnly
                   />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Valor fijo (no editable en este módulo).
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-slate-700">
@@ -742,16 +751,20 @@ export default function ContratosPage() {
               />
             </section>
 
-            {/* CLÁUSULAS ADICIONALES */}
+            {/* CLÁUSULAS ADICIONALES (ESTÁTICAS) */}
             <section className="mb-6 space-y-3">
               <h3 className="font-semibold text-[#123528] text-lg">
                 Cláusulas Adicionales
               </h3>
               <textarea
-                className="w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm h-20"
-                value={formClausulas}
-                onChange={(e) => setFormClausulas(e.target.value)}
+                className="w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm h-32"
+                value={CLAUSULAS_BASE}
+                readOnly
               />
+              <p className="text-xs text-slate-500">
+                Estas cláusulas son estándar y no se pueden modificar desde este
+                módulo.
+              </p>
             </section>
 
             {/* BOTONES FINALES */}
