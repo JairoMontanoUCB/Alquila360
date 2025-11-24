@@ -1,665 +1,606 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import React, { useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 
-interface Pago {
-  id: string;
-  mes: string;
-  monto: number;
-  fechaLimite: string;
-  fechaPago: string | null;
-  estado: "Pagado" | "Pendiente" | "En Mora";
+/* -------------------------------------------------------------------------- */
+/*                                  SIDEBAR                                   */
+/* -------------------------------------------------------------------------- */
+
+const inquilinoMenu = [
+  { label: "Home", path: "/inquilino" },
+  { label: "Contrato", path: "/inquilino/contrato" },
+  { label: "Pagos", path: "/inquilino/pagos" },
+  { label: "Tickets", path: "/inquilino/tickets" },
+  { label: "Expensas", path: "/inquilino/expensas" },
+  { label: "Perfil", path: "/inquilino/perfil" },
+];
+
+function SidebarInquilino() {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  return (
+    <aside className="w-64 bg-[#0b3b2c] text-white flex flex-col py-6 px-4">
+      <div
+        className="text-2xl font-extrabold tracking-wide mb-10 px-2 cursor-pointer"
+        onClick={() => router.push("/inquilino")}
+      >
+        ALQUILA 360
+      </div>
+
+      <nav className="flex-1 space-y-1">
+        {inquilinoMenu.map((item) => {
+          const active = pathname === item.path;
+          return (
+            <button
+              key={item.path}
+              onClick={() => router.push(item.path)}
+              className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition ${
+                active ? "bg-[#4b7f5e] font-semibold" : "hover:bg-[#164332]"
+              }`}
+            >
+              {item.label}
+            </button>
+          );
+        })}
+      </nav>
+
+      <div className="mt-6 px-2 text-xs text-slate-300">Inquilino</div>
+      <button className="mt-2 px-3 py-2 text-xs text-slate-200 hover:bg-[#164332] rounded-lg text-left">
+        Cerrar sesion
+      </button>
+    </aside>
+  );
 }
 
-export default function GestionPagos() {
-  const [pagos, setPagos] = useState<Pago[]>([]);
-  const [pagosRecibidos, setPagosRecibidos] = useState(2500);
-  const [pagosPendientes, setpagosPendientes] = useState(2500);
-  const [enMora, setEnMora] = useState(2500);
+/* -------------------------------------------------------------------------- */
+/*                              DATOS DE PAGOS                                */
+/* -------------------------------------------------------------------------- */
 
-  const [showHistorial, setShowHistorial] = useState(false);
+type EstadoPago = "Pagado" | "Pendiente" | "En mora";
 
-  const [showPagoModal, setShowPagoModal] = useState(false);
+type Pago = {
+  id: string;
+  periodo: string;
+  fechaLimite: string;
+  monto: string;
+  estado: EstadoPago;
+  fechaPago: string;
+};
+
+const pagosMock: Pago[] = [
+  {
+    id: "pay1",
+    periodo: "Noviembre 2024",
+    fechaLimite: "2024-11-10",
+    monto: "$2.500",
+    estado: "Pagado",
+    fechaPago: "2024-11-01",
+  },
+  {
+    id: "pay2",
+    periodo: "Diciembre 2024",
+    fechaLimite: "2024-12-10",
+    monto: "$2.500",
+    estado: "Pendiente",
+    fechaPago: "-",
+  },
+  {
+    id: "pay3",
+    periodo: "Octubre 2024",
+    fechaLimite: "2024-10-10",
+    monto: "$2.500",
+    estado: "En mora",
+    fechaPago: "-",
+  },
+];
+
+const totalPagado = "$2.500";
+const totalPendiente = "$2.500";
+const totalMora = "$2.500";
+const totalGeneral = "$7.500";
+
+/* -------------------------------------------------------------------------- */
+/*                              PAGINA DE PAGOS                               */
+/* -------------------------------------------------------------------------- */
+
+export default function PagosInquilinoPage() {
+  const [openHistorial, setOpenHistorial] = useState(false);
   const [pagoSeleccionado, setPagoSeleccionado] = useState<Pago | null>(null);
-
-  useEffect(() => {
-    // Datos de ejemplo - conecta con tu backend
-    const data: Pago[] = [
-      {
-        id: "pay1",
-        mes: "Noviembre 2024",
-        monto: 250,
-        fechaLimite: "2024-11-10",
-        fechaPago: "2024-11-01",
-        estado: "Pagado",
-      },
-      {
-        id: "pay2",
-        mes: "Diciembre 2024",
-        monto: 250,
-        fechaLimite: "2024-12-10",
-        fechaPago: null,
-        estado: "Pendiente",
-      },
-      {
-        id: "pay3",
-        mes: "Octubre 2024",
-        monto: 250,
-        fechaLimite: "2024-10-10",
-        fechaPago: null,
-        estado: "En Mora",
-      },
-    ];
-    setPagos(data);
-
-    const totalPagado = data
-      .filter((p) => p.estado === "Pagado")
-      .reduce((sum, p) => sum + p.monto, 0);
-    const totalPendiente = data
-      .filter((p) => p.estado === "Pendiente")
-      .reduce((sum, p) => sum + p.monto, 0);
-    const totalMora = data
-      .filter((p) => p.estado === "En Mora")
-      .reduce((sum, p) => sum + p.monto, 0);
-
-    setPagosRecibidos(totalPagado);
-    setpagosPendientes(totalPendiente);
-    setEnMora(totalMora);
-  }, []);
-
-  const getEstadoColor = (estado: string) => {
-    switch (estado) {
-      case "Pagado":
-        return "bg-emerald-100 text-emerald-700";
-      case "Pendiente":
-        return "bg-amber-100 text-amber-700";
-      case "En Mora":
-        return "bg-rose-100 text-rose-700";
-      default:
-        return "bg-gray-100 text-gray-700";
-    }
-  };
+  const [stepPago, setStepPago] = useState<1 | 2>(1);
+  const [referencia, setReferencia] = useState("");
 
   const abrirPago = (pago: Pago) => {
     setPagoSeleccionado(pago);
-    setShowPagoModal(true);
+    setStepPago(1);
+    setReferencia("");
   };
 
   const cerrarPago = () => {
     setPagoSeleccionado(null);
-    setShowPagoModal(false);
+    setStepPago(1);
+    setReferencia("");
+  };
+
+  const confirmarPago = () => {
+    if (!referencia.trim()) {
+      alert("Ingresa el numero de referencia para confirmar el pago.");
+      return;
+    }
+    // Aquí podrias actualizar el estado real del pago si quisieras.
+    alert("Pago confirmado (maqueta).");
+    cerrarPago();
   };
 
   return (
-    <div className="min-h-screen bg-[#f7f5ee] flex">
-      {/* Sidebar */}
-      <aside className="fixed left-0 top-0 h-full w-64 bg-[#0b3b2c] text-white flex flex-col">
-        <div className="p-6">
-          <h1 className="text-2xl font-bold tracking-wide">ALQUILA 360</h1>
-        </div>
+    <div className="min-h-screen flex bg-[#0b3b2c] text-slate-900">
+      <SidebarInquilino />
 
-        <nav className="flex-1 px-4 space-y-2">
-          <Link
-            href="/inquilino"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#164332]"
-          >
-            <span>🏠</span>
-            <span>Home</span>
-          </Link>
-          <Link
-            href="/inquilino/contratos"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#164332]"
-          >
-            <span>📄</span>
-            <span>Contrato</span>
-          </Link>
-          <Link
-            href="/inquilino/pagos"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[#4b7f5e]"
-          >
-            <span>💳</span>
-            <span>Pagos</span>
-          </Link>
-          <Link
-            href="/inquilino/ticket"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#164332]"
-          >
-            <span>🔧</span>
-            <span>Tickets</span>
-          </Link>
-          <Link
-            href="/inquilino/expensas"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#164332]"
-          >
-            <span>📊</span>
-            <span>Expensas</span>
-          </Link>
-          <Link
-            href="/inquilino/perfil"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#164332]"
-          >
-            <span>👤</span>
-            <span>Perfil</span>
-          </Link>
-        </nav>
-
-        <div className="p-4 border-t border-white/10">
-          <p className="text-sm text-slate-200 mb-2">Inquilino</p>
-          <button className="flex items-center gap-3 px-4 py-3 w-full rounded-lg hover:bg-[#164332] text-sm">
-            <span>🚪</span>
-            <span>Cerrar Sesión</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="ml-64 flex-1 p-8">
-        <header className="flex items-center justify-between mb-8">
+      <section className="flex-1 bg-[#f7f5ee] px-10 py-8 overflow-y-auto">
+        {/* Header */}
+        <header className="mb-6 flex items-center justify-between">
           <div>
-            <h2 className="text-3xl font-bold text-[#123528]">Mis Pagos</h2>
-            <p className="text-slate-600">Historial de cuotas y alquileres</p>
+            <h1 className="text-3xl font-extrabold text-[#123528]">
+              Mis Pagos
+            </h1>
+            <p className="text-sm text-slate-500">
+              Historial de cuotas y alquileres
+            </p>
           </div>
+
           <button
-            onClick={() => setShowHistorial(true)}
-            className="px-6 py-2 bg-[#f7a81b] text-[#123528] rounded-lg hover:bg-[#ec9a03] transition font-semibold flex items-center gap-2 text-sm border border-[#d89313]"
+            onClick={() => setOpenHistorial(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-400 hover:bg-amber-500 text-xs font-semibold text-white shadow-sm"
           >
             <span>⬇️</span>
             <span>Descargar Historial</span>
           </button>
         </header>
 
-        {/* Cards de Resumen */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-xs text-slate-500">Pagos</p>
-                <h3 className="text-sm font-semibold text-[#123528]">
-                  Realizados
-                </h3>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-xl">
-                ✅
-              </div>
-            </div>
-            <p className="text-3xl font-extrabold text-emerald-600">
-              ${pagosRecibidos}
-            </p>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-xs text-slate-500">Pagos</p>
-                <h3 className="text-sm font-semibold text-[#123528]">
-                  Pendientes
-                </h3>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-xl">
-                📅
-              </div>
-            </div>
-            <p className="text-3xl font-extrabold text-amber-500">
-              ${pagosPendientes}
-            </p>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-xs text-slate-500">En Mora</p>
-                <h3 className="text-sm font-semibold text-[#123528]">Total</h3>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-xl">
-                💳
-              </div>
-            </div>
-            <p className="text-3xl font-extrabold text-rose-500">${enMora}</p>
-          </div>
-        </div>
-
-        {/* Tabla de Pagos */}
-        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-200">
-            <h3 className="text-sm font-semibold text-[#123528]">
-              Todas las Cuotas
-            </h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    ID
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    Mes/Periodo
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    Fecha Límite
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    Monto
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    Estado
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    Fecha de Pago
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    Acción
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-slate-100">
-                {pagos.map((pago) => {
-                  const puedePagar = pago.estado !== "Pagado";
-                  return (
-                    <tr key={pago.id} className="hover:bg-slate-50">
-                      <td className="px-6 py-4 whitespace-nowrap font-medium text-slate-900">
-                        {pago.id}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-slate-700">
-                        {pago.mes}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-slate-700">
-                        {pago.fechaLimite}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap font-semibold text-slate-900">
-                        ${pago.monto}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${getEstadoColor(
-                            pago.estado
-                          )}`}
-                        >
-                          {pago.estado}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-slate-700">
-                        {pago.fechaPago || "-"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {puedePagar ? (
-                          <button
-                            onClick={() => abrirPago(pago)}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#f7a81b] hover:bg-[#ec9a03] text-[#123528] text-xs font-semibold border border-[#d89313]"
-                          >
-                            <span>💳</span>
-                            <span>Realizar Pago</span>
-                          </button>
-                        ) : (
-                          <span className="text-xs text-slate-400">
-                            - Pagado -
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+        {/* Tarjetas resumen */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <PagoResumenCard
+            titulo="Pagos Realizados"
+            monto={totalPagado}
+            colorValor="text-emerald-600"
+            bg="bg-emerald-50"
+          />
+          <PagoResumenCard
+            titulo="Pagos Pendientes"
+            monto={totalPendiente}
+            colorValor="text-amber-600"
+            bg="bg-amber-50"
+          />
+          <PagoResumenCard
+            titulo="En Mora"
+            monto={totalMora}
+            colorValor="text-rose-600"
+            bg="bg-rose-50"
+          />
         </section>
 
-        {/* MODAL HISTORIAL COMPLETO */}
-        {showHistorial && (
-          <HistorialPagosModal
-            pagos={pagos}
-            onClose={() => setShowHistorial(false)}
-          />
-        )}
+        {/* Tabla de pagos */}
+        <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
+          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between text-sm">
+            <span className="font-semibold text-[#123528]">
+              Todas las Cuotas
+            </span>
+          </div>
 
-        {/* MODAL REALIZAR PAGO */}
-        {showPagoModal && pagoSeleccionado && (
-          <RealizarPagoModal pago={pagoSeleccionado} onClose={cerrarPago} />
-        )}
-      </main>
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-xs text-slate-500">
+              <tr>
+                <th className="p-3 text-left">ID</th>
+                <th className="p-3 text-left">Mes/Periodo</th>
+                <th className="p-3 text-left">Fecha Limite</th>
+                <th className="p-3 text-left">Monto</th>
+                <th className="p-3 text-left">Estado</th>
+                <th className="p-3 text-left">Fecha de Pago</th>
+                <th className="p-3 text-left">Accion</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pagosMock.map((pago) => (
+                <tr key={pago.id} className="border-t border-slate-100">
+                  <td className="p-3 text-xs md:text-sm">{pago.id}</td>
+                  <td className="p-3 text-xs md:text-sm">{pago.periodo}</td>
+                  <td className="p-3 text-xs md:text-sm">{pago.fechaLimite}</td>
+                  <td className="p-3 text-xs md:text-sm">{pago.monto}</td>
+                  <td className="p-3 text-xs md:text-sm">
+                    <EstadoPagoBadge estado={pago.estado} />
+                  </td>
+                  <td className="p-3 text-xs md:text-sm">{pago.fechaPago}</td>
+                  <td className="p-3 text-xs md:text-sm">
+                    {pago.estado === "Pagado" ? (
+                      <span className="text-[11px] text-slate-400">
+                        Sin accion
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => abrirPago(pago)}
+                        className="px-3 py-1 rounded-lg text-xs bg-amber-400 hover:bg-amber-500 text-white font-semibold"
+                      >
+                        Realizar Pago
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      </section>
+
+      {/* ---------------------------------------------------------------------- */}
+      {/*                         MODAL HISTORIAL COMPLETO                      */}
+      {/* ---------------------------------------------------------------------- */}
+      {openHistorial && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-[#f7f5ee] w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-xl shadow-xl border border-emerald-900/20">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-emerald-900/20">
+              <h2 className="text-sm md:text-base font-semibold text-[#123528]">
+                Historial Completo de Pagos
+              </h2>
+              <button
+                onClick={() => setOpenHistorial(false)}
+                className="text-slate-500 hover:text-slate-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="px-6 py-4 space-y-4 text-sm">
+              {/* Totales */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <HistCard
+                  titulo="Total Pagado"
+                  monto={totalPagado}
+                  detalle="1 pago realizados"
+                  bg="bg-emerald-50"
+                  color="text-emerald-600"
+                />
+                <HistCard
+                  titulo="Total Pendiente"
+                  monto={totalPendiente}
+                  detalle="1 pago pendiente"
+                  bg="bg-amber-50"
+                  color="text-amber-600"
+                />
+                <HistCard
+                  titulo="Total en Mora"
+                  monto={totalMora}
+                  detalle="1 pago en mora"
+                  bg="bg-rose-50"
+                  color="text-rose-600"
+                />
+              </div>
+
+              {/* Detalle tabla */}
+              <section>
+                <p className="text-xs text-slate-500 mb-2">
+                  Detalle de Todos los Pagos
+                </p>
+                <div className="border border-slate-200 rounded-lg overflow-hidden bg-white">
+                  <table className="w-full text-xs md:text-sm">
+                    <thead className="bg-slate-50 text-slate-500">
+                      <tr>
+                        <th className="p-3 text-left">ID</th>
+                        <th className="p-3 text-left">Periodo</th>
+                        <th className="p-3 text-left">Monto</th>
+                        <th className="p-3 text-left">Fecha Limite</th>
+                        <th className="p-3 text-left">Fecha de Pago</th>
+                        <th className="p-3 text-left">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pagosMock.map((pago) => (
+                        <tr key={pago.id} className="border-t border-slate-100">
+                          <td className="p-3">{pago.id}</td>
+                          <td className="p-3">{pago.periodo}</td>
+                          <td className="p-3">{pago.monto}</td>
+                          <td className="p-3">{pago.fechaLimite}</td>
+                          <td className="p-3">{pago.fechaPago}</td>
+                          <td className="p-3">
+                            <EstadoPagoBadge estado={pago.estado} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              {/* Total general */}
+              <section className="border border-slate-200 rounded-lg bg-white px-4 py-3 text-xs md:text-sm flex justify-between items-center">
+                <div>
+                  <p className="font-semibold text-[#123528]">Total General</p>
+                  <p className="text-slate-500">
+                    3 pagos registrados
+                  </p>
+                </div>
+                <p className="text-lg font-bold text-[#123528]">
+                  {totalGeneral}
+                </p>
+              </section>
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-emerald-900/10 bg-white/70 rounded-b-xl">
+              <button
+                onClick={() => setOpenHistorial(false)}
+                className="px-4 py-2 rounded-lg text-xs border border-slate-300 hover:bg-slate-100"
+              >
+                Cerrar
+              </button>
+              <button className="px-4 py-2 rounded-lg text-xs bg-amber-400 text-white hover:bg-amber-500">
+                Descargar PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------------------------- */}
+      {/*                           MODAL REALIZAR PAGO                          */}
+      {/* ---------------------------------------------------------------------- */}
+      {pagoSeleccionado && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-[#f7f5ee] w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-xl shadow-xl border border-emerald-900/20">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-emerald-900/20">
+              <div className="flex items-center gap-2">
+                <span>💳</span>
+                <h2 className="text-sm md:text-base font-semibold text-[#123528]">
+                  Realizar Pago
+                </h2>
+              </div>
+              <button
+                onClick={cerrarPago}
+                className="text-slate-500 hover:text-slate-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            {stepPago === 1 && (
+              <>
+                <div className="px-6 py-4 space-y-4 text-xs md:text-sm">
+                  {/* Detalles del pago */}
+                  <section className="border border-slate-200 rounded-lg bg-white px-4 py-3">
+                    <p className="text-xs text-slate-500 mb-2">
+                      Detalles del Pago
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-[11px] text-slate-500">ID de Pago</p>
+                        <p className="font-semibold text-[#123528]">
+                          {pagoSeleccionado.id}
+                        </p>
+                        <p className="text-[11px] text-slate-500 mt-3">
+                          Fecha Limite
+                        </p>
+                        <p className="font-semibold text-[#123528]">
+                          {pagoSeleccionado.fechaLimite}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-slate-500">Periodo</p>
+                        <p className="font-semibold text-[#123528]">
+                          {pagoSeleccionado.periodo}
+                        </p>
+                        <p className="text-[11px] text-slate-500 mt-3">
+                          Monto a Pagar
+                        </p>
+                        <p className="text-2xl font-bold text-amber-500">
+                          {pagoSeleccionado.monto}
+                        </p>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Metodo de pago */}
+                  <section className="border border-slate-200 rounded-lg bg-white px-4 py-3">
+                    <p className="text-xs text-slate-500 mb-2">
+                      Metodo de Pago *
+                    </p>
+                    <div className="border border-slate-300 rounded-lg px-3 py-2 flex items-center justify-between text-xs">
+                      <span>Transferencia Bancaria</span>
+                      <span>▾</span>
+                    </div>
+                  </section>
+
+                  {/* Datos bancarios */}
+                  <section className="border border-slate-200 rounded-lg bg-white px-4 py-3">
+                    <p className="text-xs text-slate-500 mb-2">
+                      Datos Bancarios del Propietario
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <p className="text-[11px] text-slate-500">Banco:</p>
+                        <p className="font-semibold text-[#123528]">
+                          Banco Nacion
+                        </p>
+                        <p className="text-[11px] text-slate-500 mt-2">CBU:</p>
+                        <p>0110599520000001234567</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-slate-500">Alias:</p>
+                        <p>ALQUILA.PAGO.360</p>
+                        <p className="text-[11px] text-slate-500 mt-2">
+                          Titular:
+                        </p>
+                        <p>Juan Carlos Martinez</p>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+
+                {/* Footer step 1 */}
+                <div className="flex justify-end gap-3 px-6 py-4 border-t border-emerald-900/10 bg-white/70 rounded-b-xl">
+                  <button
+                    onClick={cerrarPago}
+                    className="px-4 py-2 rounded-lg text-xs border border-slate-300 hover:bg-slate-100"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => setStepPago(2)}
+                    className="px-4 py-2 rounded-lg text-xs bg-emerald-600 text-white hover:bg-emerald-700"
+                  >
+                    Continuar
+                  </button>
+                </div>
+              </>
+            )}
+
+            {stepPago === 2 && (
+              <>
+                <div className="px-6 py-4 space-y-4 text-xs md:text-sm">
+                  {/* Datos bancarios (resumen) */}
+                  <section className="border border-slate-200 rounded-lg bg-white px-4 py-3">
+                    <p className="text-xs text-slate-500 mb-2">
+                      Datos Bancarios del Propietario
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <p className="text-[11px] text-slate-500">Banco:</p>
+                        <p className="font-semibold text-[#123528]">
+                          Banco Nacion
+                        </p>
+                        <p className="text-[11px] text-slate-500 mt-2">CBU:</p>
+                        <p>0110599520000001234567</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-slate-500">Alias:</p>
+                        <p>ALQUILA.PAGO.360</p>
+                        <p className="text-[11px] text-slate-500 mt-2">
+                          Titular:
+                        </p>
+                        <p>Juan Carlos Martinez</p>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Numero de referencia */}
+                  <section className="border border-slate-200 rounded-lg bg-white px-4 py-3">
+                    <p className="text-xs text-slate-500 mb-2">
+                      Numero de Referencia *
+                    </p>
+                    <input
+                      type="text"
+                      value={referencia}
+                      onChange={(e) => setReferencia(e.target.value)}
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-emerald-400"
+                      placeholder="Ingresa el numero de comprobante de la transferencia"
+                    />
+                  </section>
+
+                  {/* Confirmacion */}
+                  <section className="border border-emerald-300 bg-emerald-50 rounded-lg px-4 py-3 text-xs md:text-sm flex gap-3">
+                    <div className="mt-1">✅</div>
+                    <div>
+                      <p className="font-semibold text-[#123528] mb-1">
+                        Confirmar Pago
+                      </p>
+                      <p className="text-slate-600">
+                        Al confirmar, aceptas que has realizado o realizaras el
+                        pago de <span className="font-semibold">{pagoSeleccionado.monto}</span>{" "}
+                        correspondiente al periodo{" "}
+                        <span className="font-semibold">
+                          {pagoSeleccionado.periodo}
+                        </span>{" "}
+                        mediante el metodo seleccionado.
+                      </p>
+                    </div>
+                  </section>
+                </div>
+
+                {/* Footer step 2 */}
+                <div className="flex justify-end gap-3 px-6 py-4 border-t border-emerald-900/10 bg-white/70 rounded-b-xl">
+                  <button
+                    onClick={cerrarPago}
+                    className="px-4 py-2 rounded-lg text-xs border border-slate-300 hover:bg-slate-100"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={confirmarPago}
+                    className="px-4 py-2 rounded-lg text-xs bg-emerald-600 text-white hover:bg-emerald-700"
+                  >
+                    Confirmar Pago
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-/* ------------ MODAL: HISTORIAL COMPLETO ------------ */
+/* -------------------------------------------------------------------------- */
+/*                           SUBCOMPONENTES AUXILIARES                         */
+/* -------------------------------------------------------------------------- */
 
-function HistorialPagosModal({
-  pagos,
-  onClose,
-}: {
-  pagos: Pago[];
-  onClose: () => void;
-}) {
-  const totalPagado = pagos
-    .filter((p) => p.estado === "Pagado")
-    .reduce((sum, p) => sum + p.monto, 0);
-  const totalPendiente = pagos
-    .filter((p) => p.estado === "Pendiente")
-    .reduce((sum, p) => sum + p.monto, 0);
-  const totalMora = pagos
-    .filter((p) => p.estado === "En Mora")
-    .reduce((sum, p) => sum + p.monto, 0);
+type ResumenProps = {
+  titulo: string;
+  monto: string;
+  colorValor: string;
+  bg: string;
+};
 
-  const countPagado = pagos.filter((p) => p.estado === "Pagado").length;
-  const countPendiente = pagos.filter((p) => p.estado === "Pendiente").length;
-  const countMora = pagos.filter((p) => p.estado === "En Mora").length;
-
-  const totalGeneral = pagos.reduce((sum, p) => sum + p.monto, 0);
-
+function PagoResumenCard({
+  titulo,
+  monto,
+  colorValor,
+  bg,
+}: ResumenProps) {
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 px-4 md:px-10">
-      <div className="bg-white w-full max-w-5xl rounded-2xl shadow-xl border border-slate-300 max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between px-8 py-5 border-b border-slate-200">
-          <h2 className="text-lg md:text-xl font-semibold text-[#123528]">
-            Historial Completo de Pagos
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-slate-600 hover:text-slate-900 text-xl"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="px-8 py-6 space-y-6">
-          {/* Cards de totales */}
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-emerald-100 rounded-xl px-6 py-4">
-              <p className="text-sm font-semibold text-emerald-900 mb-1">
-                Total Pagado
-              </p>
-              <p className="text-3xl font-bold text-emerald-700">
-                ${totalPagado}
-              </p>
-              <p className="text-xs text-emerald-900 mt-2">
-                {countPagado} pago(s) realizados
-              </p>
-            </div>
-
-            <div className="bg-amber-100 rounded-xl px-6 py-4">
-              <p className="text-sm font-semibold text-amber-900 mb-1">
-                Total Pendiente
-              </p>
-              <p className="text-3xl font-bold text-amber-700">
-                ${totalPendiente}
-              </p>
-              <p className="text-xs text-amber-900 mt-2">
-                {countPendiente} pago(s) pendientes
-              </p>
-            </div>
-
-            <div className="bg-rose-100 rounded-xl px-6 py-4">
-              <p className="text-sm font-semibold text-rose-900 mb-1">
-                Total en Mora
-              </p>
-              <p className="text-3xl font-bold text-rose-700">
-                ${totalMora}
-              </p>
-              <p className="text-xs text-rose-900 mt-2">
-                {countMora} pago(s) en mora
-              </p>
-            </div>
-          </section>
-
-          {/* Título detalle */}
-          <p className="text-sm font-semibold text-[#123528] mt-2">
-            Detalle de Todos los Pagos
-          </p>
-
-          {/* Tabla detalle */}
-          <section className="border border-slate-300 rounded-xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 border-b border-slate-300">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
-                      ID
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
-                      Periodo
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
-                      Monto
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
-                      Fecha Límite
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
-                      Fecha de Pago
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
-                      Estado
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pagos.map((pago) => (
-                    <tr
-                      key={pago.id}
-                      className="border-b border-slate-200 last:border-b-0"
-                    >
-                      <td className="px-6 py-3 text-sm text-slate-800">
-                        {pago.id}
-                      </td>
-                      <td className="px-6 py-3 text-sm text-slate-800">
-                        {pago.mes}
-                      </td>
-                      <td className="px-6 py-3 text-sm text-slate-800">
-                        ${pago.monto}
-                      </td>
-                      <td className="px-6 py-3 text-sm text-slate-800">
-                        {pago.fechaLimite}
-                      </td>
-                      <td className="px-6 py-3 text-sm text-slate-800">
-                        {pago.fechaPago || "-"}
-                      </td>
-                      <td className="px-6 py-3 text-sm">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            pago.estado === "Pagado"
-                              ? "bg-emerald-100 text-emerald-700"
-                              : pago.estado === "Pendiente"
-                              ? "bg-amber-100 text-amber-700"
-                              : "bg-rose-100 text-rose-700"
-                          }`}
-                        >
-                          {pago.estado}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          {/* Total general */}
-          <section className="border border-slate-300 rounded-xl px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-[#123528] mb-1">
-                Total General
-              </p>
-              <p className="text-xs text-slate-600">
-                {pagos.length} pagos registrados
-              </p>
-            </div>
-            <p className="text-3xl font-bold text-[#123528]">${totalGeneral}</p>
-          </section>
-
-          {/* Footer botones */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 mt-2">
-            <button
-              onClick={onClose}
-              className="px-5 py-2 rounded-lg border border-slate-300 bg-slate-100 hover:bg-slate-200 text-sm font-medium"
-            >
-              Cerrar
-            </button>
-            <button
-              onClick={() => console.log("Descargar PDF")}
-              className="px-6 py-2 rounded-lg bg-[#f7a81b] hover:bg-[#ec9a03] text-white text-sm font-semibold flex items-center gap-2"
-            >
-              <span>⬇️</span>
-              <span>Descargar PDF</span>
-            </button>
-          </div>
-        </div>
-      </div>
+    <div className={`rounded-xl border border-slate-200 ${bg} p-4 shadow-sm`}>
+      <p className="text-xs text-slate-500">{titulo}</p>
+      <p className={`text-2xl font-bold mt-2 ${colorValor}`}>{monto}</p>
     </div>
   );
 }
 
-/* ------------ MODAL: REALIZAR PAGO ------------ */
+type HistCardProps = {
+  titulo: string;
+  monto: string;
+  detalle: string;
+  bg: string;
+  color: string;
+};
 
-function RealizarPagoModal({ pago, onClose }: { pago: Pago; onClose: () => void }) {
-  const [referencia, setReferencia] = useState("");
+function HistCard({ titulo, monto, detalle, bg, color }: HistCardProps) {
+  return (
+    <div className={`rounded-xl border border-slate-200 ${bg} p-4`}>
+      <p className="text-xs text-slate-500 mb-1">{titulo}</p>
+      <p className={`text-xl font-bold ${color}`}>{monto}</p>
+      <p className="text-[11px] text-slate-500 mt-1">{detalle}</p>
+    </div>
+  );
+}
 
-  const handleConfirm = () => {
-    console.log("Confirmar pago", pago.id, referencia);
-    onClose();
-  };
+function EstadoPagoBadge({ estado }: { estado: EstadoPago }) {
+  let classes =
+    "bg-slate-50 text-slate-600 border-slate-200";
+
+  if (estado === "Pagado") {
+    classes = "bg-emerald-50 text-emerald-700 border-emerald-200";
+  } else if (estado === "Pendiente") {
+    classes = "bg-amber-50 text-amber-700 border-amber-200";
+  } else if (estado === "En mora") {
+    classes = "bg-rose-50 text-rose-700 border-rose-200";
+  }
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 px-4 md:px-10">
-      <div className="bg-white w-full max-w-4xl rounded-2xl shadow-xl border border-slate-300 max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between px-8 py-5 border-b border-slate-200">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full border border-amber-400 bg-amber-50 flex items-center justify-center text-lg">
-              💳
-            </div>
-            <h2 className="text-xl font-semibold text-[#123528]">
-              Realizar Pago
-            </h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-slate-600 hover:text-slate-900 text-xl"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="px-8 py-6 space-y-6">
-          {/* Detalles del pago */}
-          <section className="bg-[#fbf8f0] border border-slate-200 rounded-2xl px-6 py-5 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3 text-sm text-[#123528]">
-              <p className="text-base font-semibold mb-1">Detalles del Pago</p>
-              <div>
-                <p className="font-medium">ID de Pago</p>
-                <p className="text-slate-700">{pago.id}</p>
-              </div>
-              <div>
-                <p className="font-medium">Fecha Límite</p>
-                <p className="text-slate-700">{pago.fechaLimite}</p>
-              </div>
-            </div>
-
-            <div className="space-y-3 text-sm text-[#123528] md:text-right">
-              <div>
-                <p className="font-medium">Periodo</p>
-                <p className="text-slate-700">{pago.mes}</p>
-              </div>
-              <div>
-                <p className="font-medium">Monto a Pagar</p>
-                <p className="text-3xl font-extrabold text-amber-500">
-                  ${pago.monto}.500
-                </p>
-              </div>
-            </div>
-          </section>
-
-          {/* Método de pago */}
-          <section className="space-y-2">
-            <p className="text-sm font-semibold text-[#123528]">
-              Método de Pago *
-            </p>
-            <div className="border border-slate-200 rounded-xl bg-slate-100 px-4 py-3 text-sm text-slate-700 flex items-center justify-between">
-              <span>Transferencia Bancaria</span>
-              <span>▾</span>
-            </div>
-          </section>
-
-          {/* Datos bancarios + referencia + confirmación */}
-          <section className="border border-[#1a5f4a] rounded-2xl px-6 py-5 space-y-5">
-            {/* Datos bancarios */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-[#123528]">
-              <div>
-                <p className="text-base font-semibold mb-3">
-                  Datos Bancarios del Propietario
-                </p>
-                <p className="font-medium mb-1">Banco:</p>
-                <p className="text-slate-700">Banco Nación</p>
-                <p className="font-medium mt-3 mb-1">CBU:</p>
-                <p className="text-slate-700">0110599520000001234567</p>
-              </div>
-              <div className="md:text-right">
-                <p className="font-medium mb-1">Alias:</p>
-                <p className="text-slate-700">ALQUILA.PAGO.360</p>
-                <p className="font-medium mt-3 mb-1">Titular:</p>
-                <p className="text-slate-700">Juan Carlos Martínez</p>
-              </div>
-            </div>
-
-            {/* Número de referencia */}
-            <div className="space-y-2">
-              <p className="text-sm font-semibold text-[#123528]">
-                Número de Referencia *
-              </p>
-              <input
-                value={referencia}
-                onChange={(e) => setReferencia(e.target.value)}
-                className="w-full border border-slate-200 rounded-xl bg-slate-100 px-4 py-3 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="Ingresa el número de comprobante de la transferencia"
-              />
-            </div>
-
-            {/* Confirmar pago */}
-            <div className="border border-emerald-500 rounded-2xl bg-emerald-50/60 px-5 py-4 flex flex-col gap-2 text-sm text-[#123528]">
-              <div className="flex items-center gap-2 font-semibold">
-                <span className="w-6 h-6 rounded-full border border-emerald-500 flex items-center justify-center text-xs">
-                  ✓
-                </span>
-                <span>Confirmar Pago</span>
-              </div>
-              <p className="text-xs md:text-sm text-slate-700">
-                Al confirmar, aceptas que has realizado o realizarás el pago de{" "}
-                <span className="font-semibold">
-                  ${pago.monto}.500
-                </span>{" "}
-                correspondiente al periodo{" "}
-                <span className="font-semibold">{pago.mes}</span> mediante el
-                método seleccionado.
-              </p>
-            </div>
-          </section>
-
-          {/* Nota */}
-          <section className="bg-yellow-50 border border-yellow-200 rounded-xl px-5 py-3 text-xs md:text-sm text-slate-700">
-            <span className="font-semibold">Nota:</span> Una vez confirmado el
-            pago, el estado de la cuota cambiará y el propietario podrá
-            verificar la información del comprobante.
-          </section>
-
-          {/* Footer */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 mt-2">
-            <button
-              onClick={onClose}
-              className="px-5 py-2 rounded-lg border border-slate-300 bg-slate-100 hover:bg-slate-200 text-sm font-medium"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleConfirm}
-              className="px-6 py-2 rounded-lg bg-[#1a5f4a] hover:bg-[#164332] text-white text-sm font-semibold flex items-center gap-2"
-            >
-              <span>✓</span>
-              <span>Confirmar Pago</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <span
+      className={`inline-flex px-3 py-1 rounded-full text-[11px] font-semibold border ${classes}`}
+    >
+      {estado}
+    </span>
   );
 }

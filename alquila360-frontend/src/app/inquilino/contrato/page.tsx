@@ -32,7 +32,6 @@ function SidebarInquilino() {
       <nav className="flex-1 space-y-1">
         {inquilinoMenu.map((item) => {
           const active = pathname === item.path;
-
           return (
             <button
               key={item.path}
@@ -49,7 +48,7 @@ function SidebarInquilino() {
 
       <div className="mt-6 px-2 text-xs text-slate-300">Inquilino</div>
       <button className="mt-2 px-3 py-2 text-xs text-slate-200 hover:bg-[#164332] rounded-lg text-left">
-        Cerrar Sesion
+        Cerrar sesion
       </button>
     </aside>
   );
@@ -64,7 +63,7 @@ const contratoInfo = {
   mesesRestantes: 10,
   numero: "C-001",
   direccion: "Calle Secundaria 456",
-  tipoPropiedad: "Departamento",
+  tipoPropiedad: "Casa",
   superficie: "120 m²",
   ambientes: "3",
   fechaInicio: "31 de diciembre de 2023",
@@ -141,7 +140,11 @@ export default function ContratoInquilinoPage() {
               <p className="font-semibold text-[#123528]">
                 {contratoInfo.direccion}
               </p>
-              <p className="text-slate-600">{contratoInfo.tipoPropiedad}</p>
+              <p className="text-slate-600">
+                Tipo: {contratoInfo.tipoPropiedad} · Superficie:{" "}
+                {contratoInfo.superficie} · Ambientes:{" "}
+                {contratoInfo.ambientes}
+              </p>
             </div>
 
             <div className="border border-slate-200 rounded-lg px-4 py-3 text-xs">
@@ -187,7 +190,8 @@ export default function ContratoInquilinoPage() {
             <p className="font-semibold text-[#123528] mb-1">Pago de Alquiler</p>
             <p>
               El pago del alquiler debe realizarse dentro de los primeros 10
-              dias de cada mes. El monto mensual es de {contratoInfo.alquilerMensual}.
+              dias de cada mes. El monto mensual es de{" "}
+              {contratoInfo.alquilerMensual}.
             </p>
           </div>
 
@@ -229,27 +233,31 @@ export default function ContratoInquilinoPage() {
       {openModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-[#f7f5ee] w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-xl shadow-xl border border-emerald-900/20">
-            {/* Header modal */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-emerald-900/20">
-              <div className="text-center flex-1">
-                <p className="text-xs text-slate-500 mb-1">
-                  Sistema de Gestion ALQUILA 360
-                </p>
-                <h2 className="text-xl font-extrabold text-[#123528] tracking-wide">
-                  CONTRATO DE LOCACION
-                </h2>
-                <p className="mt-2 inline-flex items-center px-3 py-1 rounded-full text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  Contrato N° {contratoInfo.numero}
-                </p>
-              </div>
+            {/* Header superior pequeñito */}
+            <div className="flex items-center justify-between px-4 py-2 border-b border-emerald-900/20 bg-white/80 rounded-t-xl">
+              <span className="text-xs text-slate-600">Contrato de Alquiler</span>
               <button
                 onClick={() => setOpenModal(false)}
-                className="absolute top-3 right-4 text-slate-500 hover:text-slate-700"
+                className="text-slate-500 hover:text-slate-700 text-sm"
               >
                 ✕
               </button>
             </div>
 
+            {/* Encabezado central como en la maqueta */}
+            <div className="px-6 pt-4 pb-2 border-b border-emerald-900/20 text-center">
+              <p className="text-[11px] text-slate-500 mb-1">
+                Sistema de Gestion ALQUILA 360
+              </p>
+              <h2 className="text-xl font-extrabold text-[#123528] tracking-wide">
+                CONTRATO DE LOCACION
+              </h2>
+              <p className="mt-2 inline-flex items-center px-3 py-1 rounded-full text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Contrato N° {contratoInfo.numero}
+              </p>
+            </div>
+
+            {/* Contenido del contrato */}
             <div className="px-6 py-4 space-y-4 text-xs">
               {/* Partes del contrato */}
               <section>
@@ -289,8 +297,9 @@ export default function ContratoInquilinoPage() {
                   </p>
                   <p>{contratoInfo.direccion}</p>
                   <p>
-                    Tipo: Casa · Superficie: {contratoInfo.superficie} ·
-                    Ambientes: {contratoInfo.ambientes}
+                    Tipo: {contratoInfo.tipoPropiedad} · Superficie:{" "}
+                    {contratoInfo.superficie} · Ambientes:{" "}
+                    {contratoInfo.ambientes}
                   </p>
                 </div>
               </section>

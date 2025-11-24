@@ -1,205 +1,275 @@
 "use client";
-import { useState, useEffect } from "react";
-import Link from "next/link";
 
-interface Expensa {
+import React from "react";
+import { useRouter, usePathname } from "next/navigation";
+
+/* -------------------------------------------------------------------------- */
+/*                               SIDEBAR INQUILINO                            */
+/* -------------------------------------------------------------------------- */
+
+const inquilinoMenu = [
+  { label: "Home", path: "/inquilino" },
+  { label: "Contrato", path: "/inquilino/contrato" },
+  { label: "Pagos", path: "/inquilino/pagos" },
+  { label: "Tickets", path: "/inquilino/tickets" },
+  { label: "Expensas", path: "/inquilino/expensas" },
+  { label: "Perfil", path: "/inquilino/perfil" },
+];
+
+function SidebarInquilino() {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  return (
+    <aside className="w-64 bg-[#0b3b2c] text-white flex flex-col py-6 px-4">
+      <div
+        className="text-2xl font-extrabold tracking-wide mb-10 px-2 cursor-pointer"
+        onClick={() => router.push("/inquilino")}
+      >
+        ALQUILA 360
+      </div>
+
+      <nav className="flex-1 space-y-1">
+        {inquilinoMenu.map((item) => {
+          const active = pathname === item.path;
+          return (
+            <button
+              key={item.path}
+              onClick={() => router.push(item.path)}
+              className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition ${
+                active ? "bg-[#4b7f5e] font-semibold" : "hover:bg-[#164332]"
+              }`}
+            >
+              {item.label}
+            </button>
+          );
+        })}
+      </nav>
+
+      <div className="mt-6 px-2 text-xs text-slate-300">Inquilino</div>
+      <button className="mt-2 px-3 py-2 text-xs text-slate-200 hover:bg-[#164332] rounded-lg text-left">
+        Cerrar Sesion
+      </button>
+    </aside>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                               DATOS MOCK EXPENSAS                          */
+/* -------------------------------------------------------------------------- */
+
+type Expensa = {
   id: string;
   propiedad: string;
-  tipo: "Agua" | "Luz" | "Gas" | "Mantenimiento";
+  tipo: string;
   descripcion: string;
+  mes: string;
   monto: number;
   fecha: string;
   estado: "Pagado" | "No pagado";
-}
-export default function GestionExpensas() {
-  const [expensas, setExpensas] = useState<Expensa[]>([]);
-  const [totalExpensas, setTotalExpensas] = useState(400);
-  const [pagadas, setPagadas] = useState(280);
-  const [noPagadas, setNoPagadas] = useState(120);
-  useEffect(() => {
-    // Datos de ejemplo - conecta con tu backend
-    setExpensas([
-      {
-        id: "exp1",
-        propiedad: "Calle Secundaria 456",
-        tipo: "Agua",
-        descripcion: "Factura de agua del mes de noviembre",
-        monto: 45,
-        fecha: "2024-11-15",
-        estado: "Pagado"
-      },
-      {
-        id: "exp2",
-        propiedad: "Calle Secundaria 456",
-        tipo: "Luz",
-        descripcion: "Factura de electricidad del mes de noviembre",
-        monto: 120,
-        fecha: "2024-11-15",
-        estado: "No pagado"
-      },
-      {
-        id: "exp3",
-        propiedad: "Calle Secundaria 456",
-        tipo: "Gas",
-        descripcion: "Factura de gas del mes de noviembre",
-        monto: 3,
-        fecha: "2024-11-15",
-        estado: "Pagado"
-      },
-      {
-        id: "exp4",
-        propiedad: "Calle Secundaria 456",
-        tipo: "Mantenimiento",
-        descripcion: "Mantenimiento general del edificio",
-        monto: 20,
-        fecha: "2024-11-10",
-        estado: "Pagado"
-      }
-    ]);
-  }, []);
-  const getTipoIcon = (tipo: string) => {
-    switch (tipo) {
-      case "Agua": return "💧";
-      case "Luz": return "💡";
-      case "Gas": return "🔥";
-      case "Mantenimiento": return "🔧";
-      default: return "📄";
-    }
-  };
-  const getEstadoColor = (estado: string) => {
-    return estado === "Pagado" 
-      ? "bg-green-100 text-green-700" 
-      : "bg-red-100 text-red-700";
-  };
-  return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
-      <aside className="fixed left-0 top-0 h-full w-64 bg-[#1a5f4a] text-white flex flex-col">
-        <div className="p-6">
-          <h1 className="text-2xl font-bold">ALQUILA 360</h1>
-        </div>
-        
-        <nav className="flex-1 px-4 space-y-2">
-          <Link href="/inquilino" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[#156b52]">
-            <span>🏠</span>
-            <span>Home</span>
-          </Link>
-          <Link href="/inquilino/contratos" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#156b52]">
-            <span>📄</span>
-            <span>Contrato</span>
-          </Link>
-          <Link href="/inquilino/pagos" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#156b52]">
-            <span>💳</span>
-            <span>Pagos</span>
-          </Link>
-          <Link href="/inquilino/ticket" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#156b52]">
-            <span>🔧</span>
-            <span>Tickets</span>
-          </Link>
-          <Link href="/inquilino/expensas" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#156b52]">
-            <span>📊</span>
-            <span>Expensas</span>
-          </Link>
-          <Link href="/inquilino/perfil" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#156b52]">
-            <span>👤</span>
-            <span>Perfil</span>
-          </Link>
-        </nav>
+};
 
-        <div className="p-4 border-t border-[#156b52]">
-          <p className="text-sm text-gray-300 mb-2">Inquilino</p>
-          <button className="flex items-center gap-3 px-4 py-3 w-full rounded-lg hover:bg-[#156b52]">
-            <span>🚪</span>
-            <span>Cerrar Sesión</span>
-          </button>
-        </div>
-      </aside>
-      {/* Main Content */}
-      <main className="ml-64 flex-1 p-8">
-        <header className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-3xl font-bold text-gray-800">Gestión de Expensas</h2>
-            <p className="text-gray-600">Gastos por inmueble</p>
-          </div>
-          <button className="px-6 py-2 bg-yellow-400 text-gray-800 rounded-lg hover:bg-yellow-500 transition font-semibold">
-            Registrar Expensa
-          </button>
+const expensas: Expensa[] = [
+  {
+    id: "exp1",
+    propiedad: "Calle Secundaria 456",
+    tipo: "Agua",
+    descripcion: "Factura de agua del mes de noviembre",
+    mes: "noviembre de 2024",
+    monto: 100,
+    fecha: "2024-11-15",
+    estado: "Pagado",
+  },
+  {
+    id: "exp2",
+    propiedad: "Calle Secundaria 456",
+    tipo: "Luz",
+    descripcion: "Factura de electricidad del mes de noviembre",
+    mes: "noviembre de 2024",
+    monto: 120,
+    fecha: "2024-11-15",
+    estado: "No pagado",
+  },
+  {
+    id: "exp3",
+    propiedad: "Calle Secundaria 456",
+    tipo: "Gas",
+    descripcion: "Factura de gas del mes de noviembre",
+    mes: "noviembre de 2024",
+    monto: 80,
+    fecha: "2024-11-15",
+    estado: "Pagado",
+  },
+  {
+    id: "exp4",
+    propiedad: "Calle Secundaria 456",
+    tipo: "Mantenimiento",
+    descripcion: "Mantenimiento general del edificio",
+    mes: "noviembre de 2024",
+    monto: 100,
+    fecha: "2024-11-10",
+    estado: "Pagado",
+  },
+];
+
+const totalExpensas = expensas.reduce((acc, e) => acc + e.monto, 0);
+const totalPagadas = expensas
+  .filter((e) => e.estado === "Pagado")
+  .reduce((acc, e) => acc + e.monto, 0);
+const totalNoPagadas = totalExpensas - totalPagadas;
+
+/* -------------------------------------------------------------------------- */
+/*                               PAGINA EXPENSAS                              */
+/* -------------------------------------------------------------------------- */
+
+export default function ExpensasInquilinoPage() {
+  return (
+    <div className="min-h-screen flex bg-[#0b3b2c] text-slate-900">
+      <SidebarInquilino />
+
+      <section className="flex-1 bg-[#f7f5ee] px-10 py-8 overflow-y-auto">
+        {/* Header */}
+        <header className="mb-6">
+          <h1 className="text-3xl font-extrabold text-[#123528] mb-1">
+            Mis Expensas
+          </h1>
+          <p className="text-sm text-slate-500">
+            Gastos asociados a tu propiedad
+          </p>
         </header>
-        {/* Cards de Resumen */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-gray-600 font-medium">Total Expensas</h3>
-              <span className="text-3xl">📊</span>
-            </div>
-            <p className="text-3xl font-bold text-blue-600">${totalExpensas}</p>
+
+        {/* Resumen cards */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <ResumenCard
+            title="Total Expensas"
+            value={`$${totalExpensas}`}
+            accent="bg-indigo-50 text-indigo-700"
+          />
+          <ResumenCard
+            title="Pagadas"
+            value={`$${totalPagadas}`}
+            accent="bg-emerald-50 text-emerald-700"
+          />
+          <ResumenCard
+            title="No Pagadas"
+            value={`$${totalNoPagadas}`}
+            accent="bg-rose-50 text-rose-700"
+          />
+        </section>
+
+        {/* Tabla expensas */}
+        <section className="bg-white rounded-xl border border-slate-200 shadow-sm mb-6">
+          <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between text-sm">
+            <span className="font-semibold text-[#123528]">
+              Todas las Expensas
+            </span>
           </div>
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-gray-600 font-medium">Pagadas</h3>
-              <span className="text-3xl">💵</span>
-            </div>
-            <p className="text-3xl font-bold text-green-600">${pagadas}</p>
-          </div>
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-gray-600 font-medium">No Pagadas</h3>
-              <span className="text-3xl">📛</span>
-            </div>
-            <p className="text-3xl font-bold text-red-600">${noPagadas}</p>
-          </div>
-        </div>
-        {/* Tabla de Expensas */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+            <table className="w-full text-xs md:text-sm">
+              <thead className="bg-slate-50 text-left text-[11px] text-slate-500">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Propiedad</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                  <th className="p-3">ID</th>
+                  <th className="p-3">Propiedad</th>
+                  <th className="p-3">Tipo</th>
+                  <th className="p-3">Descripcion</th>
+                  <th className="p-3">Mes</th>
+                  <th className="p-3">Monto</th>
+                  <th className="p-3">Fecha</th>
+                  <th className="p-3">Estado</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {expensas.map((expensa) => (
-                  <tr key={expensa.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {expensa.id}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {expensa.propiedad}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className="flex items-center gap-2">
-                        <span>{getTipoIcon(expensa.tipo)}</span>
-                        <span>{expensa.tipo}</span>
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {expensa.descripcion}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                      ${expensa.monto}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {expensa.fecha}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getEstadoColor(expensa.estado)}`}>
-                        {expensa.estado}
-                      </span>
+              <tbody>
+                {expensas.map((e, idx) => (
+                  <tr
+                    key={e.id}
+                    className={`border-t border-slate-100 ${
+                      idx % 2 === 1 ? "bg-slate-50/60" : ""
+                    }`}
+                  >
+                    <td className="p-3">{e.id}</td>
+                    <td className="p-3">{e.propiedad}</td>
+                    <td className="p-3">{e.tipo}</td>
+                    <td className="p-3">{e.descripcion}</td>
+                    <td className="p-3">{e.mes}</td>
+                    <td className="p-3">{`$${e.monto}`}</td>
+                    <td className="p-3">{e.fecha}</td>
+                    <td className="p-3">
+                      <EstadoBadge estado={e.estado} />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
-      </main>
+        </section>
+
+        {/* Info expensas */}
+        <section className="bg-white rounded-xl border border-slate-200 shadow-sm px-5 py-4 text-xs md:text-sm text-slate-700 space-y-2 mb-10">
+          <h2 className="font-semibold text-[#123528] mb-2">
+            Informacion sobre Expensas
+          </h2>
+          <ul className="list-disc list-inside space-y-1">
+            <li>
+              Las expensas incluyen servicios comunes como agua, luz, gas,
+              mantenimiento e internet segun corresponda.
+            </li>
+            <li>
+              Todas las expensas deben ser abonadas dentro de los primeros 10
+              dias del mes siguiente.
+            </li>
+            <li>
+              Para consultas sobre expensas especificas, contacta a la
+              administracion o propietario.
+            </li>
+            <li>
+              Los comprobantes de pago estan disponibles una vez confirmado el
+              pago.
+            </li>
+          </ul>
+        </section>
+      </section>
     </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                             SUBCOMPONENTES                                 */
+/* -------------------------------------------------------------------------- */
+
+type ResumenCardProps = {
+  title: string;
+  value: string;
+  accent: string;
+};
+
+function ResumenCard({ title, value, accent }: ResumenCardProps) {
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex items-center gap-3">
+      <div
+        className={`h-10 w-10 rounded-lg flex items-center justify-center text-lg ${accent}`}
+      >
+        💳
+      </div>
+      <div>
+        <p className="text-[11px] text-slate-500">{title}</p>
+        <p className="text-xl font-bold text-[#123528] mt-1">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function EstadoBadge({ estado }: { estado: Expensa["estado"] }) {
+  const isPagado = estado === "Pagado";
+  const classes = isPagado
+    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+    : "bg-rose-50 text-rose-700 border-rose-200";
+
+  return (
+    <span
+      className={`inline-flex px-3 py-1 rounded-full text-[11px] font-semibold border ${classes}`}
+    >
+      {estado}
+    </span>
   );
 }
