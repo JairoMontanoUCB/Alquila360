@@ -12,7 +12,7 @@ export default function SidebarAdministrador() {
     { label: "Usuarios", icon: "👥", href: "/administrador/usuarios" },
     { label: "Contratos", icon: "📄", href: "/administrador/contratos" },
     { label: "Pagos", icon: "💳", href: "/administrador/pagos" },
-    { label: "Expensas", icon: "💰", href: "/administrador/expensas" },
+    { label: "Cuotas", icon: "💰", href: "/administrador/cuotas" },
     { label: "Tickets", icon: "🎫", href: "/administrador/tickets" },
     { label: "Reportes", icon: "📑", href: "/administrador/reportes" },
     { label: "Configuración", icon: "⚙️", href: "/administrador/configuracion" },
