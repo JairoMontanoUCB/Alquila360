@@ -8,7 +8,7 @@ import { get } from "http";
 export class ContratoController {
     constructor(private readonly contratoService : ContratoService) {}
 
-    @Post("registrar")
+    @Post("/registrar")
     RegistrarUsuarioContrato(@Body() contratoDto: CreateContratoDto) {
         return this.contratoService.RegistrarUsuarioContrato(contratoDto);
     }

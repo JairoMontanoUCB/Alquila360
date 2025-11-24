@@ -71,6 +71,8 @@ calificarPropiedad(
   return this.propiedadService.calificarPropiedad(propiedadId, dto);
 }
 
-
-
+@Get('disponibles/contratos')
+  async getPropiedadesDisponiblesParaContratos() {
+    return this.propiedadService.getPropiedadesDisponiblesParaContratos();     
+}
 }

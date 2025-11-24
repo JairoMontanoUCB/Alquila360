@@ -47,4 +47,19 @@ export class UserController {
   RegistrarTecnico(@Body() createUserDto: CreateUserDto) {
     return this.userService.RegistrarTecnico(createUserDto);
   }
+
+  @Get('rol/inquilinos')
+  getInquilinos() {
+    return this.userService.getUsersByRol('inquilino');
+  }
+
+  @Get('rol/propietarios')
+  getPropietarios() {
+    return this.userService.getUsersByRol('propietario');
+  }
+
+  @Get('activos')
+  getUsuariosActivos() {
+    return this.userService.getUsuariosActivos();
+  }
 }

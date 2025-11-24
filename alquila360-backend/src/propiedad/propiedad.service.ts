@@ -103,4 +103,10 @@ export class PropiedadService {
     return AppDataSource.getRepository(Propiedad).delete(id);
   }
 
+  async getPropiedadesDisponiblesParaContratos() {
+    return AppDataSource.getRepository(Propiedad).find({
+      where: { estado: "disponible" },
+      relations: ["fotos", "propietario", "calificaciones"]
+    });
+  }
 }
