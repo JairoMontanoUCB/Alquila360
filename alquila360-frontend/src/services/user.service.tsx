@@ -1,6 +1,6 @@
-import { instance } from "../app/utils/axios.util";
+import axiosInstance from "../app/utils/axios.util";
 
-export const getUsers   = async () => {
-    const response = await instance.get('/user');
+export const getUsers = async () => {
+    const response = await axiosInstance.get('/user');
     return response.data;
-    }
+};

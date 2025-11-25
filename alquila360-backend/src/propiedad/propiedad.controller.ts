@@ -70,6 +70,14 @@ calificarPropiedad(
 ) {
   return this.propiedadService.calificarPropiedad(propiedadId, dto);
 }
+@Get("mis-propiedades/:usuarioId")
+async getPropiedadesPorInquilino(@Param("usuarioId") usuarioId: number) {
+  return this.propiedadService.getPropiedadesPorInquilino(usuarioId);
+}
+@Get("/inquilino/:id")
+getByInquilino(@Param("id") id: number) {
+  return this.propiedadService.getByInquilino(id);
+}
 
 
 

@@ -261,4 +261,14 @@ export class ContratoService {
         });
     }
 
+    async getContratoActivo(usuarioId: number) {
+  return AppDataSource.getRepository(Contrato).findOne({
+    where: { 
+      inquilino: { id: usuarioId },
+      estado: "activo"
+    },
+    relations: ["propiedad", "inquilino"]
+  });
+}
+
 }

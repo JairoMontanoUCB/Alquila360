@@ -63,6 +63,14 @@ export class TicketService {
     return ticket;
   }
 
+  async getAllTickets() {
+  return AppDataSource.getRepository(Ticket).find({
+    relations: ["usuario", "propiedad", "tecnico", "fotos"],
+    order: { id: "DESC" }
+  });
+}
+
+
   async getTicketsByUsuario(usuarioId: number) {
     return AppDataSource.getRepository(Ticket).find({
       where: { usuario: { id: usuarioId } },
@@ -87,4 +95,6 @@ export class TicketService {
     await AppDataSource.getRepository(Ticket).update(id, { tecnico });
     return { message: "Técnico asignado" };
   }
+
+  
 }

@@ -6,6 +6,8 @@ import { CreatePropiedadDto } from "./propiedadDto/create-propiedad.dto";
 import { User } from "src/entity/user.entity";
 import { RatePropiedadDto } from "./propiedadDto/rate-propiedad.dto";
 import { PropertyRating } from "src/entity/property_rating.entity"; // ✅ IMPORTANTE
+import { Contrato } from "src/entity/contrato.entity";
+
 
 @Injectable()
 export class PropiedadService {
@@ -102,5 +104,25 @@ export class PropiedadService {
   async deletePropiedad(id: number) {
     return AppDataSource.getRepository(Propiedad).delete(id);
   }
+
+
+  async getPropiedadesPorInquilino(usuarioId: number) {
+  const contratos = await AppDataSource.getRepository(Contrato).find({
+    where: { inquilino: { id: usuarioId } },
+    relations: ["propiedad"],
+  });
+
+  return contratos.map(c => c.propiedad);
+}
+async getByInquilino(id: number) {
+  return AppDataSource.getRepository(Propiedad).find({
+    where: { contratos: { inquilino: { id } } },
+    relations: ["contratos"]
+  });
+}
+
+
+
+
 
 }
