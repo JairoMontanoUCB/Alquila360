@@ -278,6 +278,17 @@ const guardarContrato = async () => {
   }
 };
 
+const descargarPDF = async (contratoId: string) => {
+  try {
+    const idNumerico = contratoId.replace('C-', '');
+    
+    await contratoService.descargarContratoPDF(Number(idNumerico));
+  } catch (error: any) {
+    console.error('Error completo:', error);
+    alert(`Error al descargar el PDF: ${error.response?.data?.message || error.message}`);
+  }
+};
+
   return (
     <div className="min-h-screen flex bg-[#0b3b2c] text-slate-900">
       <SidebarAdministrador />
@@ -601,8 +612,11 @@ const guardarContrato = async () => {
 
             {/* BOTONES ABAJO */}
             <div className="flex justify-end gap-3 mt-6">
-              <button className="px-4 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-sm font-medium">
-                Imprimir
+              <button 
+                  onClick={() => descargarPDF(selectedContrato.id)}
+                  className="px-4 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-sm font-medium"
+              >
+                  Imprimir
               </button>
               <button
                 onClick={abrirEditorDesdeVista}

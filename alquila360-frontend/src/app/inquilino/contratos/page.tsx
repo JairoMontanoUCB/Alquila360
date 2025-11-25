@@ -205,10 +205,21 @@ export default function ContratosInquilinoPage() {
       setContratos(transformado);
       
     } catch (err: any) {
-      console.error("❌ Error cargando contratos:", err);
+      console.error(" Error cargando contratos:", err);
       setError(`Error cargando contratos: ${err.message}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const descargarPDF = async (contratoId: string) => {
+    try {
+      const idNumerico = contratoId.replace('C-', '');
+      
+      await contratoService.descargarContratoPDF(Number(idNumerico));
+    } catch (error: any) {
+      console.error('Error completo:', error);
+      alert(`Error al descargar el PDF: ${error.response?.data?.message || error.message}`);
     }
   };
 

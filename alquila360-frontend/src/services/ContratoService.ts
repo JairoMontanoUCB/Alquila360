@@ -119,7 +119,7 @@ export type PropietarioBackend = {
       const response = await api.put(`/contrato/${id}`, contratoData);
       return response.data;
     },
-    
+
     async getContratosPorPropietario(propietarioId: number): Promise<ContratoBackend[]> {
       const response = await api.get(`/contrato/propietario/${propietarioId}`);
       return response.data;
@@ -150,5 +150,26 @@ export type PropietarioBackend = {
     async getUsuariosActivos(): Promise<InquilinoBackend[]> {
       const response = await api.get('/user/activos');
       return response.data;
+    },
+
+    //Descargar pdf
+
+    async descargarContratoPDF(Id: number): Promise<void> {
+      try {
+        const response = await api.get(`/contrato/${Id}/pdf`, {
+          responseType: 'blob' // Importante para descargar archivos
+        });
+        
+        // descargar el archivo
+        const blob = new Blob([response.data], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `contrato-${Id}.pdf`;
+        link.click();
+        window.URL.revokeObjectURL(url);
+      } catch (error) {
+        throw error;
+      }
     }
   };
