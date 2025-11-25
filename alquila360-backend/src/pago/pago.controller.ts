@@ -1,35 +1,46 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, NotFoundException, Res } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Put, NotFoundException, Res, HttpStatus } from "@nestjs/common";
 import { PagoService } from "./pago.service";
-import { Pago } from "src/entity/pago.entity";
-import { get } from "http";
-import * as fs from "fs";
 import { CreatePagoDto } from "./pagoDto/create-pago.dto";
+import { UpdatePagoDto } from "./pagoDto/update-pago.dto";
+import { Response } from 'express';
 
-@Controller('/pago')
+@Controller('pago')
 export class PagoController {
-    constructor(private readonly pagoService : PagoService) {}
-    
+    constructor(private readonly pagoService: PagoService) {}
+   
     @Post()
-    createPago(@Body() createPagoDto : CreatePagoDto) {
+    async createPago(@Body() createPagoDto: CreatePagoDto) {
         return this.pagoService.createPago(createPagoDto);
     }
-    
 
     @Get()
-    getAllPago() {
+    async getAllPago() {
         return this.pagoService.getAllPago();
     }
-    @Get('/:id')
-    getPagoById(@Param()param: any) {
-        return this.pagoService.getPagoById(param.id);
+
+    @Get(':id')
+    async getPagoById(@Param('id') id: number) {
+        return this.pagoService.getPagoById(id);
     }
-    @Put('/:id')
-    updatePago(@Param()param: any, @Body() pago: Pago) {
-        return this.pagoService.updatePago(param.id, pago);
+
+    @Put(':id')
+    async updatePago(@Param('id') id: number, @Body() updatePagoDto: UpdatePagoDto) {
+        return this.pagoService.updatePago(id, updatePagoDto);
     }
-    @Delete('/:id')
-    deletePago(@Param()param: any) {
-        return this.pagoService.deletePago(param.id);
+
+    @Delete(':id')
+    async deletePago(@Param('id') id: number) {
+        return this.pagoService.deletePago(id);
+    }
+
+    @Get('propietario/:propietarioId')
+    async getPagosByPropietario(@Param('propietarioId') propietarioId: number) {
+        return this.pagoService.getPagosByPropietario(propietarioId);
+    }
+
+    @Get('inquilino/:inquilinoId')
+    async getPagosByInquilino(@Param('inquilinoId') inquilinoId: number) {
+        return this.pagoService.getPagosByInquilino(inquilinoId);
     }
 
     @Get("descargar/:id")
@@ -40,12 +51,10 @@ export class PagoController {
             throw new NotFoundException("PDF no encontrado.");
         }
 
-        if (!fs.existsSync(pago.ruta_pdf)) {
-            throw new NotFoundException("El archivo PDF no existe en el servidor.");
-        }
-
-        res.download(pago.ruta_pdf);
+        // Configurar headers para descarga
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="recibo-pago-${id}.pdf"`);
+        
+        return res.download(pago.ruta_pdf);
     }
 }
-
-

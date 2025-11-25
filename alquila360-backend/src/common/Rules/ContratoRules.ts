@@ -4,6 +4,7 @@ import AppDataSource from "src/data-source";
 import { User } from "src/entity/user.entity";
 import { Propiedad } from "src/entity/propiedad.entity";
 import { Contrato } from 'src/entity/contrato.entity';
+import { Cuota } from 'src/entity/cuota.entity';
 
 export class ContratoRules {
     
@@ -66,12 +67,17 @@ export class ContratoRules {
         }
     }
 
-    static validarDescuentoGarantia(nuevaGarantia: number): void {
+    static validarDescuentoGarantia(nuevaGarantia: number, ultimaCuota: Cuota): void {
         // Si la nueva garantia es negativa, ajustar la ultima cuota
-
+        if (!Cuota){
+            throw new BusinessException('No se pudo cargar la ultima cuota del contrato');
+        }
+        if (ultimaCuota.estado !== 'pendiente') {
+            throw new BusinessException('La última cuota ya fue pagada o no está pendiente');
+        }
         if (nuevaGarantia < 0) {
             var cantidadAdeudada = Math.abs(nuevaGarantia);
-            // Aqui cambiar el monto de la ultima cuota 
+            ultimaCuota.monto = cantidadAdeudada;
             throw new BusinessException(`La garantia no alcanzo para el ultimo mes. Queda una deuda de ${cantidadAdeudada}`);
         }
     }

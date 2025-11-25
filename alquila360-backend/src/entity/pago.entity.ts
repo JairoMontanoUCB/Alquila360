@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from "typeorm";
 import { Contrato } from "./contrato.entity";
 import { User } from "./user.entity";
+import { Cuota } from "./cuota.entity";
 
 @Entity("pagos")
 export class Pago {
@@ -14,6 +15,12 @@ export class Pago {
   @Column()
   id_contrato: number;
 
+  @ManyToOne(() => Cuota, cuota => cuota.pagos)
+  @JoinColumn({ name: "cuota_id" })
+  cuota: Cuota;
+
+  @Column()
+  cuota_id: number;
   
   @ManyToOne(() => User, user => user.pagos)
   inquilino: User;

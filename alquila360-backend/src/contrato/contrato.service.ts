@@ -12,6 +12,7 @@ import { PdfKitGeneratorService } from "src/utils/pdf-generator.service";
 import { ResponseContratoDto } from "./contratoDto/response-contrato.dto";
 import { HTTPRequest } from "puppeteer";
 import { ContratoRules } from "src/common/Rules/ContratoRules";
+import { Cuota } from "src/entity/cuota.entity";
 
 @Injectable()
 export class ContratoService {
@@ -86,6 +87,7 @@ export class ContratoService {
         contrato.monto_mensual = monto_mensual; 
         contrato.garantia = garantia;
         contrato.estado = "activo";
+        
 
         var contratoGuardado = await AppDataSource.getRepository(Contrato).save(contrato);
 
@@ -175,8 +177,6 @@ export class ContratoService {
     }
 
     async FinalizarContrato(contratoId : number){
-        // AUI CARGAR ULTIMA CUOTA
-        
         // Conseguir Contrato
         
         var contrato = await this.getContratoById(contratoId);
@@ -192,7 +192,10 @@ export class ContratoService {
         var nuevaGarantia = contrato.garantia - ultimoAlquiler;
         contrato.garantia = nuevaGarantia;
 
-        ContratoRules.validarGarantia(nuevaGarantia);
+        //Cargar ultima cuota 
+        var ultimaCuota = await this.obtenerUltimaCuotaPendiente(contratoId);
+
+        ContratoRules.validarDescuentoGarantia(nuevaGarantia,ultimaCuota!);
 
 
         // Actualizar estado a "finalizado"
@@ -210,7 +213,7 @@ export class ContratoService {
             Propiedad: contrato.propiedad
         });
 
-        return { message: `El contrato con ID ${contratoId} ha sido finalizado.` };
+        return { message: `El contrato con ID ${contratoId} ha sido finalizado. El recibo final fue guardado en ${pdfPath}` };
 
     }
 
@@ -247,4 +250,25 @@ export class ContratoService {
         
         return response;
     }
+    
+    private async obtenerUltimaCuotaPendiente(contratoId: number) {
+        return await AppDataSource.getRepository(Cuota).findOne({
+            where: { 
+                contrato: { id: contratoId },
+                estado: 'pendiente'
+            },
+            order: { fecha_vencimiento: "DESC" }
+        });
+    }
+
+    async getContratoActivo(usuarioId: number) {
+  return AppDataSource.getRepository(Contrato).findOne({
+    where: { 
+      inquilino: { id: usuarioId },
+      estado: "activo"
+    },
+    relations: ["propiedad", "inquilino"]
+  });
+}
+
 }

@@ -39,16 +39,16 @@ export class AuthService {
     });
 
     return {
-      message: 'Login exitoso',
-      usuario: {
-        id: usuario.id,
-        nombre: usuario.nombre,
-        apellido: usuario.apellido,
-        email: usuario.email,
-        rol: usuario.rol,
-      },
-      token,
-    };
+  message: 'Login exitoso',
+  usuario: {
+    id: usuario.id,
+    nombre: usuario.nombre,
+    apellido: usuario.apellido,
+    email: usuario.email,
+    rol: usuario.rol,
+  },
+  access_token: token,
+};
   }
 
   // --------------------------
