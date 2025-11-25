@@ -99,4 +99,9 @@ export class PropiedadController {
   ) {
     return this.propiedadService.eliminarFotoPropiedad(id, fotoId);
   }
+
+  @Get('propietario/:propietarioId')
+  async getPropiedadesPorPropietario(@Param('propietarioId') propietarioId: number) {
+    return this.propiedadService.getPropiedadesPorPropietario(propietarioId);
+  }
 }

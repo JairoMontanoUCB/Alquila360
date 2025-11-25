@@ -177,4 +177,12 @@ export class PropiedadService {
 
     return { message: "Foto eliminada correctamente" };
   }
+
+  async getPropiedadesPorPropietario(propietarioId: number) {
+    return AppDataSource.getRepository(Propiedad).find({
+      where: { propietario: { id: propietarioId } },
+      relations: ["fotos", "propietario", "calificaciones"]
+    });
+  }
+  
 }
