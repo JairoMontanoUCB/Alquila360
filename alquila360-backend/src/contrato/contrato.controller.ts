@@ -32,6 +32,13 @@ export class ContratoController {
     TerminarContrato(@Param('id') id: number) {
         return this.contratoService.FinalizarContrato(id);
     }
+
+    @Get("/actual/:usuarioId")
+getContratoActivo(@Param("usuarioId") usuarioId: number) {
+  return this.contratoService.getContratoActivo(usuarioId);
+}
+
+
 }
 
 

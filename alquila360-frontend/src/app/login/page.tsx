@@ -23,6 +23,7 @@ export default function Login() {
 
     localStorage.setItem("token", data.access_token);
     localStorage.setItem("role", data.usuario.rol);
+    localStorage.setItem("userId", data.usuario.id);
     localStorage.setItem("user", JSON.stringify(data.usuario));
     
     const role = data.usuario.rol;

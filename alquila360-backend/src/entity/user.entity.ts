@@ -6,6 +6,8 @@ import { Ticket } from "./ticket.entity";
 import { UserRating } from "./user_rating.entity";
 import { PropertyRating } from "./property_rating.entity";
 
+
+
 @Entity("usuarios")
 export class User {
   @PrimaryGeneratedColumn({ name: "usuario_id" })
@@ -43,8 +45,7 @@ export class User {
   @OneToMany(() => Propiedad, propiedad => propiedad.propietario)
   propiedades: Propiedad[];
 
-  @OneToMany(() => Contrato, contrato => contrato.inquilino)
-  contratos: Contrato[];
+  
 
   @OneToMany(() => Pago, pago => pago.inquilino)
   pagos: Pago[];
@@ -73,5 +74,8 @@ ticketsAsignados:  Ticket[];
 
 @OneToMany(() => PropertyRating, rating => rating.autor)
 propertyRatings: PropertyRating[];
+
+@OneToMany(() => Contrato, contrato => contrato.inquilino)
+contratos: Contrato[];
 
 }

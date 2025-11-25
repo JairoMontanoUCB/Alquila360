@@ -59,6 +59,11 @@ export class TicketController {
   getMisTickets(@Req() req) {
     return this.ticketService.getTicketsByUsuario(req.user.id);
   }
+  @UseGuards(JwtAuthGuard)
+@Get()
+getAllTickets() {
+  return this.ticketService.getAllTickets();
+}
 
   @Patch(":id/prioridad")
   cambiarPrioridad(@Param("id") id: number, @Body() body: any) {
@@ -74,4 +79,9 @@ export class TicketController {
   asignarTecnico(@Param("id") id: number, @Body() body: any) {
     return this.ticketService.asignarTecnico(id, body.tecnicoId);
   }
+
+  @Get("usuario/:id")
+getByUser(@Param("id") id: number) {
+  return this.ticketService.getTicketsByUsuario(id);
+}
 }

@@ -9,6 +9,7 @@ import { PagoModule } from './pago/pago.module';
 import { authPlugins } from 'mysql2';
 import { AuthModule } from './auth/auth.module';
 import { CuotaModule } from './cuota/cuota.module';
+import { ReportesModule } from './reportes/reportes.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
@@ -19,7 +20,8 @@ imports: [
   TicketModule,
   PagoModule,
   AuthModule,
-  CuotaModule
+  CuotaModule,
+  ReportesModule,
 ],
   controllers: [AppController],
   providers: [AppService],
