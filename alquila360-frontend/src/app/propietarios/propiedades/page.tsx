@@ -3,6 +3,7 @@
 import { useState, useEffect, ChangeEvent } from "react";
 import Sidebar from "../../components/sideBarPropietario";
 import { propiedadService, PropiedadBackend } from "../../../services/PropiedadService";
+import { useRouter } from "next/navigation";
 
 // Tipo actualizado para usar datos reales
 type Propiedad = {
@@ -59,32 +60,65 @@ export default function MisPropiedades() {
   const [editServicios, setEditServicios] = useState("");
   const [editImagenes, setEditImagenes] = useState<File[]>([]);
 
-  // ID del propietario logueado (esto debería venir de tu sistema de autenticación)
-  const [propietarioId, setPropietarioId] = useState<number>(1); // Temporal - reemplaza con el ID real
+  const router = useRouter();
+  const [propietarioId, setPropietarioId] = useState<number | null>(null);
+  const [userLoading, setUserLoading] = useState(true);
 
+    // Obtener usuario logueado al cargar el componente
+    useEffect(() => {
+      const obtenerUsuarioLogueado = () => {
+        try {
+          const usuarioStorage = localStorage.getItem('usuario');
+          const role = localStorage.getItem('role');
+          
+          console.log("🔍 Verificando usuario:", { usuarioStorage, role });
+  
+          if (usuarioStorage && role === 'propietario') {
+            const usuario = JSON.parse(usuarioStorage);
+            console.log("👤 Usuario propietario encontrado:", usuario);
+            
+            if (usuario && usuario.id) {
+              setPropietarioId(usuario.id);
+            } else {
+              console.error("❌ Usuario no tiene ID");
+              router.push('/login');
+            }
+          } else {
+            console.error("❌ No es propietario o no hay usuario:", { role });
+            router.push('/login');
+          }
+        } catch (error) {
+          console.error("❌ Error obteniendo usuario:", error);
+          router.push('/login');
+        } finally {
+          setUserLoading(false);
+        }
+      };
+  
+      obtenerUsuarioLogueado();
+    }, [router]);
   // Cargar propiedades del propietario
   useEffect(() => {
     cargarPropiedades();
-  }, []);
+  }, [propietarioId]);
 
   const cargarPropiedades = async () => {
+    if (!propietarioId) return;
+    
     try {
       setLoading(true);
       setError(null);
-      console.log("🔄 Cargando propiedades del propietario...");
+      console.log("🔄 Cargando propiedades del propietario ID:", propietarioId);
       
-      // Obtener solo las propiedades del propietario logueado
       const propiedadesData = await propiedadService.getPropiedadesPorPropietario(propietarioId);
       console.log("✅ Propiedades del propietario recibidas:", propiedadesData);
 
-      // Transformar datos del backend al formato del frontend
+      // Transformación de datos
       const propiedadesTransformadas: Propiedad[] = propiedadesData.map(prop => {
-        // Obtener imagen
         const primeraImagen = prop.fotos && prop.fotos.length > 0 && prop.fotos[0].url
           ? `http://localhost:3001${prop.fotos[0].url}`
           : "/propiedad.png";
 
-        // Mapear estado
         const estadoFrontend = 
           prop.estado === "disponible" ? "Disponible" :
           prop.estado === "alquilada" ? "Ocupada" :
@@ -93,7 +127,7 @@ export default function MisPropiedades() {
         return {
           id: prop.id,
           img: primeraImagen,
-          nombre: prop.direccion, // Usar dirección como nombre
+          nombre: prop.direccion,
           tipo: prop.tipo,
           direccion: prop.direccion,
           superficie: prop.superficie ? `${prop.superficie} m²` : "No especificado",
@@ -102,7 +136,7 @@ export default function MisPropiedades() {
           precioAlquiler: `$${prop.precio_referencia}`,
           precioGarantia: `$${prop.precio_referencia * 2}`,
           descripcion: prop.descripcion || "Sin descripción",
-          servicios: "Básicos", // Temporal - ajusta según tus datos
+          servicios: "Básicos",
           fotos: prop.fotos || []
         };
       });
@@ -117,15 +151,9 @@ export default function MisPropiedades() {
     }
   };
 
-  const stateColor = (estado: string) => {
-    if (estado === "Disponible") return "bg-[#d3f7e8] text-[#1b7c4b]";
-    if (estado === "Ocupada") return "bg-[#dbe7ff] text-[#3b5fb4]";
-    return "bg-[#f0f0f0] text-[#666]";
-  };
-
-  // Función para crear propiedad - CONECTADA AL BACKEND
+  // También corrige la función de crear propiedad para usar el propietarioId real
   const handleGuardarPropiedad = async () => {
-    if (!nombrePropiedad || !direccionExacta || !precioAlquiler) {
+    if (!nombrePropiedad || !direccionExacta || !precioAlquiler || !propietarioId) {
       alert("Completa al menos nombre, dirección y precio de alquiler.");
       return;
     }
@@ -133,19 +161,18 @@ export default function MisPropiedades() {
     try {
       const propiedadData = {
         direccion: direccionExacta,
-        ciudad: "Ciudad por defecto", // Ajusta según tu formulario
+        ciudad: "Ciudad por defecto",
         tipo: tipoPropiedad.toLowerCase(),
         estado: estadoActual.toLowerCase(),
         descripcion: descripcion || "Sin descripción",
         precio_referencia: Number(precioAlquiler),
-        propietarioId: propietarioId, // Usar el ID del propietario logueado
-        // Agrega otros campos según necesites
+        propietarioId: propietarioId, // ← USAR EL ID REAL DEL USUARIO LOGUEADO
       };
 
-      console.log("📤 Creando propiedad:", propiedadData);
+      console.log("📤 Creando propiedad para propietario:", propietarioId, propiedadData);
       
       await propiedadService.crearPropiedad(propiedadData);
-      await cargarPropiedades(); // Recargar la lista
+      await cargarPropiedades();
       
       resetForm();
       setOpenCreate(false);
@@ -157,55 +184,76 @@ export default function MisPropiedades() {
     }
   };
 
-  // Función para editar propiedad - CONECTADA AL BACKEND
-  const handleGuardarEdicion = async () => {
-    if (editIndex === null) return;
-
-    try {
-      const propiedad = propiedades[editIndex];
-      
-      const propiedadData = {
-        direccion: editDireccionExacta,
-        ciudad: "Ciudad por defecto", // Ajusta según tu formulario
-        tipo: editTipoPropiedad.toLowerCase(),
-        estado: editEstadoActual.toLowerCase(),
-        descripcion: editDescripcion || "Sin descripción",
-        precio_referencia: Number(editPrecioAlquiler),
-        // Agrega otros campos según necesites
-      };
-
-      console.log("📤 Actualizando propiedad:", propiedad.id, propiedadData);
-      
-      await propiedadService.actualizarPropiedad(propiedad.id, propiedadData);
-      await cargarPropiedades(); // Recargar la lista
-      
-      setOpenEdit(false);
-      setEditIndex(null);
-      alert("Propiedad actualizada exitosamente");
-      
-    } catch (error: any) {
-      console.error("❌ Error actualizando propiedad:", error);
-      alert(`Error al actualizar la propiedad: ${error.message}`);
-    }
+  const stateColor = (estado: string) => {
+    if (estado === "Disponible") return "bg-[#d3f7e8] text-[#1b7c4b]";
+    if (estado === "Ocupada") return "bg-[#dbe7ff] text-[#3b5fb4]";
+    return "bg-[#f0f0f0] text-[#666]";
   };
 
   // Funciones de UI
-  const handleOpenEdit = (index: number) => {
-    const p = propiedades[index];
-    setEditIndex(index);
-    setEditNombrePropiedad(p.nombre);
-    setEditTipoPropiedad(p.tipo);
-    setEditDireccionExacta(p.direccion);
-    setEditSuperficie(p.superficie.replace(' m²', ''));
-    setEditAmbientes(p.ambientes.replace(' ambientes', ''));
-    setEditEstadoActual(p.estado);
-    setEditPrecioAlquiler(p.precioAlquiler.replace('$', ''));
-    setEditPrecioGarantia(p.precioGarantia.replace('$', ''));
-    setEditDescripcion(p.descripcion);
-    setEditServicios(p.servicios);
-    setEditImagenes([]);
-    setOpenEdit(true);
-  };
+  // Función para abrir edición 
+const handleOpenEdit = (index: number) => {
+  const p = propiedades[index];
+  console.log("📝 Editando propiedad:", p);
+  
+  setEditIndex(index);
+  setEditNombrePropiedad(p.nombre);
+  setEditTipoPropiedad(p.tipo);
+  setEditDireccionExacta(p.direccion);
+  
+  // CORRECCIÓN: Manejar correctamente "No especificado"
+  const superficieValue = p.superficie.includes('No especificado') 
+    ? '' 
+    : p.superficie.replace(' m²', '');
+  
+  const ambientesValue = p.ambientes.includes('No especificado') 
+    ? '' 
+    : p.ambientes.replace(' ambientes', '');
+  
+  console.log("🔍 Valores procesados:");
+  console.log("  - superficieValue:", superficieValue);
+  console.log("  - ambientesValue:", ambientesValue);
+  
+  setEditSuperficie(superficieValue);
+  setEditAmbientes(ambientesValue);
+  setEditEstadoActual(p.estado);
+  
+  // CORRECCIÓN: Mejor manejo del precio
+  const precioValue = p.precioAlquiler.replace('$', '').replace('/mes', '');
+  setEditPrecioAlquiler(precioValue);
+  setEditPrecioGarantia(p.precioGarantia.replace('$', ''));
+  setEditDescripcion(p.descripcion);
+  setEditServicios(p.servicios);
+  setEditImagenes([]);
+  setOpenEdit(true);
+};
+
+const handleGuardarEdicion = async () => {
+  if (editIndex === null) return;
+
+  try {
+    const propiedad = propiedades[editIndex];
+    
+    // DATOS MÍNIMOS PARA PRUEBA
+    const propiedadData = {
+      direccion: editDireccionExacta,
+      precio_referencia: Number(editPrecioAlquiler),
+    };
+
+    const respuesta = await propiedadService.actualizarPropiedad(propiedad.id, propiedadData);
+
+    await cargarPropiedades();
+    
+    setOpenEdit(false);
+    setEditIndex(null);
+    alert("✅ Propiedad actualizada exitosamente");
+    
+  } catch (error: any) {
+    console.error("❌ ERROR:", error);
+    alert(`Error: ${error.message}`);
+  }
+};
+
 
   const handleOpenView = (index: number) => {
     setViewIndex(index);
