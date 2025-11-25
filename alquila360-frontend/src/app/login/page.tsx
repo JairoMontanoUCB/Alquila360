@@ -10,12 +10,12 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
 
  const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!email || !password) {
-    setError("Todos los campos son obligatorios.");
-    return;
-  }
+    if (!email || !password) {
+      setError("Todos los campos son obligatorios.");
+      return;
+    }
 
   try {
     const data = await loginRequest(email, password);
@@ -23,11 +23,13 @@ export default function Login() {
 
     localStorage.setItem("token", data.access_token);
     localStorage.setItem("role", data.usuario.rol);
-const role = data.usuario.rol;
+    localStorage.setItem("user", JSON.stringify(data.usuario));
+    
+    const role = data.usuario.rol;
 
     if (role === "administrador") window.location.href = "/administrador";
-if (role === "propietario") window.location.href = "/propietarios";
-if (role === "inquilino") window.location.href = "/inquilino";
+    if (role === "propietario") window.location.href = "/propietarios";
+    if (role === "inquilino") window.location.href = "/inquilino";
 
     if (role === "tecnico") window.location.href = "/tecnicos";
 
