@@ -96,7 +96,7 @@ export default function ContratosPage() {
       const propiedadesArray = Array.isArray(propiedadesData) ? propiedadesData as PropiedadBackend[] : [];
       const inquilinosArray = Array.isArray(inquilinosData) ? inquilinosData as InquilinoBackend[] : [];
   
-      // CONVERTIR CONTRATOS - SOLUCIÓN TEMPORAL
+      // CONVERTIR CONTRATOS 
       let contratosFrontend: Contrato[] = [];
       
       if (contratosArray.length > 0) {
@@ -104,7 +104,7 @@ export default function ContratosPage() {
           // BUSCAR PROPIEDAD
           const propiedadEncontrada = propiedadesArray.find(p => p.id === contrato.id_propiedad);
 
-          const inquilinoEncontrado = inquilinosArray[index] || inquilinosArray[0];
+          const inquilinoEncontrado = contrato.inquilino;
   
           return {
             id: `C-${String(contrato.id).padStart(3, "0")}`,
