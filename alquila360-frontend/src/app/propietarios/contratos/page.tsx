@@ -3,27 +3,44 @@
 import { useState, ChangeEvent, FormEvent } from "react";
 import Sidebar from "../../components/sideBarPropietario";
 
+type EstadoContrato = "Vigente" | "Finalizado";
+
 type Contrato = {
   id: string;
   propiedad: string;
   inquilino: string;
-  fechaInicio: string;
-  fechaFin: string;
-  cuotaMensual: string;
-  estado: string;
+  propietario: string;
+  fechaInicio: string; // YYYY-MM-DD
+  fechaFin: string; // YYYY-MM-DD
+  montoAlquiler: string; // solo número, ej: "85000"
+  montoGarantia: string; // solo número
+  frecuenciaCobro: string; // Mensual / Trimestral / Anual
+  numeroCuotas: string;
+  diaVencimiento: string;
+  penalidades: string;
+  clausulasAdicionales: string;
+  estado: EstadoContrato;
 };
 
-const contratosIniciales: Contrato[] = [
-  {
-    id: "cont1",
-    propiedad: "Calle Secundaria 456",
-    inquilino: "María García",
-    fechaInicio: "31/12/2023",
-    fechaFin: "31/12/2024",
-    cuotaMensual: "$2500",
-    estado: "Vigente",
-  },
-];
+function formatearFechaBonita(fecha: string) {
+  if (!fecha) return "-";
+  const d = new Date(fecha);
+  if (isNaN(d.getTime())) return fecha;
+  return d.toLocaleDateString("es-AR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function formatearMoneda(valor: string) {
+  if (!valor) return "$0";
+  const num = Number(valor);
+  if (isNaN(num)) return `$${valor}`;
+  return `$${num.toLocaleString("es-AR")}`;
+}
+
+const contratosIniciales: Contrato[] = [];
 
 export default function ContratosPage() {
   const [contratos, setContratos] = useState<Contrato[]>(contratosIniciales);
@@ -54,7 +71,7 @@ export default function ContratosPage() {
     fechaInicio: "",
     fechaFin: "",
     montoAlquiler: "",
-    garantia: "",
+    montoGarantia: "",
     frecuenciaCobro: "Mensual",
     numeroCuotas: "",
     diaVencimiento: "",
@@ -69,8 +86,8 @@ export default function ContratosPage() {
     nuevoMontoAlquiler: "",
     nuevaGarantia: "",
     frecuenciaCobro: "Mensual",
-    numeroCuotas: "12",
-    diaVencimiento: "10",
+    numeroCuotas: "",
+    diaVencimiento: "",
     condicionesRenovacion: "",
     observaciones: "",
   });
@@ -83,7 +100,7 @@ export default function ContratosPage() {
       fechaInicio: "",
       fechaFin: "",
       montoAlquiler: "",
-      garantia: "",
+      montoGarantia: "",
       frecuenciaCobro: "Mensual",
       numeroCuotas: "",
       diaVencimiento: "",
@@ -99,8 +116,8 @@ export default function ContratosPage() {
       nuevoMontoAlquiler: "",
       nuevaGarantia: "",
       frecuenciaCobro: "Mensual",
-      numeroCuotas: "12",
-      diaVencimiento: "10",
+      numeroCuotas: "",
+      diaVencimiento: "",
       condicionesRenovacion: "",
       observaciones: "",
     });
@@ -129,17 +146,22 @@ export default function ContratosPage() {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
 
-    const nuevoId = `cont${contratos.length + 1}`;
+    const nuevoId = `C-${String(contratos.length + 1).padStart(3, "0")}`;
 
     const contratoAInsertar: Contrato = {
       id: nuevoId,
-      propiedad: nuevoContrato.propiedad || "Sin nombre",
-      inquilino: nuevoContrato.inquilino || "Sin inquilino",
+      propiedad: nuevoContrato.propiedad,
+      inquilino: nuevoContrato.inquilino,
+      propietario: nuevoContrato.propietario,
       fechaInicio: nuevoContrato.fechaInicio,
       fechaFin: nuevoContrato.fechaFin,
-      cuotaMensual: nuevoContrato.montoAlquiler
-        ? `$${nuevoContrato.montoAlquiler}`
-        : "$0",
+      montoAlquiler: nuevoContrato.montoAlquiler || "0",
+      montoGarantia: nuevoContrato.montoGarantia || "0",
+      frecuenciaCobro: nuevoContrato.frecuenciaCobro,
+      numeroCuotas: nuevoContrato.numeroCuotas || "0",
+      diaVencimiento: nuevoContrato.diaVencimiento,
+      penalidades: nuevoContrato.penalidades,
+      clausulasAdicionales: nuevoContrato.clausulasAdicionales,
       estado: "Vigente",
     };
 
@@ -161,22 +183,19 @@ export default function ContratosPage() {
 
   // ---------- MODAL EDITAR CONTRATO ----------
   const handleOpenEdit = (contrato: Contrato) => {
-    const montoLimpio = contrato.cuotaMensual.replace(/[^0-9.]/g, "");
     setNuevoContrato({
       propiedad: contrato.propiedad,
       inquilino: contrato.inquilino,
-      propietario: "Juan Pérez",
+      propietario: contrato.propietario,
       fechaInicio: contrato.fechaInicio,
       fechaFin: contrato.fechaFin,
-      montoAlquiler: montoLimpio,
-      garantia: "170000",
-      frecuenciaCobro: "Mensual",
-      numeroCuotas: "12",
-      diaVencimiento: "10",
-      penalidades:
-        "Ej: Mora del 2% por día de atraso. Costo de reparaciones por daños...",
-      clausulasAdicionales:
-        "Agregue cualquier cláusula adicional del contrato...",
+      montoAlquiler: contrato.montoAlquiler,
+      montoGarantia: contrato.montoGarantia,
+      frecuenciaCobro: contrato.frecuenciaCobro,
+      numeroCuotas: contrato.numeroCuotas,
+      diaVencimiento: contrato.diaVencimiento,
+      penalidades: contrato.penalidades,
+      clausulasAdicionales: contrato.clausulasAdicionales,
     });
 
     setIdEditando(contrato.id);
@@ -199,11 +218,17 @@ export default function ContratosPage() {
               ...c,
               propiedad: nuevoContrato.propiedad || c.propiedad,
               inquilino: nuevoContrato.inquilino || c.inquilino,
+              propietario: nuevoContrato.propietario || c.propietario,
               fechaInicio: nuevoContrato.fechaInicio || c.fechaInicio,
               fechaFin: nuevoContrato.fechaFin || c.fechaFin,
-              cuotaMensual: nuevoContrato.montoAlquiler
-                ? `$${nuevoContrato.montoAlquiler}`
-                : c.cuotaMensual,
+              montoAlquiler: nuevoContrato.montoAlquiler || c.montoAlquiler,
+              montoGarantia: nuevoContrato.montoGarantia || c.montoGarantia,
+              frecuenciaCobro: nuevoContrato.frecuenciaCobro || c.frecuenciaCobro,
+              numeroCuotas: nuevoContrato.numeroCuotas || c.numeroCuotas,
+              diaVencimiento: nuevoContrato.diaVencimiento || c.diaVencimiento,
+              penalidades: nuevoContrato.penalidades || c.penalidades,
+              clausulasAdicionales:
+                nuevoContrato.clausulasAdicionales || c.clausulasAdicionales,
             }
           : c
       )
@@ -215,18 +240,16 @@ export default function ContratosPage() {
 
   // ---------- MODAL RENOVAR CONTRATO ----------
   const handleOpenRenew = (contrato: Contrato) => {
-    const montoLimpio = contrato.cuotaMensual.replace(/[^0-9.]/g, "");
     setContratoARenovar(contrato);
     setDatosRenovacion({
       nuevaFechaInicio: "",
       nuevaFechaFin: "",
-      nuevoMontoAlquiler: montoLimpio,
-      nuevaGarantia: "5000",
-      frecuenciaCobro: "Mensual",
-      numeroCuotas: "12",
-      diaVencimiento: "10",
-      condicionesRenovacion:
-        "Especificar las condiciones y términos de la renovación del contrato...",
+      nuevoMontoAlquiler: contrato.montoAlquiler,
+      nuevaGarantia: contrato.montoGarantia,
+      frecuenciaCobro: contrato.frecuenciaCobro || "Mensual",
+      numeroCuotas: contrato.numeroCuotas || "",
+      diaVencimiento: contrato.diaVencimiento || "",
+      condicionesRenovacion: "",
       observaciones: "",
     });
     setIsRenewOpen(true);
@@ -252,7 +275,7 @@ export default function ContratosPage() {
     e.preventDefault();
     if (!contratoARenovar) return;
 
-    const { nuevaFechaInicio, nuevaFechaFin, nuevoMontoAlquiler } =
+    const { nuevaFechaInicio, nuevaFechaFin, nuevoMontoAlquiler, nuevaGarantia } =
       datosRenovacion;
 
     setContratos((prev) =>
@@ -262,9 +285,11 @@ export default function ContratosPage() {
               ...c,
               fechaInicio: nuevaFechaInicio || c.fechaInicio,
               fechaFin: nuevaFechaFin || c.fechaFin,
-              cuotaMensual: nuevoMontoAlquiler
-                ? `$${nuevoMontoAlquiler}`
-                : c.cuotaMensual,
+              montoAlquiler: nuevoMontoAlquiler || c.montoAlquiler,
+              montoGarantia: nuevaGarantia || c.montoGarantia,
+              frecuenciaCobro: datosRenovacion.frecuenciaCobro || c.frecuenciaCobro,
+              numeroCuotas: datosRenovacion.numeroCuotas || c.numeroCuotas,
+              diaVencimiento: datosRenovacion.diaVencimiento || c.diaVencimiento,
             }
           : c
       )
@@ -275,8 +300,9 @@ export default function ContratosPage() {
 
   // Cálculos para el resumen de renovación
   const montoAnteriorLimpio = contratoARenovar
-    ? contratoARenovar.cuotaMensual.replace(/[^0-9.]/g, "")
+    ? contratoARenovar.montoAlquiler || "0"
     : "0";
+
   const montoNuevoNum = Number(
     datosRenovacion.nuevoMontoAlquiler || montoAnteriorLimpio || "0"
   );
@@ -332,10 +358,14 @@ export default function ContratosPage() {
                     <td className="py-3 px-4 text-sm">{c.id}</td>
                     <td className="py-3 px-4 text-sm">{c.propiedad}</td>
                     <td className="py-3 px-4 text-sm">{c.inquilino}</td>
-                    <td className="py-3 px-4 text-sm">{c.fechaInicio}</td>
-                    <td className="py-3 px-4 text-sm">{c.fechaFin}</td>
+                    <td className="py-3 px-4 text-sm">
+                      {formatearFechaBonita(c.fechaInicio)}
+                    </td>
+                    <td className="py-3 px-4 text-sm">
+                      {formatearFechaBonita(c.fechaFin)}
+                    </td>
                     <td className="py-3 px-4 text-sm font-semibold">
-                      {c.cuotaMensual}
+                      {formatearMoneda(c.montoAlquiler)}
                     </td>
 
                     {/* ESTADO */}
@@ -362,6 +392,16 @@ export default function ContratosPage() {
                     </td>
                   </tr>
                 ))}
+                {contratos.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={8}
+                      className="py-4 px-4 text-sm text-center text-gray-500"
+                    >
+                      No hay contratos registrados.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -410,12 +450,9 @@ export default function ContratosPage() {
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
                     >
                       <option value="">Seleccionar propiedad</option>
-                      <option value="Av. Principal 123, Piso 5">
-                        Av. Principal 123, Piso 5
-                      </option>
-                      <option value="Calle Secundaria 456">
-                        Calle Secundaria 456
-                      </option>
+                      {/* Opciones de ejemplo: luego pueden venir de la BD */}
+                      <option value="Propiedad 1">Propiedad 1</option>
+                      <option value="Propiedad 2">Propiedad 2</option>
                     </select>
                   </div>
 
@@ -428,8 +465,8 @@ export default function ContratosPage() {
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
                     >
                       <option value="">Seleccionar inquilino</option>
-                      <option value="María García">María García</option>
-                      <option value="Juan Pérez">Juan Pérez</option>
+                      <option value="Inquilino 1">Inquilino 1</option>
+                      <option value="Inquilino 2">Inquilino 2</option>
                     </select>
                   </div>
 
@@ -442,9 +479,8 @@ export default function ContratosPage() {
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
                     >
                       <option value="">Seleccionar propietario</option>
-                      <option value="Juan Carlos Martínez">
-                        Juan Carlos Martínez
-                      </option>
+                      <option value="Propietario 1">Propietario 1</option>
+                      <option value="Propietario 2">Propietario 2</option>
                     </select>
                   </div>
                 </div>
@@ -500,7 +536,6 @@ export default function ContratosPage() {
                 </div>
               </section>
 
-
               {/* PENALIDADES POR INCUMPLIMIENTO */}
               <section className="border border-[#e1dac8] rounded-2xl p-6 space-y-4">
                 <h3 className="text-lg font-semibold">
@@ -510,26 +545,23 @@ export default function ContratosPage() {
                   name="penalidades"
                   value={nuevoContrato.penalidades}
                   onChange={handleChange}
-                  placeholder="Ej: Mora del 2% por día de atraso. Costo de reparaciones por daños..."
+                  placeholder="Detalle aquí las penalidades acordadas por incumplimiento..."
                   className="w-full h-20 rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
                 />
               </section>
 
-                {/* CLÁUSULAS ADICIONALES */}
+              {/* CLÁUSULAS ADICIONALES (modelo fijo de lectura) */}
               <section className="border border-[#e1dac8] rounded-2xl p-6 space-y-4">
                 <h3 className="text-lg font-semibold">Cláusulas Adicionales</h3>
 
-                <div
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100 text-gray-700 whitespace-pre-line"
-                >
-                  {`1. El inquilino se compromete a pagar el monto mensual acordado en la fecha establecida.
-              2. El propietario se compromete a mantener la propiedad en condiciones habitables.
-              3. Cualquier daño a la propiedad será responsabilidad del inquilino, salvo desgaste por uso normal.
-              4. El contrato podrá ser renovado previo acuerdo entre ambas partes.
-              5. Cualquier disputa será resuelta conforme a las leyes vigentes.`}
+                <div className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100 text-gray-700 whitespace-pre-line">
+{`1. El inquilino se compromete a pagar el monto mensual acordado en la fecha establecida.
+2. El propietario se compromete a mantener la propiedad en condiciones habitables.
+3. Cualquier daño a la propiedad será responsabilidad del inquilino, salvo desgaste por uso normal.
+4. El contrato podrá ser renovado previo acuerdo entre ambas partes.
+5. Cualquier disputa será resuelta conforme a las leyes vigentes.`}
                 </div>
               </section>
-
 
               {/* Botones del modal */}
               <div className="flex justify-end gap-3 pt-2">
@@ -591,10 +623,8 @@ export default function ContratosPage() {
                   <p className="text-xs font-semibold text-[#7aa278] mb-1">
                     👤 LOCADOR (Propietario)
                   </p>
-                  <p className="font-semibold">Juan Carlos Martínez</p>
-                  <p className="text-sm text-gray-700">DNI: 28.456.789</p>
-                  <p className="text-sm text-gray-700">
-                    martinez@email.com
+                  <p className="font-semibold">
+                    {contratoSeleccionado.propietario || "Propietario"}
                   </p>
                 </div>
                 <div className="border border-[#315c47] rounded-2xl px-5 py-4">
@@ -603,10 +633,6 @@ export default function ContratosPage() {
                   </p>
                   <p className="font-semibold">
                     {contratoSeleccionado.inquilino}
-                  </p>
-                  <p className="text-sm text-gray-700">DNI: 32.654.987</p>
-                  <p className="text-sm text-gray-700">
-                    maria.garcia@example.com
                   </p>
                 </div>
               </div>
@@ -624,9 +650,6 @@ export default function ContratosPage() {
                 <p className="font-semibold mb-1">
                   {contratoSeleccionado.propiedad}
                 </p>
-                <p className="text-sm text-gray-700">
-                  Tipo: Casa · Superficie: 120 m² · Ambientes: 3
-                </p>
               </div>
             </section>
 
@@ -641,7 +664,7 @@ export default function ContratosPage() {
                     📅 Fecha de Inicio
                   </p>
                   <p className="text-sm text-gray-700">
-                    {contratoSeleccionado.fechaInicio}
+                    {formatearFechaBonita(contratoSeleccionado.fechaInicio)}
                   </p>
                 </div>
                 <div className="border border-[#315c47] rounded-2xl px-5 py-4">
@@ -649,7 +672,7 @@ export default function ContratosPage() {
                     📅 Fecha de Finalización
                   </p>
                   <p className="text-sm text-gray-700">
-                    {contratoSeleccionado.fechaFin}
+                    {formatearFechaBonita(contratoSeleccionado.fechaFin)}
                   </p>
                 </div>
               </div>
@@ -666,18 +689,22 @@ export default function ContratosPage() {
                     💲 Alquiler Mensual
                   </p>
                   <p className="text-2xl font-semibold">
-                    {contratoSeleccionado.cuotaMensual}
+                    {formatearMoneda(contratoSeleccionado.montoAlquiler)}
                   </p>
                 </div>
                 <div className="bg-[#fbf5ea] rounded-2xl px-5 py-4">
                   <p className="text-sm font-semibold mb-1 flex items-center gap-2">
                     💲 Garantía
                   </p>
-                  <p className="text-2xl font-semibold">$5.000</p>
+                  <p className="text-2xl font-semibold">
+                    {formatearMoneda(contratoSeleccionado.montoGarantia)}
+                  </p>
                 </div>
                 <div className="bg-[#fbf5ea] rounded-2xl px-5 py-4">
                   <p className="text-sm font-semibold mb-1">Vencimiento</p>
-                  <p className="text-xl font-semibold">Día 10</p>
+                  <p className="text-xl font-semibold">
+                    {contratoSeleccionado.diaVencimiento || "-"}
+                  </p>
                 </div>
               </div>
             </section>
@@ -691,21 +718,26 @@ export default function ContratosPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 text-center mb-3">
                   <div>
                     <p className="text-sm font-semibold">Frecuencia</p>
-                    <p className="text-sm text-gray-700">Mensual</p>
+                    <p className="text-sm text-gray-700">
+                      {contratoSeleccionado.frecuenciaCobro}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm font-semibold">Número de Cuotas</p>
-                    <p className="text-sm text-gray-700">12 cuotas</p>
+                    <p className="text-sm text-gray-700">
+                      {contratoSeleccionado.numeroCuotas || "-"}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm font-semibold">Valor por Cuota</p>
                     <p className="text-sm text-gray-700">
-                      {contratoSeleccionado.cuotaMensual}
+                      {formatearMoneda(contratoSeleccionado.montoAlquiler)}
                     </p>
                   </div>
                 </div>
                 <p className="text-center text-sm text-gray-700">
-                  Todas las cuotas tendrán el mismo valor mensual sin variación
+                  Todas las cuotas tendrán el mismo valor mensual sin variación,
+                  según lo acordado por las partes.
                 </p>
               </div>
             </section>
@@ -716,17 +748,9 @@ export default function ContratosPage() {
                 PENALIDADES
               </h3>
               <div className="border border-[#315c47] rounded-2xl px-5 py-4 text-sm text-gray-800">
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Mora del 2% por día de atraso en el pago.</li>
-                  <li>
-                    El locatario será responsable de los costos de reparación
-                    por daños causados.
-                  </li>
-                  <li>
-                    Rescisión anticipada: Penalidad equivalente a 2 meses de
-                    alquiler.
-                  </li>
-                </ul>
+                {contratoSeleccionado.penalidades
+                  ? contratoSeleccionado.penalidades
+                  : "Las penalidades por incumplimiento se regirán por lo que las partes acuerden expresamente en el contrato."}
               </div>
             </section>
 
@@ -735,25 +759,13 @@ export default function ContratosPage() {
               <h3 className="text-sm font-semibold tracking-wide mb-3">
                 CLÁUSULAS ADICIONALES
               </h3>
-              <div className="border border-[#315c47] rounded-2xl px-5 py-4 text-sm text-gray-800">
-                <ul className="list-disc list-inside space-y-1">
-                  <li>
-                    El locatario se compromete a mantener la propiedad en buen
-                    estado.
-                  </li>
-                  <li>
-                    No se permiten modificaciones estructurales sin autorización
-                    escrita.
-                  </li>
-                  <li>
-                    Los gastos de servicios públicos correrán por cuenta del
-                    locatario.
-                  </li>
-                  <li>
-                    Prohibida la cesión o subarriendo sin consentimiento del
-                    locador.
-                  </li>
-                </ul>
+              <div className="border border-[#315c47] rounded-2xl px-5 py-4 text-sm text-gray-800 whitespace-pre-line">
+                {contratoSeleccionado.clausulasAdicionales ||
+`1. El inquilino se compromete a pagar el monto mensual acordado en la fecha establecida.
+2. El propietario se compromete a mantener la propiedad en condiciones habitables.
+3. Cualquier daño a la propiedad será responsabilidad del inquilino, salvo desgaste por uso normal.
+4. El contrato podrá ser renovado previo acuerdo entre ambas partes.
+5. Cualquier disputa será resuelta conforme a las leyes vigentes.`}
               </div>
             </section>
 
@@ -763,7 +775,9 @@ export default function ContratosPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10 text-center">
                 <div>
                   <div className="border-t border-[#d7cec0] pt-4" />
-                  <p className="font-semibold">Juan Carlos Martínez</p>
+                  <p className="font-semibold">
+                    {contratoSeleccionado.propietario || "____________________"}
+                  </p>
                   <p className="text-sm text-gray-700">Firma del Locador</p>
                 </div>
                 <div>
@@ -802,7 +816,7 @@ export default function ContratosPage() {
 
       {/* ========= MODAL EDITAR CONTRATO ========= */}
       {isEditOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg:black/40 bg-black/40">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto p-8">
             {/* Header modal */}
             <div className="flex justify-between items-center mb-6">
@@ -829,12 +843,8 @@ export default function ContratosPage() {
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
                     >
                       <option value="">Seleccionar propiedad</option>
-                      <option value="Calle Secundaria 456">
-                        Calle Secundaria 456
-                      </option>
-                      <option value="Av. Principal 123, Piso 5">
-                        Av. Principal 123, Piso 5
-                      </option>
+                      <option value="Propiedad 1">Propiedad 1</option>
+                      <option value="Propiedad 2">Propiedad 2</option>
                     </select>
                   </div>
 
@@ -847,8 +857,8 @@ export default function ContratosPage() {
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
                     >
                       <option value="">Seleccionar inquilino</option>
-                      <option value="María García">María García</option>
-                      <option value="Juan Pérez">Juan Pérez</option>
+                      <option value="Inquilino 1">Inquilino 1</option>
+                      <option value="Inquilino 2">Inquilino 2</option>
                     </select>
                   </div>
 
@@ -861,10 +871,8 @@ export default function ContratosPage() {
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
                     >
                       <option value="">Seleccionar propietario</option>
-                      <option value="Juan Pérez">Juan Pérez</option>
-                      <option value="Juan Carlos Martínez">
-                        Juan Carlos Martínez
-                      </option>
+                      <option value="Propietario 1">Propietario 1</option>
+                      <option value="Propietario 2">Propietario 2</option>
                     </select>
                   </div>
                 </div>
@@ -923,8 +931,8 @@ export default function ContratosPage() {
                     </label>
                     <input
                       type="number"
-                      name="garantia"
-                      value={nuevoContrato.garantia}
+                      name="montoGarantia"
+                      value={nuevoContrato.montoGarantia}
                       onChange={handleChange}
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
                     />
@@ -983,7 +991,7 @@ export default function ContratosPage() {
 
                 <p className="text-sm text-gray-500">
                   Nota: Todas las cuotas tendrán el mismo valor mensual de{" "}
-                  <strong>${nuevoContrato.montoAlquiler || 0}</strong>
+                  <strong>{formatearMoneda(nuevoContrato.montoAlquiler || "0")}</strong>
                 </p>
               </section>
 
@@ -996,7 +1004,7 @@ export default function ContratosPage() {
                   name="penalidades"
                   value={nuevoContrato.penalidades}
                   onChange={handleChange}
-                  placeholder="Ej: Mora del 2% por día de atraso. Costo de reparaciones por daños..."
+                  placeholder="Detalle aquí las penalidades acordadas por incumplimiento..."
                   className="w-full h-20 rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
                 />
               </section>
@@ -1062,13 +1070,13 @@ export default function ContratosPage() {
                     <p className="font-semibold">Contrato N°</p>
                     <p>{contratoARenovar.id}</p>
                     <p className="mt-2 font-semibold">Fecha de Finalización</p>
-                    <p>{contratoARenovar.fechaFin}</p>
+                    <p>{formatearFechaBonita(contratoARenovar.fechaFin)}</p>
                   </div>
                   <div>
                     <p className="font-semibold">Propiedad</p>
                     <p>{contratoARenovar.propiedad}</p>
                     <p className="mt-2 font-semibold">Monto Actual</p>
-                    <p>{contratoARenovar.cuotaMensual}/mes</p>
+                    <p>{formatearMoneda(contratoARenovar.montoAlquiler)}/mes</p>
                   </div>
                   <div>
                     <p className="font-semibold">Inquilino</p>
@@ -1076,7 +1084,7 @@ export default function ContratosPage() {
                   </div>
                   <div className="flex items-center md:justify-end">
                     <span className="px-4 py-1 rounded-full bg-[#d3f7e8] text-[#1b7c4b] text-sm font-semibold">
-                      Vigente
+                      {contratoARenovar.estado}
                     </span>
                   </div>
                 </div>
@@ -1115,7 +1123,7 @@ export default function ContratosPage() {
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
                     />
                     <p className="mt-1 text-xs text-gray-500">
-                      Duración: {datosRenovacion.numeroCuotas} meses
+                      Duración: {datosRenovacion.numeroCuotas || "-"} meses
                     </p>
                   </div>
                 </div>
@@ -1139,7 +1147,8 @@ export default function ContratosPage() {
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
                     />
                     <p className="mt-1 text-xs text-gray-500">
-                      Monto anterior: {contratoARenovar.cuotaMensual}
+                      Monto anterior:{" "}
+                      {formatearMoneda(contratoARenovar.montoAlquiler)}
                     </p>
                   </div>
                   <div>
@@ -1154,7 +1163,8 @@ export default function ContratosPage() {
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
                     />
                     <p className="mt-1 text-xs text-gray-500">
-                      Equivalente a 2 meses de alquiler
+                      Valor anterior:{" "}
+                      {formatearMoneda(contratoARenovar.montoGarantia)}
                     </p>
                   </div>
                 </div>
@@ -1208,10 +1218,12 @@ export default function ContratosPage() {
 
                 <div className="mt-3 rounded-xl bg-[#fff7cf] px-4 py-3 text-sm text-gray-700">
                   <span className="font-semibold">Importante: </span>
-                  Todas las cuotas tendrán el mismo valor mensual de $
-                  {datosRenovacion.nuevoMontoAlquiler ||
-                    montoAnteriorLimpio ||
-                    "0"}
+                  Todas las cuotas tendrán el mismo valor mensual de{" "}
+                  {formatearMoneda(
+                    datosRenovacion.nuevoMontoAlquiler ||
+                      montoAnteriorLimpio ||
+                      "0"
+                  )}
                 </div>
               </section>
 
@@ -1260,10 +1272,11 @@ export default function ContratosPage() {
                       Nuevo Monto Mensual:
                     </p>
                     <p>
-                      $
-                      {datosRenovacion.nuevoMontoAlquiler ||
-                        montoAnteriorLimpio ||
-                        "0"}
+                      {formatearMoneda(
+                        datosRenovacion.nuevoMontoAlquiler ||
+                          montoAnteriorLimpio ||
+                          "0"
+                      )}
                     </p>
                   </div>
                   <div>
@@ -1274,10 +1287,9 @@ export default function ContratosPage() {
                     </p>
                     <p className="mt-2 font-semibold">Total del Contrato:</p>
                     <p>
-                      $
                       {Number.isNaN(totalContrato)
-                        ? "0"
-                        : totalContrato.toLocaleString("es-AR")}
+                        ? "$0"
+                        : formatearMoneda(String(totalContrato))}
                     </p>
                   </div>
                 </div>
