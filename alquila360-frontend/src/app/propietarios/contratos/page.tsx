@@ -497,75 +497,9 @@ export default function ContratosPage() {
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm mb-1">
-                      Monto de la Garantía ($)
-                    </label>
-                    <input
-                      type="number"
-                      name="garantia"
-                      value={nuevoContrato.garantia}
-                      onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
-                    />
-                  </div>
                 </div>
               </section>
 
-              {/* DETALLE DE CUOTAS */}
-              <section className="border border-[#e1dac8] rounded-2xl p-6 space-y-4">
-                <h3 className="text-lg font-semibold">Detalle de Cuotas</h3>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm mb-1">
-                      Frecuencia de Cobro
-                    </label>
-                    <select
-                      name="frecuenciaCobro"
-                      value={nuevoContrato.frecuenciaCobro}
-                      onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
-                    >
-                      <option value="Mensual">Mensual</option>
-                      <option value="Trimestral">Trimestral</option>
-                      <option value="Semestral">Semestral</option>
-                      <option value="Anual">Anual</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm mb-1">
-                      Número de Cuotas
-                    </label>
-                    <input
-                      type="number"
-                      name="numeroCuotas"
-                      value={nuevoContrato.numeroCuotas}
-                      onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm mb-1">
-                      Día de Vencimiento
-                    </label>
-                    <input
-                      type="number"
-                      name="diaVencimiento"
-                      value={nuevoContrato.diaVencimiento}
-                      onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
-                    />
-                  </div>
-                </div>
-
-                <p className="text-sm text-gray-500">
-                  Nota: Todas las cuotas tendrán el mismo valor mensual de{" "}
-                  <strong>${nuevoContrato.montoAlquiler || 0}</strong>
-                </p>
-              </section>
 
               {/* PENALIDADES POR INCUMPLIMIENTO */}
               <section className="border border-[#e1dac8] rounded-2xl p-6 space-y-4">
@@ -581,17 +515,21 @@ export default function ContratosPage() {
                 />
               </section>
 
-              {/* CLÁUSULAS ADICIONALES */}
+                {/* CLÁUSULAS ADICIONALES */}
               <section className="border border-[#e1dac8] rounded-2xl p-6 space-y-4">
                 <h3 className="text-lg font-semibold">Cláusulas Adicionales</h3>
-                <textarea
-                  name="clausulasAdicionales"
-                  value={nuevoContrato.clausulasAdicionales}
-                  onChange={handleChange}
-                  placeholder="Agregue cualquier cláusula adicional del contrato..."
-                  className="w-full h-20 rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
-                />
+
+                <div
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100 text-gray-700 whitespace-pre-line"
+                >
+                  {`1. El inquilino se compromete a pagar el monto mensual acordado en la fecha establecida.
+              2. El propietario se compromete a mantener la propiedad en condiciones habitables.
+              3. Cualquier daño a la propiedad será responsabilidad del inquilino, salvo desgaste por uso normal.
+              4. El contrato podrá ser renovado previo acuerdo entre ambas partes.
+              5. Cualquier disputa será resuelta conforme a las leyes vigentes.`}
+                </div>
               </section>
+
 
               {/* Botones del modal */}
               <div className="flex justify-end gap-3 pt-2">
