@@ -152,4 +152,11 @@ export class PagoService {
 
     return await AppDataSource.getRepository(Pago).delete(id);
   }
+
+  async getPagosByInquilino(inquilinoId: number) {
+  return await AppDataSource.getRepository(Pago).find({
+    where: { inquilino: { id: inquilinoId } },
+    relations: ['contrato', 'inquilino', 'cuota']
+  });
+}
 }
