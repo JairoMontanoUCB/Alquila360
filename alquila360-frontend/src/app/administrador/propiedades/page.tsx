@@ -31,6 +31,10 @@ export default function PropiedadesPage() {
   const [openAdd, setOpenAdd] = useState(false);
   const [openReport, setOpenReport] = useState(false);
   const [selectedProp, setSelectedProp] = useState<Propiedad | null>(null);
+  const [openEdit, setOpenEdit] = useState(false);
+  const [editingProp, setEditingProp] = useState<Propiedad | null>(null);
+  const [subiendoFotos, setSubiendoFotos] = useState(false);
+  const [archivosSeleccionados, setArchivosSeleccionados] = useState<File[]>([]);
 
   // --- STATE DEL FORMULARIO CORREGIDO ---
   const [direccion, setDireccion] = useState("");
@@ -53,10 +57,8 @@ export default function PropiedadesPage() {
     try {
       setLoading(true);
       setError(null);
-      console.log("🔄 Cargando propiedades del backend...");
       
       const propiedadesData = await propiedadService.getPropiedades();
-      console.log("✅ Propiedades recibidas del backend:", propiedadesData);
 
       // Transformar datos del backend al formato del frontend
       const propiedadesTransformadas: Propiedad[] = propiedadesData.map(prop => {
@@ -90,12 +92,113 @@ export default function PropiedadesPage() {
       setListaPropiedades(propiedadesTransformadas);
       
     } catch (err: any) {
-      console.error("❌ Error cargando propiedades:", err);
       setError(`Error cargando propiedades: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
+
+  const cerrarModalEdit = () => {
+    setOpenEdit(false);
+    setEditingProp(null);
+    resetForm();
+  };
+
+  const guardarCambiosPropiedad = async () => {
+    if (!direccion || !precio || !ciudad) {
+      alert("Completa al menos Dirección, Ciudad y Precio.");
+      return;
+    }
+  
+    try {
+      // Limpiar y validar datos
+      const precioLimpio = precio.replace('$', '').replace('/mes', '').trim();
+      const precioNumerico = Number(precioLimpio);
+      
+      if (isNaN(precioNumerico)) {
+        alert("El precio debe ser un número válido");
+        return;
+      }
+  
+      const serviciosArray = serviciosTexto
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+  
+      // Datos más robustos
+      const propiedadData = {
+        direccion: direccion.trim(),
+        ciudad: ciudad.trim() || "Sin ciudad",
+        tipo: tipoProp,
+        estado: estadoProp,
+        descripcion: (descripcion || "Sin descripción").trim(),
+        precio_referencia: precioNumerico,
+      };
+      
+      await propiedadService.actualizarPropiedad(editingProp!.id, propiedadData);
+      await cargarPropiedades();
+      
+      cerrarModalEdit();
+      alert("Propiedad actualizada exitosamente");
+      
+    } catch (error: any) {
+      const mensajeError = error.response?.data?.message || error.message;
+      console.error("Error completo:", error.response?.data);
+      alert(`Error al actualizar: ${mensajeError}`);
+    }
+  };
+  
+  // Funciones para manejar fotos
+  const manejarSeleccionArchivos = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      setArchivosSeleccionados(Array.from(files));
+    }
+  };
+  
+  const subirFotos = async (propiedadId: number) => {
+    if (archivosSeleccionados.length === 0) {
+      alert("Selecciona al menos una foto para subir.");
+      return;
+    }
+  
+    try {
+      setSubiendoFotos(true);
+      const formData = new FormData();
+      
+      archivosSeleccionados.forEach((archivo) => {
+        formData.append('fotos', archivo);
+      });
+  
+      await propiedadService.subirFotosPropiedad(propiedadId, formData);
+      await cargarPropiedades();
+      
+      setArchivosSeleccionados([]);
+      alert("Fotos subidas exitosamente");
+      
+    } catch (error: any) {
+      console.error("Error subiendo fotos:", error);
+      alert(`Error al subir las fotos: ${error.message}`);
+    } finally {
+      setSubiendoFotos(false);
+    }
+  };
+
+  const eliminarFoto = async (propiedadId: number, fotoId: number) => {
+    if (confirm("¿Estás seguro de que quieres eliminar esta foto?")) {
+      try {
+        await propiedadService.eliminarFotoPropiedad(propiedadId, fotoId);
+        await cargarPropiedades();
+        alert("Foto eliminada exitosamente");
+      } catch (error: any) {
+        console.error("Error eliminando foto:", error);
+        alert(`Error al eliminar la foto: ${error.message}`);
+      }
+    }
+  };
+  
+  
+
 
   const resetForm = () => {
     setDireccion("");
@@ -113,6 +216,21 @@ export default function PropiedadesPage() {
   const abrirReporte = (prop: Propiedad) => {
     setSelectedProp(prop);
     setOpenReport(true);
+  };
+  
+  const abrirEditor = (prop: Propiedad) => {
+    setEditingProp(prop);
+    // Cargar los datos de la propiedad en el formulario
+    setDireccion(prop.direccion);
+    setCiudad(prop.ciudad);
+    setTipoProp(prop.tipo);
+    setEstadoProp(prop.estado.toLowerCase() as "disponible" | "alquilada" | "mantenimiento" | "inactiva");
+    setPrecio(prop.precio.replace('$', '').replace('/mes', ''));
+    setDescripcion(prop.descripcion);
+    setSuperficie(prop.superficie.replace(' m²', '').replace('No especificado', ''));
+    setAmbientes(prop.ambientes.replace(' ambientes', '').replace('No especificado', ''));
+    setServiciosTexto(prop.servicios.join(', '));
+    setOpenEdit(true);
   };
 
   const cerrarReporte = () => {
@@ -149,8 +267,6 @@ export default function PropiedadesPage() {
         ambientes: ambientes ? Number(ambientes) : undefined,
         servicios: serviciosArray.length > 0 ? serviciosArray : undefined
       };
-
-      console.log("📤 Enviando propiedad al backend:", propiedadData);
       
       await propiedadService.crearPropiedad(propiedadData);
       await cargarPropiedades();
@@ -159,14 +275,13 @@ export default function PropiedadesPage() {
       alert("Propiedad creada exitosamente");
       
     } catch (error: any) {
-      console.error("❌ Error creando propiedad:", error);
+      console.error(" Error creando propiedad:", error);
       alert(`Error al crear la propiedad: ${error.message}`);
     }
   };
 
   return (
     <main className="min-h-screen flex bg-[#0b3b2c] text-slate-900">
-      {/* CORREGIDO: Sin activeLabel */}
       <SidebarAdministrador />
 
       {/* CONTENIDO PRINCIPAL */}
@@ -211,7 +326,7 @@ export default function PropiedadesPage() {
               {listaPropiedades.map((prop) => (
                 <tr key={prop.id} className="border-t">
                   <td className="p-3">
-                    <Image
+                    <img
                       src={prop.img}
                       width={80}
                       height={80}
@@ -244,15 +359,14 @@ export default function PropiedadesPage() {
                   <td className="p-3">
                     <div className="flex gap-2">
                       <button
-                        onClick={() => abrirReporte(prop)}
-                        className="h-9 w-9 flex items-center justify-center rounded-lg border border-slate-300 bg-white hover:bg-emerald-50 hover:border-emerald-400 transition"
+                        onClick={() => abrirEditor(prop)}  
+                        className="h-9 w-9 flex items-center justify-center rounded-lg border border-slate-300 bg-white hover:bg-blue-50 hover:border-blue-400 transition"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-emerald-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M12 20h9" />
                           <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
                         </svg>
                       </button>
-
                       <button
                         onClick={() => abrirReporte(prop)}
                         className="h-9 w-9 flex items-center justify-center rounded-lg border border-slate-300 bg-white hover:bg-slate-50 hover:border-slate-400 transition"
@@ -279,7 +393,7 @@ export default function PropiedadesPage() {
         </div>
       </section>
 
-      {/* MODAL AGREGAR PROPIEDAD - FORMULARIO CORREGIDO */}
+      {/* MODAL AGREGAR PROPIEDAD  */}
       {openAdd && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 px-6">
           <div className="bg-white w-full max-w-4xl rounded-2xl shadow-xl border border-slate-300 p-6 overflow-y-auto max-h-[90vh] relative">
@@ -373,29 +487,6 @@ export default function PropiedadesPage() {
                 </div>
               </div>
 
-              {/* SUPERFICIE Y AMBIENTES */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Superficie (m²)</label>
-                  <input
-                    className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100"
-                    value={superficie}
-                    onChange={(e) => setSuperficie(e.target.value)}
-                    placeholder="Ej: 120"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium">Ambientes</label>
-                  <input
-                    className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100"
-                    value={ambientes}
-                    onChange={(e) => setAmbientes(e.target.value)}
-                    placeholder="Ej: 3"
-                  />
-                </div>
-              </div>
-
               {/* DESCRIPCIÓN */}
               <div>
                 <label className="text-sm font-medium">Descripción</label>
@@ -404,17 +495,6 @@ export default function PropiedadesPage() {
                   value={descripcion}
                   onChange={(e) => setDescripcion(e.target.value)}
                   placeholder="Descripción de la propiedad..."
-                />
-              </div>
-
-              {/* SERVICIOS */}
-              <div>
-                <label className="text-sm font-medium">Servicios</label>
-                <input
-                  className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100"
-                  placeholder="Ej: WiFi, Gas, Agua, Luz, Cable"
-                  value={serviciosTexto}
-                  onChange={(e) => setServiciosTexto(e.target.value)}
                 />
               </div>
 
@@ -650,6 +730,200 @@ export default function PropiedadesPage() {
           </button>
           <button className="px-5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-sm transition">
             Contactar Propietario
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+{/* MODAL: EDITAR PROPIEDAD */}
+{openEdit && editingProp && (
+  <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 px-6">
+    <div className="bg-white w-full max-w-4xl rounded-2xl shadow-xl border border-slate-300 p-6 overflow-y-auto max-h-[90vh] relative">
+      <button
+        onClick={cerrarModalEdit}
+        className="absolute top-4 right-4 text-slate-600 hover:text-black text-xl"
+      >
+        ✕
+      </button>
+
+      <h2 className="text-xl font-bold mb-4">Editar Propiedad - {editingProp.direccion}</h2>
+
+      <div className="space-y-6">
+        {/* DIRECCIÓN Y CIUDAD */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm font-medium">Dirección *</label>
+            <input
+              className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100"
+              value={direccion}
+              onChange={(e) => setDireccion(e.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Ciudad *</label>
+            <input
+              className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100"
+              value={ciudad}
+              onChange={(e) => setCiudad(e.target.value)}
+              required
+            />
+          </div>
+        </div>
+
+        {/* TIPO Y ESTADO */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm font-medium">Tipo</label>
+            <select
+              className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100"
+              value={tipoProp}
+              onChange={(e) => setTipoProp(e.target.value)}
+            >
+              <option value="casa">Casa</option>
+              <option value="departamento">Departamento</option>
+              <option value="local">Local</option>
+              <option value="oficina">Oficina</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Estado</label>
+            <select
+              className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100"
+              value={estadoProp}
+              onChange={(e) => setEstadoProp(e.target.value as any)}
+            >
+              <option value="disponible">Disponible</option>
+              <option value="alquilada">Alquilada</option>
+              <option value="mantenimiento">Mantenimiento</option>
+              <option value="inactiva">Inactiva</option>
+            </select>
+          </div>
+        </div>
+
+        {/* PRECIO */}
+        <div>
+          <label className="text-sm font-medium">Precio Mensual *</label>
+          <input
+            className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100"
+            value={precio}
+            onChange={(e) => setPrecio(e.target.value)}
+            placeholder="Ej: 150000"
+            required
+          />
+        </div>
+
+        {/* SUPERFICIE Y AMBIENTES */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm font-medium">Superficie (m²)</label>
+            <input
+              className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100"
+              value={superficie}
+              onChange={(e) => setSuperficie(e.target.value)}
+              placeholder="Ej: 120"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Ambientes</label>
+            <input
+              className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100"
+              value={ambientes}
+              onChange={(e) => setAmbientes(e.target.value)}
+              placeholder="Ej: 3"
+            />
+          </div>
+        </div>
+
+        {/* DESCRIPCIÓN */}
+        <div>
+          <label className="text-sm font-medium">Descripción</label>
+          <textarea
+            className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100 h-24"
+            value={descripcion}
+            onChange={(e) => setDescripcion(e.target.value)}
+            placeholder="Descripción de la propiedad..."
+          />
+        </div>
+
+        {/* SERVICIOS */}
+        <div>
+          <label className="text-sm font-medium">Servicios</label>
+          <input
+            className="w-full mt-1 border rounded-md px-3 py-2 bg-slate-100"
+            placeholder="Ej: WiFi, Gas, Agua, Luz, Cable"
+            value={serviciosTexto}
+            onChange={(e) => setServiciosTexto(e.target.value)}
+          />
+        </div>
+
+        {/* GESTIÓN DE FOTOS - OPCIONAL (si quieres agregarlo ahora) */}
+        <div>
+          <label className="text-sm font-medium">Subir Nuevas Fotos</label>
+          <div className="mt-2 border-2 border-dashed border-[#123528] rounded-xl p-6 text-center bg-slate-50">
+            <p className="text-slate-700 mb-3">
+              {archivosSeleccionados.length > 0 
+                ? `${archivosSeleccionados.length} archivo(s) seleccionado(s)`
+                : "Arrastra imágenes aquí o haz clic para seleccionar"
+              }
+            </p>
+
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={manejarSeleccionArchivos}
+              className="hidden"
+              id="file-input-edit"
+            />
+            
+            <label
+              htmlFor="file-input-edit"
+              className="px-4 py-2 bg-white border rounded-lg shadow-sm hover:bg-slate-100 cursor-pointer inline-block"
+            >
+              Seleccionar Imágenes
+            </label>
+
+            {archivosSeleccionados.length > 0 && (
+              <div className="mt-4">
+                <button
+                  onClick={() => subirFotos(editingProp.id)}
+                  disabled={subiendoFotos}
+                  className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold disabled:bg-gray-400"
+                >
+                  {subiendoFotos ? "Subiendo..." : "Subir Fotos"}
+                </button>
+                <button
+                  onClick={() => setArchivosSeleccionados([])}
+                  className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold ml-2"
+                >
+                  Cancelar
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* BOTONES */}
+        <div className="flex justify-end gap-3 mt-4">
+          <button
+            onClick={cerrarModalEdit}
+            className="px-4 py-2 border rounded-lg bg-slate-200 hover:bg-slate-300"
+          >
+            Cancelar
+          </button>
+
+          <button
+            onClick={guardarCambiosPropiedad}
+            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold"
+          >
+            Guardar Cambios
           </button>
         </div>
       </div>

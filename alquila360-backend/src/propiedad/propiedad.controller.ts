@@ -60,19 +60,43 @@ export class PropiedadController {
   delete(@Param('id') id: number) {
     return this.propiedadService.deletePropiedad(id);
   }
-  
 
+  @Post(':id/calificar')
+  calificarPropiedad(
+    @Param('id') propiedadId: number,
+    @Body() dto: RatePropiedadDto
+  ) {
+    return this.propiedadService.calificarPropiedad(propiedadId, dto);
+  }
 
-@Post(':id/calificar')
-calificarPropiedad(
-  @Param('id') propiedadId: number,
-  @Body() dto: RatePropiedadDto
-) {
-  return this.propiedadService.calificarPropiedad(propiedadId, dto);
-}
+  @Get('disponibles/contratos')
+    async getPropiedadesDisponiblesParaContratos() {
+      return this.propiedadService.getPropiedadesDisponiblesParaContratos();     
+  }
+  @Post(':id/fotos')
+  @UseInterceptors(
+    FilesInterceptor('fotos', 10, {
+      storage: diskStorage({
+        destination: './storage/propiedades',
+        filename: (req, file, cb) => {
+          const name = uuid() + path.extname(file.originalname);
+          cb(null, name);
+        },
+      }),
+    }),
+  )
+  subirFotosPropiedad(
+    @Param('id') id: number,
+    @UploadedFiles() fotos: Express.Multer.File[],
+  ) {
+    return this.propiedadService.subirFotosPropiedad(id, fotos);
+  }
 
-@Get('disponibles/contratos')
-  async getPropiedadesDisponiblesParaContratos() {
-    return this.propiedadService.getPropiedadesDisponiblesParaContratos();     
-}
+  @Delete(':id/fotos/:fotoId')
+  eliminarFotoPropiedad(
+    @Param('id') id: number,
+    @Param('fotoId') fotoId: number,
+  ) {
+    return this.propiedadService.eliminarFotoPropiedad(id, fotoId);
+  }
 }

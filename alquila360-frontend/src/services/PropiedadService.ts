@@ -127,5 +127,19 @@ export const propiedadService = {
   async getPropiedadesPorPropietario(propietarioId: number): Promise<PropiedadBackend[]> {
     const response = await api.get(`/propiedad/propietario/${propietarioId}`);
     return response.data;
+  },
+  // Subir fotos a una propiedad existente
+    async subirFotosPropiedad(id: number, formData: FormData): Promise<PropiedadBackend> {
+        const response = await api.post(`/propiedad/${id}/fotos`, formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+        });
+    return response.data;
+  },
+  
+  // Eliminar foto de una propiedad
+  async eliminarFotoPropiedad(propiedadId: number, fotoId: number): Promise<void> {
+    await api.delete(`/propiedad/${propiedadId}/fotos/${fotoId}`);
   }
 };
