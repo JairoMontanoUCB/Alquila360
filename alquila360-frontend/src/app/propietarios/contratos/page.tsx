@@ -1,7 +1,12 @@
 "use client";
 
-import { useState, ChangeEvent, FormEvent } from "react";
+import { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import Sidebar from "../../components/sideBarPropietario";
+import {
+  contratoService,
+  PropiedadBackend,
+  InquilinoBackend,
+} from "../../../services/ContratoService";
 
 type EstadoContrato = "Vigente" | "Finalizado";
 
@@ -45,6 +50,12 @@ const contratosIniciales: Contrato[] = [];
 export default function ContratosPage() {
   const [contratos, setContratos] = useState<Contrato[]>(contratosIniciales);
 
+  // Datos desde backend
+  const [propiedades, setPropiedades] = useState<PropiedadBackend[]>([]);
+  const [inquilinos, setInquilinos] = useState<InquilinoBackend[]>([]);
+  const [loadingDatos, setLoadingDatos] = useState(true);
+  const [errorDatos, setErrorDatos] = useState<string | null>(null);
+
   // Modal crear contrato
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -63,7 +74,7 @@ export default function ContratosPage() {
     null
   );
 
-  // Estado del formulario (se reutiliza para crear y editar)
+  // Estado del formulario (crear / editar)
   const [nuevoContrato, setNuevoContrato] = useState({
     propiedad: "",
     inquilino: "",
@@ -79,7 +90,7 @@ export default function ContratosPage() {
     clausulasAdicionales: "",
   });
 
-  // Estado del formulario de renovación
+  // Estado formulario de renovación
   const [datosRenovacion, setDatosRenovacion] = useState({
     nuevaFechaInicio: "",
     nuevaFechaFin: "",
@@ -91,6 +102,37 @@ export default function ContratosPage() {
     condicionesRenovacion: "",
     observaciones: "",
   });
+
+  // ===== CARGA DE PROPIEDADES E INQUILINOS DESDE BACKEND =====
+  useEffect(() => {
+    const cargarDatos = async () => {
+      try {
+        setLoadingDatos(true);
+        setErrorDatos(null);
+
+        const [propiedadesData, inquilinosData] = await Promise.all([
+          contratoService.getPropiedadesDisponibles(),
+          contratoService.getInquilinos(),
+        ]);
+
+        const propiedadesArray = Array.isArray(propiedadesData)
+          ? (propiedadesData as PropiedadBackend[])
+          : [];
+        const inquilinosArray = Array.isArray(inquilinosData)
+          ? (inquilinosData as InquilinoBackend[])
+          : [];
+
+        setPropiedades(propiedadesArray);
+        setInquilinos(inquilinosArray);
+      } catch (err: any) {
+        setErrorDatos(err.message || "Error cargando datos del backend");
+      } finally {
+        setLoadingDatos(false);
+      }
+    };
+
+    cargarDatos();
+  }, []);
 
   const resetForm = () => {
     setNuevoContrato({
@@ -137,6 +179,25 @@ export default function ContratosPage() {
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
+
+    // Si cambia la propiedad, auto-completamos propietario
+    if (name === "propiedad") {
+      const propiedadSel = propiedades.find((p) => p.direccion === value);
+      let propietarioNombre = "";
+
+      if (propiedadSel && (propiedadSel as any).propietario) {
+        const propObj = (propiedadSel as any).propietario;
+        propietarioNombre = `${propObj.nombre} ${propObj.apellido}`;
+      }
+
+      setNuevoContrato((prev) => ({
+        ...prev,
+        propiedad: value,
+        propietario: propietarioNombre,
+      }));
+      return;
+    }
+
     setNuevoContrato((prev) => ({
       ...prev,
       [name]: value,
@@ -223,7 +284,8 @@ export default function ContratosPage() {
               fechaFin: nuevoContrato.fechaFin || c.fechaFin,
               montoAlquiler: nuevoContrato.montoAlquiler || c.montoAlquiler,
               montoGarantia: nuevoContrato.montoGarantia || c.montoGarantia,
-              frecuenciaCobro: nuevoContrato.frecuenciaCobro || c.frecuenciaCobro,
+              frecuenciaCobro:
+                nuevoContrato.frecuenciaCobro || c.frecuenciaCobro,
               numeroCuotas: nuevoContrato.numeroCuotas || c.numeroCuotas,
               diaVencimiento: nuevoContrato.diaVencimiento || c.diaVencimiento,
               penalidades: nuevoContrato.penalidades || c.penalidades,
@@ -275,8 +337,12 @@ export default function ContratosPage() {
     e.preventDefault();
     if (!contratoARenovar) return;
 
-    const { nuevaFechaInicio, nuevaFechaFin, nuevoMontoAlquiler, nuevaGarantia } =
-      datosRenovacion;
+    const {
+      nuevaFechaInicio,
+      nuevaFechaFin,
+      nuevoMontoAlquiler,
+      nuevaGarantia,
+    } = datosRenovacion;
 
     setContratos((prev) =>
       prev.map((c) =>
@@ -287,9 +353,11 @@ export default function ContratosPage() {
               fechaFin: nuevaFechaFin || c.fechaFin,
               montoAlquiler: nuevoMontoAlquiler || c.montoAlquiler,
               montoGarantia: nuevaGarantia || c.montoGarantia,
-              frecuenciaCobro: datosRenovacion.frecuenciaCobro || c.frecuenciaCobro,
+              frecuenciaCobro:
+                datosRenovacion.frecuenciaCobro || c.frecuenciaCobro,
               numeroCuotas: datosRenovacion.numeroCuotas || c.numeroCuotas,
-              diaVencimiento: datosRenovacion.diaVencimiento || c.diaVencimiento,
+              diaVencimiento:
+                datosRenovacion.diaVencimiento || c.diaVencimiento,
             }
           : c
       )
@@ -298,7 +366,7 @@ export default function ContratosPage() {
     handleCloseRenew();
   };
 
-  // Cálculos para el resumen de renovación
+  // Cálculos resumen renovación
   const montoAnteriorLimpio = contratoARenovar
     ? contratoARenovar.montoAlquiler || "0"
     : "0";
@@ -321,6 +389,14 @@ export default function ContratosPage() {
             <p className="text-sm text-gray-600">
               Historial de contratos de alquiler
             </p>
+            {loadingDatos && (
+              <p className="text-xs text-gray-500 mt-1">
+                Cargando propiedades e inquilinos...
+              </p>
+            )}
+            {errorDatos && (
+              <p className="text-xs text-red-600 mt-1">Error: {errorDatos}</p>
+            )}
           </div>
 
           {/* Botón Nuevo Contrato */}
@@ -437,51 +513,94 @@ export default function ContratosPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Partes del Contrato */}
-              <section className="bg-[#fbf8f1] border border-[#e1dac8] rounded-2xl p-6 space-y-4">
-                <h3 className="text-lg font-semibold">Partes del Contrato</h3>
+              {/* PARTES DEL CONTRATO */}
+              <section className="mb-6 border border-emerald-900/40 rounded-2xl bg-[#f9f6ef] p-5 space-y-4">
+                <h3 className="font-semibold text-[#123528] text-lg mb-1">
+                  Partes del Contrato
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Propiedad - DINÁMICO */}
                   <div>
-                    <label className="block text-sm mb-1">Propiedad</label>
+                    <p className="text-sm font-medium text-slate-700">
+                      Propiedad *
+                    </p>
                     <select
+                      className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
                       name="propiedad"
                       value={nuevoContrato.propiedad}
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
+                      disabled={loadingDatos}
+
+                      required
                     >
-                      <option value="">Seleccionar propiedad</option>
-                      {/* Opciones de ejemplo: luego pueden venir de la BD */}
-                      <option value="Propiedad 1">Propiedad 1</option>
-                      <option value="Propiedad 2">Propiedad 2</option>
+                      <option value="">
+                        {loadingDatos
+                          ? "Cargando propiedades..."
+                          : "Seleccionar propiedad"}
+                      </option>
+                      {propiedades.map((propiedad) => (
+                        <option
+                          key={propiedad.id}
+                          value={propiedad.direccion}
+                        >
+                          {propiedad.direccion} - {propiedad.tipo}
+                        </option>
+                      ))}
                     </select>
+                    {propiedades.length === 0 && !loadingDatos && (
+                      <p className="text-xs text-red-500 mt-1">
+                        No hay propiedades disponibles
+                      </p>
+                    )}
                   </div>
 
+                  {/* Inquilino - DINÁMICO */}
                   <div>
-                    <label className="block text-sm mb-1">Inquilino</label>
+                    <p className="text-sm font-medium text-slate-700">
+                      Inquilino *
+                    </p>
                     <select
+                      className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
                       name="inquilino"
                       value={nuevoContrato.inquilino}
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
+                      disabled={loadingDatos}
+                      required
                     >
-                      <option value="">Seleccionar inquilino</option>
-                      <option value="Inquilino 1">Inquilino 1</option>
-                      <option value="Inquilino 2">Inquilino 2</option>
+                      <option value="">
+                        {loadingDatos
+                          ? "Cargando inquilinos..."
+                          : "Seleccionar inquilino"}
+                      </option>
+                      {inquilinos.map((inquilino) => (
+                        <option
+                          key={inquilino.id}
+                          value={`${inquilino.nombre} ${inquilino.apellido}`}
+                        >
+                          {inquilino.nombre} {inquilino.apellido}
+                        </option>
+                      ))}
                     </select>
+                    {inquilinos.length === 0 && !loadingDatos && (
+                      <p className="text-xs text-red-500 mt-1">
+                        No hay inquilinos disponibles
+                      </p>
+                    )}
                   </div>
 
+                  {/* Propietario (auto-completado) */}
                   <div>
-                    <label className="block text-sm mb-1">Propietario</label>
-                    <select
+                    <p className="text-sm font-medium text-slate-700">
+                      Propietario
+                    </p>
+                    <input
+                      type="text"
                       name="propietario"
                       value={nuevoContrato.propietario}
-                      onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
-                    >
-                      <option value="">Seleccionar propietario</option>
-                      <option value="Propietario 1">Propietario 1</option>
-                      <option value="Propietario 2">Propietario 2</option>
-                    </select>
+                      readOnly
+                      placeholder="Se auto-completa al seleccionar propiedad"
+                      className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm text-gray-500"
+                    />
                   </div>
                 </div>
               </section>
@@ -491,7 +610,9 @@ export default function ContratosPage() {
                 <h3 className="text-lg font-semibold">Duración del Contrato</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm mb-1">Fecha de Inicio</label>
+                    <label className="block text-sm mb-1">
+                      Fecha de Inicio <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="date"
                       name="fechaInicio"
@@ -502,7 +623,8 @@ export default function ContratosPage() {
                   </div>
                   <div>
                     <label className="block text-sm mb-1">
-                      Fecha de Finalización
+                      Fecha de Finalización{" "}
+                      <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="date"
@@ -523,7 +645,8 @@ export default function ContratosPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm mb-1">
-                      Monto del Alquiler ($/mes)
+                      Monto del Alquiler ($/mes){" "}
+                      <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="number"
@@ -533,29 +656,18 @@ export default function ContratosPage() {
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
                     />
                   </div>
+                  
                 </div>
               </section>
 
-              {/* PENALIDADES POR INCUMPLIMIENTO */}
-              <section className="border border-[#e1dac8] rounded-2xl p-6 space-y-4">
-                <h3 className="text-lg font-semibold">
-                  Penalidades por Incumplimiento
-                </h3>
-                <textarea
-                  name="penalidades"
-                  value={nuevoContrato.penalidades}
-                  onChange={handleChange}
-                  placeholder="Detalle aquí las penalidades acordadas por incumplimiento..."
-                  className="w-full h-20 rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
-                />
-              </section>
+             
 
               {/* CLÁUSULAS ADICIONALES (modelo fijo de lectura) */}
               <section className="border border-[#e1dac8] rounded-2xl p-6 space-y-4">
                 <h3 className="text-lg font-semibold">Cláusulas Adicionales</h3>
 
                 <div className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100 text-gray-700 whitespace-pre-line">
-{`1. El inquilino se compromete a pagar el monto mensual acordado en la fecha establecida.
+                  {`1. El inquilino se compromete a pagar el monto mensual acordado en la fecha establecida.
 2. El propietario se compromete a mantener la propiedad en condiciones habitables.
 3. Cualquier daño a la propiedad será responsabilidad del inquilino, salvo desgaste por uso normal.
 4. El contrato podrá ser renovado previo acuerdo entre ambas partes.
@@ -761,7 +873,7 @@ export default function ContratosPage() {
               </h3>
               <div className="border border-[#315c47] rounded-2xl px-5 py-4 text-sm text-gray-800 whitespace-pre-line">
                 {contratoSeleccionado.clausulasAdicionales ||
-`1. El inquilino se compromete a pagar el monto mensual acordado en la fecha establecida.
+                  `1. El inquilino se compromete a pagar el monto mensual acordado en la fecha establecida.
 2. El propietario se compromete a mantener la propiedad en condiciones habitables.
 3. Cualquier daño a la propiedad será responsabilidad del inquilino, salvo desgaste por uso normal.
 4. El contrato podrá ser renovado previo acuerdo entre ambas partes.
@@ -816,7 +928,7 @@ export default function ContratosPage() {
 
       {/* ========= MODAL EDITAR CONTRATO ========= */}
       {isEditOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg:black/40 bg-black/40">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto p-8">
             {/* Header modal */}
             <div className="flex justify-between items-center mb-6">
@@ -830,50 +942,91 @@ export default function ContratosPage() {
             </div>
 
             <form onSubmit={handleSubmitEdit} className="space-y-6">
-              {/* Partes del Contrato */}
-              <section className="bg-[#fbf8f1] border border-[#e1dac8] rounded-2xl p-6 space-y-4">
-                <h3 className="text-lg font-semibold">Partes del Contrato</h3>
+              {/* PARTES DEL CONTRATO */}
+              <section className="mb-6 border border-emerald-900/40 rounded-2xl bg-[#f9f6ef] p-5 space-y-4">
+                <h3 className="font-semibold text-[#123528] text-lg mb-1">
+                  Partes del Contrato
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Propiedad - DINÁMICO */}
                   <div>
-                    <label className="block text-sm mb-1">Propiedad</label>
+                    <p className="text-sm font-medium text-slate-700">
+                      Propiedad
+                    </p>
                     <select
+                      className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
                       name="propiedad"
                       value={nuevoContrato.propiedad}
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
+                      disabled={loadingDatos || !!errorDatos}
                     >
-                      <option value="">Seleccionar propiedad</option>
-                      <option value="Propiedad 1">Propiedad 1</option>
-                      <option value="Propiedad 2">Propiedad 2</option>
+                      <option value="">
+                        {loadingDatos
+                          ? "Cargando propiedades..."
+                          : "Seleccionar propiedad"}
+                      </option>
+                      {propiedades.map((propiedad) => (
+                        <option
+                          key={propiedad.id}
+                          value={propiedad.direccion}
+                        >
+                          {propiedad.direccion} - {propiedad.tipo}
+                        </option>
+                      ))}
                     </select>
+                    {propiedades.length === 0 && !loadingDatos && (
+                      <p className="text-xs text-red-500 mt-1">
+                        No hay propiedades disponibles
+                      </p>
+                    )}
                   </div>
 
+                  {/* Inquilino - DINÁMICO */}
                   <div>
-                    <label className="block text-sm mb-1">Inquilino</label>
+                    <p className="text-sm font-medium text-slate-700">
+                      Inquilino
+                    </p>
                     <select
+                      className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
                       name="inquilino"
                       value={nuevoContrato.inquilino}
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
+                      disabled={loadingDatos || !!errorDatos}
                     >
-                      <option value="">Seleccionar inquilino</option>
-                      <option value="Inquilino 1">Inquilino 1</option>
-                      <option value="Inquilino 2">Inquilino 2</option>
+                      <option value="">
+                        {loadingDatos
+                          ? "Cargando inquilinos..."
+                          : "Seleccionar inquilino"}
+                      </option>
+                      {inquilinos.map((inquilino) => (
+                        <option
+                          key={inquilino.id}
+                          value={`${inquilino.nombre} ${inquilino.apellido}`}
+                        >
+                          {inquilino.nombre} {inquilino.apellido}
+                        </option>
+                      ))}
                     </select>
+                    {inquilinos.length === 0 && !loadingDatos && (
+                      <p className="text-xs text-red-500 mt-1">
+                        No hay inquilinos disponibles
+                      </p>
+                    )}
                   </div>
 
+                  {/* Propietario (auto-completado) */}
                   <div>
-                    <label className="block text-sm mb-1">Propietario</label>
-                    <select
+                    <p className="text-sm font-medium text-slate-700">
+                      Propietario
+                    </p>
+                    <input
+                      type="text"
                       name="propietario"
                       value={nuevoContrato.propietario}
-                      onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
-                    >
-                      <option value="">Seleccionar propietario</option>
-                      <option value="Propietario 1">Propietario 1</option>
-                      <option value="Propietario 2">Propietario 2</option>
-                    </select>
+                      readOnly
+                      placeholder="Se auto-completa al seleccionar propiedad"
+                      className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm text-gray-500"
+                    />
                   </div>
                 </div>
               </section>
@@ -883,7 +1036,9 @@ export default function ContratosPage() {
                 <h3 className="text-lg font-semibold">Duración del Contrato</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm mb-1">Fecha de Inicio</label>
+                    <label className="block text-sm mb-1">
+                      Fecha de Inicio
+                    </label>
                     <input
                       type="date"
                       name="fechaInicio"
@@ -991,7 +1146,9 @@ export default function ContratosPage() {
 
                 <p className="text-sm text-gray-500">
                   Nota: Todas las cuotas tendrán el mismo valor mensual de{" "}
-                  <strong>{formatearMoneda(nuevoContrato.montoAlquiler || "0")}</strong>
+                  <strong>
+                    {formatearMoneda(nuevoContrato.montoAlquiler || "0")}
+                  </strong>
                 </p>
               </section>
 
@@ -1076,7 +1233,9 @@ export default function ContratosPage() {
                     <p className="font-semibold">Propiedad</p>
                     <p>{contratoARenovar.propiedad}</p>
                     <p className="mt-2 font-semibold">Monto Actual</p>
-                    <p>{formatearMoneda(contratoARenovar.montoAlquiler)}/mes</p>
+                    <p>
+                      {formatearMoneda(contratoARenovar.montoAlquiler)}/mes
+                    </p>
                   </div>
                   <div>
                     <p className="font-semibold">Inquilino</p>
