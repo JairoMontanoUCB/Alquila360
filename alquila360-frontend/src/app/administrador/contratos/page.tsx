@@ -155,9 +155,12 @@ export default function ContratosPage() {
     setFormPenalidades(
       "Mora del 2% por día de atraso. Costo de reparaciones por daños..."
     );
-    setFormClausulas(
-      "Agregue cualquier cláusula adicional del contrato..."
-    );
+    setFormClausulas(`    1. El inquilino se compromete a pagar el monto mensual acordado en la fecha establecida.
+    2. El propietario se compromete a mantener la propiedad en condiciones habitables.
+    3. Cualquier daño a la propiedad será responsabilidad del inquilino, salvo desgaste por uso normal.
+    4. El contrato podrá ser renovado previo acuerdo entre ambas partes.
+    5. Cualquier disputa será resuelta conforme a las leyes vigentes.
+    `);
   };
 
     const cargarFormDesdeContrato = (c: Contrato) => {
@@ -563,9 +566,13 @@ const guardarContrato = async () => {
               <h3 className="font-semibold text-[#123528] mb-3">
                 CLÁUSULAS ADICIONALES
               </h3>
-              <div className="border border-emerald-900/40 rounded-2xl p-4 text-sm text-slate-700 whitespace-pre-line">
+            <div
+                className="border border-emerald-900/40 rounded-2xl p-4 text-sm text-slate-700 whitespace-pre-line"
+
+              >
                 {selectedContrato.clausulas}
               </div>
+
             </section>
 
             {/* FIRMAS */}
@@ -738,81 +745,24 @@ const guardarContrato = async () => {
               </div>
             </section>
 
-            {/* INFORMACIÓN FINANCIERA */}
-            <section className="mb-6 border border-emerald-900/40 rounded-2xl p-5 space-y-4">
-              <h3 className="font-semibold text-[#123528] text-lg">
-                Información Financiera
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-slate-700">
-                    Monto del Alquiler ($/mes) *
-                  </p>
-                  <input
-                    className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
-                    value={formMontoAlquiler}
-                    onChange={(e) => setFormMontoAlquiler(e.target.value)}
-                    required
-                  />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-700">
-                    Monto de la Garantía ($)
-                  </p>
-                  <input
-                    className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
-                    value={formMontoGarantia}
-                    onChange={(e) => setFormMontoGarantia(e.target.value)}
-                  />
-                </div>
-              </div>
-            </section>
+          {/* INFORMACIÓN FINANCIERA */}
+          <section className="mb-6 border border-emerald-900/40 rounded-2xl p-5 space-y-4">
+            <h3 className="font-semibold text-[#123528] text-lg">
+              Información Financiera
+            </h3>
 
-            {/* DETALLE DE CUOTAS */}
-            <section className="mb-6 border border-emerald-900/40 rounded-2xl p-5 space-y-4">
-              <h3 className="font-semibold text-[#123528] text-lg">
-                Detalle de Cuotas
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-slate-700">
-                    Frecuencia de Cobro
-                  </p>
-                  <select
-                    className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
-                    value={formFrecuenciaCobro}
-                    onChange={(e) => setFormFrecuenciaCobro(e.target.value)}
-                  >
-                    <option>Mensual</option>
-                    <option>Trimestral</option>
-                    <option>Anual</option>
-                  </select>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-700">
-                    Número de Cuotas
-                  </p>
-                  <input
-                    className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
-                    value={formNumeroCuotas}
-                    onChange={(e) => setFormNumeroCuotas(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-700">
-                    Día de Vencimiento
-                  </p>
-                  <input
-                    className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
-                    value={formDiaVencimiento}
-                    onChange={(e) => setFormDiaVencimiento(e.target.value)}
-                  />
-                </div>
-              </div>
-              <p className="text-xs text-slate-500 mt-2">
-                Nota: Todas las cuotas tendrán el mismo valor mensual.
+            <div>
+              <p className="text-sm font-medium text-slate-700">
+                Monto del Alquiler ($/mes) *
               </p>
-            </section>
+              <input
+                className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
+                value={formMontoAlquiler}
+                onChange={(e) => setFormMontoAlquiler(e.target.value)}
+                required
+              />
+            </div>
+          </section>
 
             {/* PENALIDADES */}
             <section className="mb-6 space-y-3">
@@ -827,14 +777,14 @@ const guardarContrato = async () => {
             </section>
 
             {/* CLÁUSULAS ADICIONALES */}
-            <section className="mb-6 space-y-3">
+                <section className="mb-6 space-y-3">
               <h3 className="font-semibold text-[#123528] text-lg">
                 Cláusulas Adicionales
               </h3>
               <textarea
                 className="w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm h-20"
                 value={formClausulas}
-                onChange={(e) => setFormClausulas(e.target.value)}
+                readOnly
               />
             </section>
 
