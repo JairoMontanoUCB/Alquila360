@@ -1,514 +1,412 @@
 "use client";
 
-import React, { useState } from "react";
-import Link from "next/link";
-import SidebarAdministrador from "../../components/sideBarAdministrador";
+import { useState } from "react";
+import Sidebar from "../../components/sideBarPropietario";
 
-const activeLabel = "Expensas";
+export default function PagosPage() {
+  // ---------------- DATOS ----------------
+  const pagos = [
+    {
+      id: "pay1",
+      mes: "Noviembre 2024",
+      monto: "$2.500",
+      fechaLimite: "2024-11-10",
+      fechaPago: "2024-11-01",
+      estado: "Pagado",
+      tipo: "Cuota", 
+    },
+    {
+      id: "pay2",
+      mes: "Diciembre 2024",
+      monto: "$2.500",
+      fechaLimite: "2024-12-10",
+      fechaPago: "-",
+      estado: "Pendiente",
+      tipo: "Cuota",
+    },
+    {
+      id: "pay3",
+      mes: "Octubre 2024",
+      monto: "$2.500",
+      fechaLimite: "2024-10-10",
+      fechaPago: "-",
+      estado: "En mora",
+      tipo: "Expensa", 
+    },
+  ];
 
-type EstadoExpensa = "Pagado" | "No pagado" | "Pendiente";
+  // --- helpers para montos ---
+  const parseMonto = (monto: string) =>
+    Number(monto.replace(/[^0-9.-]/g, "")) || 0;
 
-type Expensa = {
-  id: string;
-  propiedad: string;
-  tipo: string;
-  descripcion: string;
-  monto: string; // ej: "$45"
-  fecha: string; // "2024-11-15"
-  estado: EstadoExpensa;
-};
+  const totalRecibido = pagos
+    .filter((p) => p.estado === "Pagado")
+    .reduce((acc, p) => acc + parseMonto(p.monto), 0);
 
-const expensasIniciales: Expensa[] = [
-  {
-    id: "exp1",
-    propiedad: "Calle Secundaria 456",
-    tipo: "Agua",
-    descripcion: "Factura de agua del mes de noviembre",
-    monto: "$45",
-    fecha: "2024-11-15",
-    estado: "Pagado",
-  },
-  {
-    id: "exp2",
-    propiedad: "Calle Secundaria 456",
-    tipo: "Luz",
-    descripcion: "Factura de electricidad del mes de noviembre",
-    monto: "$120",
-    fecha: "2024-11-15",
-    estado: "No pagado",
-  },
-  {
-    id: "exp3",
-    propiedad: "Calle Secundaria 456",
-    tipo: "Gas",
-    descripcion: "Factura de gas del mes de noviembre",
-    monto: "$35",
-    fecha: "2024-11-15",
-    estado: "Pagado",
-  },
-  {
-    id: "exp4",
-    propiedad: "Calle Secundaria 456",
-    tipo: "Mantenimiento",
-    descripcion: "Mantenimiento general del edificio",
-    monto: "$90",
-    fecha: "2024-11-10",
-    estado: "Pagado",
-  },
-];
+  const totalPendiente = pagos
+    .filter((p) => p.estado === "Pendiente")
+    .reduce((acc, p) => acc + parseMonto(p.monto), 0);
 
-export default function ExpensasPage() {
-  // lista editable
-  const [lista, setLista] = useState<Expensa[]>(expensasIniciales);
+  const totalMora = pagos
+    .filter((p) => p.estado === "En mora")
+    .reduce((acc, p) => acc + parseMonto(p.monto), 0);
 
-  // modal crear
-  const [mostrarModalCrear, setMostrarModalCrear] = useState(false);
+  const totalGeneral = pagos.reduce((acc, p) => acc + parseMonto(p.monto), 0);
 
-  // modal editar
-  const [mostrarModalEditar, setMostrarModalEditar] = useState(false);
-  const [expensaEditar, setExpensaEditar] = useState<Expensa | null>(null);
-  const [formEditar, setFormEditar] = useState({
-    propiedad: "",
-    tipo: "",
-    descripcion: "",
-    monto: "",
-    fecha: "",
-    estado: "Pendiente" as EstadoExpensa,
-  });
+  /* ------------------------------------------
+       ESTADO PARA MODAL DE RECIBO INDIVIDUAL
+  -------------------------------------------*/
+  const [modalPago, setModalPago] = useState<null | any>(null);
 
-  const parseMonto = (monto: string) => {
-    const num = Number(monto.replace(/[^0-9.-]/g, ""));
-    return isNaN(num) ? 0 : num;
-  };
+  /* ------------------------------------------
+       ESTADO PARA MODAL DE HISTORIAL COMPLETO
+  -------------------------------------------*/
+  const [mostrarHistorial, setMostrarHistorial] = useState(false);
 
-  const total = lista.reduce((acc, e) => acc + parseMonto(e.monto), 0);
-  const pagadas = lista
-    .filter((e) => e.estado === "Pagado")
-    .reduce((acc, e) => acc + parseMonto(e.monto), 0);
-  const noPagadas = lista
-    .filter((e) => e.estado === "No pagado")
-    .reduce((acc, e) => acc + parseMonto(e.monto), 0);
-
-  const getEstadoClasses = (estado: EstadoExpensa) => {
-    if (estado === "Pagado")
-      return "bg-emerald-100 text-emerald-700 border border-emerald-300";
-    if (estado === "No pagado")
-      return "bg-red-100 text-red-700 border border-red-300";
-    return "bg-amber-100 text-amber-700 border border-amber-300";
-  };
-
-  // abrir modal editar
-  const handleClickEditar = (exp: Expensa) => {
-    setExpensaEditar(exp);
-    setFormEditar({
-      propiedad: exp.propiedad,
-      tipo: exp.tipo,
-      descripcion: exp.descripcion,
-      monto: exp.monto.replace(/[^0-9.-]/g, ""),
-      fecha: exp.fecha,
-      estado: exp.estado,
-    });
-    setMostrarModalEditar(true);
-  };
-
-  // guardar cambios de edicion
-  const handleGuardarEdicion = () => {
-    if (!expensaEditar) return;
-    setLista((prev) =>
-      prev.map((e) =>
-        e.id === expensaEditar.id
-          ? {
-              ...e,
-              propiedad: formEditar.propiedad,
-              tipo: formEditar.tipo,
-              descripcion: formEditar.descripcion,
-              monto: `$${formEditar.monto}`,
-              fecha: formEditar.fecha,
-              estado: formEditar.estado,
-            }
-          : e
-      )
-    );
-    setMostrarModalEditar(false);
-  };
-
-  // eliminar expensa
-  const handleEliminar = (id: string) => {
-    if (!window.confirm("¿Seguro que deseas eliminar esta expensa?")) return;
-    setLista((prev) => prev.filter((e) => e.id !== id));
+  const getEstadoBadge = (estado: string) => {
+    if (estado === "Pagado") {
+      return "bg-[#d3f7e8] text-[#1b7c4b]";
+    }
+    if (estado === "Pendiente") {
+      return "bg-[#ffeac0] text-[#d18b1a]";
+    }
+    return "bg-[#ffd9dd] text-[#d8454f]";
   };
 
   return (
-    <div className="min-h-screen flex bg-[#0b3b2c] text-slate-900">
-      <SidebarAdministrador />
+    <div className="min-h-screen flex bg-[#f3efe3] text-[#15352b]">
+      <Sidebar />
 
-      {/* contenido */}
-      <section className="flex-1 bg-[#f7f5ee] px-10 py-8 overflow-y-auto">
-        <header className="mb-4 flex justify-between items-start">
+      <main className="flex-1 px-10 py-10">
+        {/* ---------------- HEADER ---------------- */}
+        <header className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-extrabold text-[#123528]">
-              Gestion de Cuotas
-            </h1>
-            <p className="text-sm text-slate-500">Gastos por inmueble</p>
+            <h2 className="text-[32px] font-bold">Gestión de Pagos</h2>
+            <p className="text-sm text-gray-600">
+              Historial de cuotas y pagos
+            </p>
           </div>
 
           <button
-            className="flex items-center gap-2 bg-yellow-400 hover:bg-yellow-500 text-black px-4 py-2 rounded-lg font-semibold text-sm"
-            onClick={() => setMostrarModalCrear(true)}
+            className="flex items-center gap-2 border border-[#15352b] rounded-lg px-4 py-2 text-sm hover:bg-[#eae4d7] transition"
+            onClick={() => setMostrarHistorial(true)}
           >
-            + Registrar Expensa
+            <span>⬇️</span>
+            <span>Descargar Historial</span>
           </button>
         </header>
 
-        {/* resumen */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <ResumenCard titulo="Total Expensas" valor={`$${total}`} />
-          <ResumenCard titulo="Pagadas" valor={`$${pagadas}`} color="emerald" />
-          <ResumenCard
-            titulo="No Pagadas"
-            valor={`$${noPagadas}`}
-            color="red"
+        {/* ------------ TARJETAS RESUMEN ------------ */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card
+            titulo="Pagos Recibidos"
+            valor={totalRecibido}
+            color="#1b7c4b"
+            bg="#d3f7e8"
+          />
+          <Card
+            titulo="Pagos Pendientes"
+            valor={totalPendiente}
+            color="#e4a526"
+            bg="#fff4d9"
+          />
+          <Card
+            titulo="En Mora"
+            valor={totalMora}
+            color="#d8454f"
+            bg="#ffd9dd"
           />
         </section>
 
-        {/* tabla */}
-        <div className="bg-white border border-slate-300 rounded-xl overflow-hidden shadow-sm">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-100 text-left">
-              <tr>
-                <th className="p-3">ID</th>
-                <th className="p-3">Propiedad</th>
-                <th className="p-3">Tipo</th>
-                <th className="p-3">Descripcion</th>
-                <th className="p-3">Monto</th>
-                <th className="p-3">Fecha</th>
-                <th className="p-3">Estado</th>
-                <th className="p-3">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lista.map((e) => (
-                <tr key={e.id} className="border-t">
-                  <td className="p-3">{e.id}</td>
-                  <td className="p-3">{e.propiedad}</td>
-                  <td className="p-3">{e.tipo}</td>
-                  <td className="p-3">{e.descripcion}</td>
-                  <td className="p-3">{e.monto}</td>
-                  <td className="p-3">{e.fecha}</td>
-                  <td className="p-3">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${getEstadoClasses(
-                        e.estado
-                      )}`}
-                    >
-                      {e.estado}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <div className="flex gap-2">
-                      <button
-                        className="p-2 bg-emerald-100 rounded-lg hover:bg-emerald-200"
-                        onClick={() => handleClickEditar(e)}
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        className="p-2 bg-red-100 rounded-lg hover:bg-red-200"
-                        onClick={() => handleEliminar(e.id)}
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {lista.length === 0 && (
+        {/* ---------------- TABLA DE PAGOS ---------------- */}
+        <section>
+          <div className="bg-[#f7f3e8] border border-[#cfc7b4] rounded-2xl overflow-hidden">
+            <table className="w-full border-collapse">
+              <thead className="bg-[#f7f3e8] text-left text-sm text-gray-700">
                 <tr>
-                  <td
-                    colSpan={8}
-                    className="p-4 text-center text-slate-400 text-sm"
-                  >
-                    No hay expensas registradas
-                  </td>
+                  <th className="py-4 px-4">ID</th>
+                  <th className="py-4 px-4">Mes</th>
+                  <th className="py-4 px-4">Monto</th>
+                  <th className="py-4 px-4">Fecha Límite</th>
+                  <th className="py-4 px-4">Fecha de Pago</th>
+                  <th className="py-4 px-4">Estado</th>
+                  <th className="py-4 px-4">Tipo</th> 
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+
+              <tbody>
+                {pagos.map((pago) => (
+                  <tr
+                    key={pago.id}
+                    className="border-t border-[#ded7c7] hover:bg-[#f1ede4]"
+                  >
+                    <td className="py-3 px-4 text-sm">{pago.id}</td>
+                    <td className="py-3 px-4 text-sm">{pago.mes}</td>
+                    <td className="py-3 px-4 text-sm">{pago.monto}</td>
+                    <td className="py-3 px-4 text-sm">{pago.fechaLimite}</td>
+
+                    {/* FECHA + BOTÓN RECIBO INDIVIDUAL */}
+                    <td className="py-3 px-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span>{pago.fechaPago}</span>
+
+                        {pago.estado === "Pagado" && (
+                          <button
+                            onClick={() => setModalPago(pago)}
+                            className="flex items-center gap-1 px-2 py-1 rounded-md border border-[#15352b] text-xs hover:bg-[#eae4d7] transition"
+                          >
+                            ⬇️ Recibo
+                          </button>
+                        )}
+                      </div>
+                    </td>
+
+                    <td className="py-3 px-4">
+                      <span
+                        className={`px-3 py-1 text-sm rounded-full ${getEstadoBadge(
+                          pago.estado
+                        )}`}
+                      >
+                        {pago.estado}
+                      </span>
+                    </td>
+
+                    {/* 👇 TIPO AL LADO DE ESTADO */}
+                    <td className="py-3 px-4 text-sm">{pago.tipo}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+
+      {/* -----------------------------------------------
+          MODAL — RECIBO DEL PAGO SELECCIONADO
+      ------------------------------------------------ */}
+      {modalPago && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-8 border border-[#cfc7b4]">
+            {/* Header modal */}
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h2 className="text-2xl font-bold">Comprobante de Pago</h2>
+                <p className="text-sm text-gray-600">
+                  Detalle del pago <b>{modalPago.id}</b>
+                </p>
+              </div>
+
+              <button
+                className="text-xl px-3 py-1 text-gray-600 hover:text-black"
+                onClick={() => setModalPago(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Datos */}
+            <div className="grid grid-cols-2 gap-4 text-sm mb-6">
+              <Field label="Mes / Periodo" value={modalPago.mes} />
+              <Field label="Monto" value={modalPago.monto} />
+              <Field label="Fecha Límite" value={modalPago.fechaLimite} />
+              <Field label="Fecha de Pago" value={modalPago.fechaPago} />
+              <Field label="Estado" value={modalPago.estado} />
+              <Field label="Tipo de pago" value={modalPago.tipo} /> {/* 👈 NUEVO */}
+            </div>
+
+            <hr className="border-[#e0d7c8] mb-4" />
+
+            <p className="text-xs text-gray-500 mb-6">
+              *Este comprobante es una representación digital del pago
+              registrado en el sistema.
+            </p>
+
+            {/* Botones */}
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setModalPago(null)}
+                className="px-4 py-2 border rounded-lg border-[#15352b] text-sm hover:bg-[#eae4d7]"
+              >
+                Cerrar
+              </button>
+
+              <button className="px-4 py-2 rounded-lg bg-[#f1b814] hover:bg-[#e0a90f] text-sm font-semibold text-black">
+                ⬇️ Descargar PDF
+              </button>
+            </div>
+          </div>
         </div>
+      )}
 
-        {/* MODAL REGISTRAR NUEVA EXPENSA (maqueta, sin guardar en lista) */}
-        {mostrarModalCrear && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-              {/* header */}
-              <div className="flex justify-between items-center px-6 py-4 border-b">
-                <h2 className="text-lg font-semibold text-[#123528]">
-                  Registrar Nueva Expensa
-                </h2>
-                <button
-                  className="text-slate-500 hover:text-slate-700"
-                  onClick={() => setMostrarModalCrear(false)}
-                >
-                  ✕
-                </button>
+      {/* -----------------------------------------------
+          MODAL — HISTORIAL COMPLETO DE PAGOS
+      ------------------------------------------------ */}
+      {mostrarHistorial && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg.white rounded-2xl shadow-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto border border-[#cfc7b4]">
+            {/* Header */}
+            <div className="flex justify-between items-center px-8 py-5 border-b border-[#d9d2c3]">
+              <h2 className="text-xl md:text-2xl font-semibold">
+                Historial Completo de Pagos
+              </h2>
+              <button
+                className="text-xl px-3 py-1 text-gray-600 hover:text-black"
+                onClick={() => setMostrarHistorial(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="px-8 py-6 space-y-6">
+              {/* Tarjetas resumen dentro del modal */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="rounded-2xl bg-[#d3f7e8] px-6 py-4">
+                  <p className="text-sm text-[#15352b] mb-1">Total Recibido</p>
+                  <p className="text-4xl font-bold text-[#1b7c4b]">
+                    ${totalRecibido.toLocaleString()}
+                  </p>
+                  <p className="text-xs mt-2 text-[#1b7c4b]">
+                    {pagos.filter((p) => p.estado === "Pagado").length} pagos
+                    realizados
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-[#fff4d9] px-6 py-4">
+                  <p className="text-sm text-[#15352b] mb-1">Total Pendiente</p>
+                  <p className="text-4xl font-bold text-[#e4a526]">
+                    ${totalPendiente.toLocaleString()}
+                  </p>
+                  <p className="text-xs mt-2 text-[#e4a526]">
+                    {pagos.filter((p) => p.estado === "Pendiente").length} pagos
+                    pendientes
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-[#ffd9dd] px-6 py-4">
+                  <p className="text-sm text-[#15352b] mb-1">Total en Mora</p>
+                  <p className="text-4xl font-bold text-[#d8454f]">
+                    ${totalMora.toLocaleString()}
+                  </p>
+                  <p className="text-xs mt-2 text-[#d8454f]">
+                    {pagos.filter((p) => p.estado === "En mora").length} pagos
+                    en mora
+                  </p>
+                </div>
               </div>
 
-              {/* cuerpo */}
-              <div className="px-6 py-4 space-y-4 text-sm">
-                {/* propiedad */}
+              {/* Tabla detalle */}
+              <section>
+                <h3 className="text-base font-semibold mb-3">
+                  Detalle de Todos los Pagos
+                </h3>
+
+                <div className="border border-[#15352b] rounded-2xl overflow-hidden">
+                  <table className="w-full text-sm border-collapse">
+                    <thead className="bg-[#f7f3e8] text-left">
+                      <tr>
+                        <th className="py-3 px-4">ID</th>
+                        <th className="py-3 px-4">Inquilino</th>
+                        <th className="py-3 px-4">Propiedad</th>
+                        <th className="py-3 px-4">Periodo</th>
+                        <th className="py-3 px-4">Monto</th>
+                        <th className="py-3 px-4">Fecha</th>
+                        <th className="py-3 px-4">Estado</th>
+                        <th className="py-3 px-4">Tipo</th> {/* 👈 NUEVA COLUMNA */}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pagos.map((pago) => (
+                        <tr
+                          key={pago.id}
+                          className="border-t border-[#ded7c7]"
+                        >
+                          <td className="py-3 px-4">{pago.id}</td>
+                          <td className="py-3 px-4">María González</td>
+                          <td className="py-3 px-4">San Isidro 1234</td>
+                          <td className="py-3 px-4">{pago.mes}</td>
+                          <td className="py-3 px-4">{pago.monto}</td>
+                          <td className="py-3 px-4">
+                            {pago.fechaPago !== "-"
+                              ? pago.fechaPago
+                              : pago.fechaLimite}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`px-3 py-1 text-sm rounded-full ${getEstadoBadge(
+                                pago.estado
+                              )}`}
+                            >
+                              {pago.estado}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">{pago.tipo}</td> {/* 👈 NUEVO */}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              {/* Total general */}
+              <div className="border border-[#15352b] rounded-2xl px-6 py-4 mt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 <div>
-                  <label className="block text-xs text-slate-600 mb-1">
-                    Propiedad
-                  </label>
-                  <select className="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm">
-                    <option>Seleccionar propiedad</option>
-                    <option>Calle Secundaria 456</option>
-                    <option>San Isidro 1234</option>
-                  </select>
+                  <p className="font-semibold">
+                    Total General (Todos los Estados)
+                  </p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    {pagos.length} pagos registrados
+                  </p>
                 </div>
+                <p className="text-4xl font-bold text-[#15352b]">
+                  ${totalGeneral.toLocaleString()}
+                </p>
+              </div>
 
-                {/* tipo / mes */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs text-slate-600 mb-1">
-                      Tipo de Expensa
-                    </label>
-                    <select className="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm">
-                      <option>Agua</option>
-                      <option>Luz</option>
-                      <option>Gas</option>
-                      <option>Mantenimiento</option>
-                      <option>Otro</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-slate-600 mb-1">
-                      Mes Correspondiente
-                    </label>
-                    <input
-                      className="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm"
-                      placeholder="Noviembre 2024"
-                    />
-                  </div>
-                </div>
-
-                {/* monto / estado */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs text-slate-600 mb-1">
-                      Monto ($)
-                    </label>
-                    <input
-                      className="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm"
-                      placeholder="15000"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-slate-600 mb-1">
-                      Estado
-                    </label>
-                    <select className="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm">
-                      <option>Pendiente</option>
-                      <option>Pagado</option>
-                      <option>No pagado</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* comentarios */}
-                <div>
-                  <label className="block text-xs text-slate-600 mb-1">
-                    Comentarios
-                  </label>
-                  <textarea
-                    rows={3}
-                    className="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm resize-none"
-                    placeholder="Informacion adicional sobre la expensa..."
-                  />
-                </div>
-
-                {/* footer */}
-                <div className="border-t border-slate-200 pt-4 flex justify-end gap-3">
-                  <button
-                    className="px-4 py-2 rounded-lg border border-slate-300 bg-white text-sm hover:bg-slate-50"
-                    onClick={() => setMostrarModalCrear(false)}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    className="px-4 py-2 rounded-lg bg-yellow-400 hover:bg-yellow-500 text-sm font-semibold text-black"
-                    onClick={() => setMostrarModalCrear(false)}
-                  >
-                    Guardar Expensa
-                  </button>
-                </div>
+              {/* Footer botones */}
+              <div className="border-t border-[#d9d2c3] pt-4 mt-4 flex justify-end gap-3">
+                <button
+                  onClick={() => setMostrarHistorial(false)}
+                  className="px-5 py-2 rounded-lg border border-[#15352b] bg-white text-sm hover:bg-[#eae4d7]"
+                >
+                  Cerrar
+                </button>
+                <button className="px-5 py-2 rounded-lg bg-[#f1b814] hover.bg-[#e0a90f] text-sm font-semibold text.black flex items-center gap-2">
+                  <span>⬇️</span>
+                  <span>Descargar PDF</span>
+                </button>
               </div>
             </div>
           </div>
-        )}
-
-        {/* MODAL EDITAR EXPENSA */}
-        {mostrarModalEditar && expensaEditar && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-              {/* header */}
-              <div className="flex justify-between items-center px-6 py-4 border-b">
-                <h2 className="text-lg font-semibold text-[#123528]">
-                  Editar Expensa
-                </h2>
-                <button
-                  className="text-slate-500 hover:text-slate-700"
-                  onClick={() => setMostrarModalEditar(false)}
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* cuerpo */}
-              <div className="px-6 py-4 space-y-4 text-sm">
-                {/* propiedad */}
-                <div>
-                  <label className="block text-xs text-slate-600 mb-1">
-                    Propiedad
-                  </label>
-                  <input
-                    className="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm"
-                    value={formEditar.propiedad}
-                    onChange={(e) =>
-                      setFormEditar((f) => ({
-                        ...f,
-                        propiedad: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-
-                {/* tipo / fecha */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs text-slate-600 mb-1">
-                      Tipo de Expensa
-                    </label>
-                    <input
-                      className="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm"
-                      value={formEditar.tipo}
-                      onChange={(e) =>
-                        setFormEditar((f) => ({ ...f, tipo: e.target.value }))
-                      }
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-slate-600 mb-1">
-                      Fecha
-                    </label>
-                    <input
-                      type="date"
-                      className="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm"
-                      value={formEditar.fecha}
-                      onChange={(e) =>
-                        setFormEditar((f) => ({ ...f, fecha: e.target.value }))
-                      }
-                    />
-                  </div>
-                </div>
-
-                {/* descripcion */}
-                <div>
-                  <label className="block text-xs text-slate-600 mb-1">
-                    Descripcion
-                  </label>
-                  <textarea
-                    rows={3}
-                    className="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm resize-none"
-                    value={formEditar.descripcion}
-                    onChange={(e) =>
-                      setFormEditar((f) => ({
-                        ...f,
-                        descripcion: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-
-                {/* monto / estado */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs text-slate-600 mb-1">
-                      Monto ($)
-                    </label>
-                    <input
-                      className="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm"
-                      value={formEditar.monto}
-                      onChange={(e) =>
-                        setFormEditar((f) => ({ ...f, monto: e.target.value }))
-                      }
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-slate-600 mb-1">
-                      Estado
-                    </label>
-                    <select
-                      className="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm"
-                      value={formEditar.estado}
-                      onChange={(e) =>
-                        setFormEditar((f) => ({
-                          ...f,
-                          estado: e.target.value as EstadoExpensa,
-                        }))
-                      }
-                    >
-                      <option value="Pendiente">Pendiente</option>
-                      <option value="Pagado">Pagado</option>
-                      <option value="No pagado">No pagado</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* footer */}
-                <div className="border-t border-slate-200 pt-4 flex justify-end gap-3">
-                  <button
-                    className="px-4 py-2 rounded-lg border border-slate-300 bg-white text-sm hover:bg-slate-50"
-                    onClick={() => setMostrarModalEditar(false)}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    className="px-4 py-2 rounded-lg bg-yellow-400 hover:bg-yellow-500 text-sm font-semibold text-black"
-                    onClick={handleGuardarEdicion}
-                  >
-                    Guardar Cambios
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </section>
+        </div>
+      )}
     </div>
   );
 }
 
-/* ---- componentes auxiliares ---- */
+/* ---------- COMPONENTES AUXILIARES ---------- */
 
-type ResumenCardProps = {
-  titulo: string;
-  valor: string;
-  color?: "emerald" | "red";
-};
-
-function ResumenCard({ titulo, valor, color }: ResumenCardProps) {
-  const colorClasses =
-    color === "emerald"
-      ? "text-emerald-600"
-      : color === "red"
-      ? "text-red-600"
-      : "text-slate-800";
-
+function Card({ titulo, valor, color, bg }: any) {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col justify-between shadow-sm">
-      <span className="text-xs text-slate-500">{titulo}</span>
-      <span className={`text-2xl font-bold mt-2 ${colorClasses}`}>{valor}</span>
+    <div className="bg-[#f7f3e8] border border-[#cfc7b4] rounded-2xl px-8 py-6 flex flex-col items-center justify-center">
+      <div
+        className="h-10 w-10 rounded-xl flex items-center justify-center text-xl mb-3"
+        style={{ background: bg, color }}
+      >
+        💳
+      </div>
+      <p className="text-sm text-gray-700 mb-1">{titulo}</p>
+      <p className="text-2xl font-bold" style={{ color }}>
+        ${valor.toLocaleString()}
+      </p>
+    </div>
+  );
+}
+
+function Field({ label, value }: any) {
+  return (
+    <div>
+      <p className="text-gray-500 text-xs">{label}</p>
+      <p className="font-semibold">{value}</p>
     </div>
   );
 }
