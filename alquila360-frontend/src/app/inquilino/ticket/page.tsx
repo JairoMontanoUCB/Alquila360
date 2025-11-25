@@ -1,857 +1,795 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import React, { useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 
-interface Ticket {
+/* -------------------------------------------------------------------------- */
+/*                                  SIDEBAR                                   */
+/* -------------------------------------------------------------------------- */
+
+const inquilinoMenu = [
+  { label: "Home", path: "/inquilino" },
+  { label: "Contrato", path: "/inquilino/contrato" },
+  { label: "Pagos", path: "/inquilino/pagos" },
+  { label: "Tickets", path: "/inquilino/tickets" },
+  { label: "Expensas", path: "/inquilino/expensas" },
+  { label: "Perfil", path: "/inquilino/perfil" },
+];
+
+function SidebarInquilino() {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  return (
+    <aside className="w-64 bg-[#0b3b2c] text-white flex flex-col py-6 px-4">
+      <div
+        className="text-2xl font-extrabold tracking-wide mb-10 px-2 cursor-pointer"
+        onClick={() => router.push("/inquilino")}
+      >
+        ALQUILA 360
+      </div>
+
+      <nav className="flex-1 space-y-1">
+        {inquilinoMenu.map((item) => {
+          const active = pathname === item.path;
+          return (
+            <button
+              key={item.path}
+              onClick={() => router.push(item.path)}
+              className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition ${
+                active ? "bg-[#4b7f5e] font-semibold" : "hover:bg-[#164332]"
+              }`}
+            >
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      <div className="mt-6 px-2 text-xs text-slate-300">Inquilino</div>
+      <button className="mt-2 px-3 py-2 text-xs text-slate-200 hover:bg-[#164332] rounded-lg text-left">
+        Cerrar Sesion
+      </button>
+    </aside>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                  DATOS MOCK                                */
+/* -------------------------------------------------------------------------- */
+
+type Ticket = {
   id: string;
-  titulo: string;
+  prioridad: "Urgente" | "Media" | "Baja";
   descripcion: string;
   direccion: string;
   fecha: string;
-  tecnico: string;
   estado: "Abierto" | "En proceso" | "Cerrado";
-  prioridad: "Urgente" | "Media" | "Baja";
-  tipoProblema?: string;
-  subestado?: string;
-  fechaCreacion?: string;
-  fechaCerrado?: string;
-  inquilino?: string;
-  historial?: Array<{
-    fecha: string;
-    accion: string;
-    detalle: string;
-  }>;
-}
+  tecnico: string;
+  nota: string;
+};
 
-export default function GestionTickets() {
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [ticketsHistorico, setTicketsHistorico] = useState<Ticket[]>([]);
-  const [modalHistorico, setModalHistorico] = useState(false);
-  const [modalCrear, setModalCrear] = useState(false);
-  const [modalDetalle, setModalDetalle] = useState(false);
-  const [modalEditar, setModalEditar] = useState(false);
-  const [ticketSeleccionado, setTicketSeleccionado] = useState<Ticket | null>(null);
-  
-  // Formulario Crear
-  const [propiedadNueva, setPropiedadNueva] = useState("");
-  const [descripcionNueva, setDescripcionNueva] = useState("");
-  const [tipoProblema, setTipoProblema] = useState("Plomería");
-  const [prioridadNueva, setPrioridadNueva] = useState("Media");
-  const [estadoNuevo, setEstadoNuevo] = useState("Abierto");
+const ticketsMock: Ticket[] = [
+  {
+    id: "TKT-001",
+    prioridad: "Urgente",
+    descripcion: "Fuga de agua en el baño principal",
+    direccion: "Calle Secundaria 456",
+    fecha: "2024-11-18",
+    estado: "Abierto",
+    tecnico: "Carlos",
+    nota: "No arreglado",
+  },
+  {
+    id: "TKT-002",
+    prioridad: "Media",
+    descripcion: "La puerta de entrada no cierra correctamente",
+    direccion: "Calle Secundaria 456",
+    fecha: "2024-11-15",
+    estado: "En proceso",
+    tecnico: "Carlos",
+    nota: "Derivado",
+  },
+  {
+    id: "TKT-003",
+    prioridad: "Baja",
+    descripcion: "Pintura descascarada en la pared del dormitorio",
+    direccion: "Calle Secundaria 456",
+    fecha: "2024-11-10",
+    estado: "Abierto",
+    tecnico: "Carlos",
+    nota: "Sin revision",
+  },
+];
 
-  // Formulario Editar
-  const [descripcionEdit, setDescripcionEdit] = useState("");
-  const [tipoProblemaEdit, setTipoProblemaEdit] = useState("");
-  const [prioridadEdit, setPrioridadEdit] = useState("");
-  const [estadoEdit, setEstadoEdit] = useState("");
+/* -------------------------------------------------------------------------- */
+/*                              PAGINA DE TICKETS                             */
+/* -------------------------------------------------------------------------- */
 
-  useEffect(() => {
-    // Tickets actuales
-    setTickets([
-      {
-        id: "TKT-001",
-        titulo: "Fuga de agua en el baño principal",
-        descripcion: "Fuga de agua en el baño principal",
-        direccion: "Calle Secundaria 456",
-        fecha: "2024-11-18",
-        tecnico: "Carlos",
-        estado: "Abierto",
-        prioridad: "Urgente",
-        tipoProblema: "Plomería",
-        subestado: "No arreglado",
-        inquilino: "María González",
-        historial: [
-          { fecha: "2024-11-18", accion: "Ticket creado", detalle: "Ticket creado por el inquilino" },
-          { fecha: "2024-11-18", accion: "Técnico asignado", detalle: "Técnico asignado Carlos Martínez" }
-        ]
-      },
-      {
-        id: "TKT-002",
-        titulo: "La puerta de entrada no cierra correctamente",
-        descripcion: "La puerta de entrada no cierra correctamente",
-        direccion: "Calle Secundaria 456",
-        fecha: "2024-11-15",
-        tecnico: "Carlos",
-        estado: "En proceso",
-        prioridad: "Media",
-        tipoProblema: "Cerrajería",
-        subestado: "Derivado"
-      },
-      {
-        id: "TKT-003",
-        titulo: "Pintura descascarada en la pared del dormitorio",
-        descripcion: "Pintura descascarada en la pared del dormitorio",
-        direccion: "Calle Secundaria 456",
-        fecha: "2024-11-10",
-        tecnico: "",
-        estado: "Abierto",
-        prioridad: "Baja"
-      }
-    ]);
+export default function TicketsInquilinoPage() {
+  const [showHistorial, setShowHistorial] = useState(false);
+  const [showReportar, setShowReportar] = useState(false);
+  const [reportStep, setReportStep] = useState<1 | 2>(1);
 
-    // Tickets históricos (cerrados)
-    setTicketsHistorico([
-      {
-        id: "T-011",
-        titulo: "Cambio de cerraduras finalizado",
-        descripcion: "Cambio de cerraduras finalizado",
-        direccion: "Palermo 5678",
-        fechaCreacion: "15 Oct 2024",
-        fechaCerrado: "16 Oct 2024",
-        tecnico: "Roberto Sánchez",
-        estado: "Cerrado",
-        prioridad: "Media",
-        inquilino: "Carlos Rodríguez",
-        fecha: ""
-      },
-      {
-        id: "T-012",
-        titulo: "Pintura de paredes completada",
-        descripcion: "Pintura de paredes completada",
-        direccion: "Belgrano 910",
-        fechaCreacion: "20 Oct 2024",
-        fechaCerrado: "25 Oct 2024",
-        tecnico: "Roberto Sánchez",
-        estado: "Cerrado",
-        prioridad: "Baja",
-        inquilino: "Ana Martínez",
-        fecha: ""
-      },
-      {
-        id: "T-013",
-        titulo: "Reparación de pérdida de agua",
-        descripcion: "Reparación de pérdida de agua",
-        direccion: "San Isidro 1234",
-        fechaCreacion: "20 Oct 2024",
-        fechaCerrado: "25 Oct 2024",
-        tecnico: "Roberto Sánchez",
-        estado: "Cerrado",
-        prioridad: "Urgente",
-        inquilino: "María González",
-        fecha: ""
-      },
-      {
-        id: "T-014",
-        titulo: "Instalación de aires acondicionados",
-        descripcion: "Instalación de aires acondicionados",
-        direccion: "Palermo 5678",
-        fechaCreacion: "05 Nov 2024",
-        fechaCerrado: "08 Nov 2024",
-        tecnico: "Roberto Sánchez",
-        estado: "Cerrado",
-        prioridad: "Media",
-        inquilino: "Carlos Rodríguez",
-        fecha: ""
-      }
-    ]);
-  }, []);
+  const [openDetalle, setOpenDetalle] = useState(false);
+  const [ticketSeleccionado, setTicketSeleccionado] = useState<Ticket | null>(
+    null
+  );
 
-  const getEstadoColor = (estado: string) => {
-    switch (estado) {
-      case "Abierto": return "bg-blue-100 text-blue-700";
-      case "En proceso": return "bg-orange-100 text-orange-700";
-      case "Cerrado": return "bg-green-100 text-green-700";
-      default: return "bg-gray-100 text-gray-700";
-    }
-  };
-
-  const getPrioridadCount = (prioridad: string) => {
-    return tickets.filter(t => t.prioridad === prioridad && t.estado !== "Cerrado").length;
-  };
-
-  const getPrioridadColor = (prioridad: string) => {
-    switch (prioridad) {
-      case "Urgente": return "text-red-600";
-      case "Media": return "text-yellow-600";
-      case "Baja": return "text-green-600";
-      default: return "text-gray-600";
-    }
-  };
-
-  const handleCrearTicket = () => {
-    if (!propiedadNueva || !descripcionNueva) {
-      alert("Por favor completa todos los campos obligatorios");
-      return;
-    }
-    
-    const nuevoTicket: Ticket = {
-      id: `TKT-00${tickets.length + 1}`,
-      titulo: descripcionNueva.substring(0, 50),
-      descripcion: descripcionNueva,
-      direccion: propiedadNueva,
-      fecha: new Date().toISOString().split('T')[0],
-      tecnico: "",
-      estado: estadoNuevo as any,
-      prioridad: prioridadNueva as any,
-      tipoProblema: tipoProblema,
-      subestado: "No asignado"
-    };
-
-    setTickets([...tickets, nuevoTicket]);
-    alert("✅ Ticket creado exitosamente");
-    setModalCrear(false);
-    
-    // Limpiar formulario
-    setPropiedadNueva("");
-    setDescripcionNueva("");
-    setTipoProblema("Plomería");
-    setPrioridadNueva("Media");
-    setEstadoNuevo("Abierto");
-  };
-
-  const abrirDetalle = (ticket: Ticket) => {
-    setTicketSeleccionado(ticket);
-    setModalDetalle(true);
-  };
-
-  const abrirEditar = (ticket: Ticket) => {
-    setTicketSeleccionado(ticket);
-    setDescripcionEdit(ticket.descripcion);
-    setTipoProblemaEdit(ticket.tipoProblema || "Plomería");
-    setPrioridadEdit(ticket.prioridad);
-    setEstadoEdit(ticket.estado);
-    setModalEditar(true);
-  };
-
-  const handleGuardarEdicion = () => {
-    if (!ticketSeleccionado) return;
-
-    const ticketsActualizados = tickets.map(t => 
-      t.id === ticketSeleccionado.id 
-        ? {
-            ...t,
-            descripcion: descripcionEdit,
-            tipoProblema: tipoProblemaEdit,
-            prioridad: prioridadEdit as any,
-            estado: estadoEdit as any
-          }
-        : t
-    );
-
-    setTickets(ticketsActualizados);
-    alert("✅ Ticket actualizado correctamente");
-    setModalEditar(false);
-  };
-
-  const cerrarTicket = (ticket: Ticket) => {
-    const confirmacion = confirm(`¿Estás seguro de cerrar el ticket ${ticket.id}?`);
-    if (confirmacion) {
-      const ticketsActualizados = tickets.map(t => 
-        t.id === ticket.id ? { ...t, estado: "Cerrado" as any } : t
-      );
-      setTickets(ticketsActualizados);
-      alert("✅ Ticket cerrado correctamente");
-      setModalDetalle(false);
-    }
-  };
+  const totalTickets = ticketsMock.length;
+  const urgentes = ticketsMock.filter((t) => t.prioridad === "Urgente");
+  const medios = ticketsMock.filter((t) => t.prioridad === "Media");
+  const bajos = ticketsMock.filter((t) => t.prioridad === "Baja");
+  const enProceso = ticketsMock.filter((t) => t.estado === "En proceso").length;
+  const resueltos = ticketsMock.filter((t) => t.estado === "Cerrado").length;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
-      <aside className="fixed left-0 top-0 h-full w-64 bg-[#1a5f4a] text-white flex flex-col z-40">
-        <div className="p-6">
-          <h1 className="text-2xl font-bold">ALQUILA 360</h1>
-        </div>
-        
-        <nav className="flex-1 px-4 space-y-2">
-          <Link href="/inquilino" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#156b52]">
-            <span>🏠</span>
-            <span>Home</span>
-          </Link>
-          <Link href="/inquilino/contrato" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#156b52]">
-            <span>📄</span>
-            <span>Contrato</span>
-          </Link>
-          <Link href="/inquilino/pagos" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#156b52]">
-            <span>💳</span>
-            <span>Pagos</span>
-          </Link>
-          <Link href="/inquilino/tickets" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[#156b52]">
-            <span>🔧</span>
-            <span>Tickets</span>
-          </Link>
-          <Link href="/inquilino/expensas" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#156b52]">
-            <span>📊</span>
-            <span>Expensas</span>
-          </Link>
-          <Link href="/inquilino/perfil" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#156b52]">
-            <span>👤</span>
-            <span>Perfil</span>
-          </Link>
-        </nav>
+    <div className="min-h-screen flex bg-[#0b3b2c] text-slate-900">
+      <SidebarInquilino />
 
-        <div className="p-4 border-t border-[#156b52]">
-          <p className="text-sm text-gray-300 mb-2">Inquilino</p>
-          <button className="flex items-center gap-3 px-4 py-3 w-full rounded-lg hover:bg-[#156b52]">
-            <span>🚪</span>
-            <span>Cerrar Sesión</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="ml-64 flex-1 p-8">
-        <header className="flex items-center justify-between mb-8">
+      <section className="flex-1 bg-[#f7f5ee] px-10 py-8 overflow-y-auto">
+        {/* Header */}
+        <header className="mb-6 flex justify-between items-start">
           <div>
-            <h2 className="text-3xl font-bold text-gray-800">Gestión de Tickets</h2>
-            <p className="text-gray-600">Mantenimiento y problemas por prioridad</p>
+            <h1 className="text-3xl font-extrabold text-[#123528]">
+              Mis Tickets
+            </h1>
+            <p className="text-xs text-slate-500">
+              Reportes de mantenimiento y problemas
+            </p>
           </div>
-          <div className="flex gap-3">
-            <button 
-              onClick={() => setModalHistorico(true)}
-              className="px-6 py-2 bg-white border border-gray-300 text-gray-800 rounded-lg hover:bg-gray-50 transition font-semibold"
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowHistorial(true)}
+              className="px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white hover:bg-slate-100 flex items-center gap-2"
             >
-              Ver Histórico
+              <span>📊</span>
+              <span>Ver Historico</span>
             </button>
-            <button 
-              onClick={() => setModalCrear(true)}
-              className="px-6 py-2 bg-yellow-400 text-gray-800 rounded-lg hover:bg-yellow-500 transition font-semibold"
+            <button
+              onClick={() => {
+                setReportStep(1);
+                setShowReportar(true);
+              }}
+              className="px-3 py-2 text-xs rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-2"
             >
-              Crear Ticket
+              <span>➕</span>
+              <span>Reportar Problema</span>
             </button>
           </div>
         </header>
 
-        {/* Resumen */}
-        <div className="grid grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-xl p-6 shadow-sm">
-            <p className="text-sm text-gray-600 mb-2">Total de Tickets</p>
-            <p className="text-3xl font-bold text-gray-800">{tickets.filter(t => t.estado !== "Cerrado").length}</p>
-          </div>
-          <div className="bg-white rounded-xl p-6 shadow-sm">
-            <p className="text-sm text-gray-600 mb-2">En Proceso</p>
-            <p className="text-3xl font-bold text-orange-600">{tickets.filter(t => t.estado === "En proceso").length}</p>
-          </div>
-          <div className="bg-white rounded-xl p-6 shadow-sm">
-            <p className="text-sm text-gray-600 mb-2">Resueltos</p>
-            <p className="text-3xl font-bold text-green-600">0</p>
-          </div>
-        </div>
+        {/* Cards resumen */}
+        <section className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <ResumenCard
+            titulo="Total de Tickets"
+            valor={totalTickets.toString()}
+          />
+          <ResumenCard titulo="Urgentes" valor={urgentes.length.toString()} />
+          <ResumenCard titulo="En Proceso" valor={enProceso.toString()} />
+          <ResumenCard titulo="Resueltos" valor={resueltos.toString()} />
+        </section>
 
-        {/* Tickets por Prioridad */}
-        <div className="space-y-6">
-          {/* Urgentes */}
-          <div className="bg-white rounded-xl shadow-sm border-l-4 border-red-500 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-gray-800">Urgentes</h3>
-              <span className="w-8 h-8 bg-red-100 text-red-600 rounded-full flex items-center justify-center font-bold">
-                {getPrioridadCount("Urgente")}
-              </span>
+        {/* Urgentes */}
+        <TicketGrupo
+          titulo="Urgentes"
+          contador={urgentes.length}
+          colorBadge="bg-rose-100 text-rose-700"
+        >
+          {urgentes.map((t) => (
+            <TicketCard
+              key={t.id}
+              ticket={t}
+              onVerDetalle={() => {
+                setTicketSeleccionado(t);
+                setOpenDetalle(true);
+              }}
+            />
+          ))}
+        </TicketGrupo>
+
+        {/* Medios */}
+        <TicketGrupo
+          titulo="Medios"
+          contador={medios.length}
+          colorBadge="bg-amber-100 text-amber-700"
+        >
+          {medios.map((t) => (
+            <TicketCard
+              key={t.id}
+              ticket={t}
+              onVerDetalle={() => {
+                setTicketSeleccionado(t);
+                setOpenDetalle(true);
+              }}
+            />
+          ))}
+        </TicketGrupo>
+
+        {/* Bajos */}
+        <TicketGrupo
+          titulo="Bajos"
+          contador={bajos.length}
+          colorBadge="bg-emerald-100 text-emerald-700"
+        >
+          {bajos.map((t) => (
+            <TicketCard
+              key={t.id}
+              ticket={t}
+              onVerDetalle={() => {
+                setTicketSeleccionado(t);
+                setOpenDetalle(true);
+              }}
+            />
+          ))}
+        </TicketGrupo>
+      </section>
+
+      {/* ----------------------------- MODAL HISTORICO ----------------------------- */}
+      {showHistorial && (
+        <ModalBase onClose={() => setShowHistorial(false)}>
+          <div className="px-6 py-4 border-b">
+            <h2 className="font-bold text-lg">Historico de Tickets</h2>
+            <p className="text-xs text-slate-500">
+              Todos los tickets finalizados y cerrados
+            </p>
+          </div>
+
+          <div className="px-6 py-4 space-y-4 text-sm">
+            {/* Resumen top */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <HistCard titulo="Total Cerrados" valor="5" />
+              <HistCard titulo="Urgentes" valor="2" />
+              <HistCard titulo="Medios" valor="2" />
+              <HistCard titulo="Bajos" valor="1" />
             </div>
 
-            {tickets.filter(t => t.prioridad === "Urgente" && t.estado !== "Cerrado").map((ticket) => (
-              <div key={ticket.id} className="bg-gray-50 rounded-lg p-4 mb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <p className="font-semibold text-gray-800">{ticket.id}</p>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getEstadoColor(ticket.estado)}`}>
-                        {ticket.estado}
-                      </span>
+            {/* Filtros */}
+            <div className="border rounded-lg bg-white p-3 space-y-3">
+              <p className="text-[11px] text-slate-500">Filtros</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                <FiltroCaja label="Propiedad" value="Todas las propiedades" />
+                <FiltroCaja label="Inquilino" value="Todos los inquilinos" />
+                <FiltroCaja label="Prioridad" value="Todas las prioridades" />
+              </div>
+            </div>
+
+            {/* Lista de historico (mock estatico) */}
+            <div className="space-y-3">
+              <TicketHistItem
+                id="T-010"
+                prioridad="Urgente"
+                propiedad="San Isidro 1234"
+                inquilino="Maria Gonzalez"
+                tecnico="Carlos Martinez"
+                tiempo="1 dia"
+              />
+              <TicketHistItem
+                id="T-011"
+                prioridad="Media"
+                propiedad="Palermo 5678"
+                inquilino="Carlos Rodriguez"
+                tecnico="Roberto Sanchez"
+                tiempo="1 dia"
+              />
+              <TicketHistItem
+                id="T-012"
+                prioridad="Baja"
+                propiedad="Belgrano 910"
+                inquilino="Ana Martinez"
+                tecnico="Roberto Sanchez"
+                tiempo="5 dias"
+              />
+              <TicketHistItem
+                id="T-013"
+                prioridad="Urgente"
+                propiedad="San Isidro 1234"
+                inquilino="Maria Gonzalez"
+                tecnico="Roberto Sanchez"
+                tiempo="3 dias"
+              />
+              <TicketHistItem
+                id="T-014"
+                prioridad="Media"
+                propiedad="Palermo 5678"
+                inquilino="Carlos Rodriguez"
+                tecnico="Roberto Sanchez"
+                tiempo="3 dias"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end px-6 py-4 border-t bg-white rounded-b-xl">
+            <button
+              onClick={() => setShowHistorial(false)}
+              className="px-4 py-2 text-xs border rounded-lg hover:bg-slate-100"
+            >
+              Cerrar
+            </button>
+          </div>
+        </ModalBase>
+      )}
+
+      {/* ----------------------------- MODAL REPORTAR ----------------------------- */}
+      {showReportar && (
+        <ModalBase
+          onClose={() => {
+            setShowReportar(false);
+            setReportStep(1);
+          }}
+        >
+          <div className="px-6 py-4 border-b flex items-center justify-between">
+            <div>
+              <h2 className="font-bold text-sm">Reportar Problema</h2>
+            </div>
+            <button
+              onClick={() => {
+                setShowReportar(false);
+                setReportStep(1);
+              }}
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="px-6 py-4 text-xs space-y-4">
+            {reportStep === 1 && (
+              <>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <p className="text-[11px] text-slate-600">
+                    Describe el problema de forma clara y detallada. Un tecnico
+                    sera asignado para revisar tu solicitud.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-[11px] text-slate-500 mb-1">
+                      Propiedad Asociada *
+                    </p>
+                    <div className="border rounded-lg px-3 py-2 bg-slate-50 flex justify-between items-center">
+                      <span>Selecciona la propiedad</span>
+                      <span>▾</span>
                     </div>
-                    <p className="text-gray-700 mb-2">{ticket.descripcion}</p>
-                    <p className="text-sm text-gray-600">📍 {ticket.direccion}</p>
-                    <p className="text-sm text-gray-600">📅 {ticket.fecha}</p>
-                    <p className="text-sm text-gray-600">👨‍🔧 Técnico: {ticket.tecnico || "No arreglado"}</p>
                   </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => abrirDetalle(ticket)} className="p-2 hover:bg-gray-200 rounded" title="Ver">👁️</button>
-                    <button onClick={() => abrirEditar(ticket)} className="p-2 hover:bg-gray-200 rounded" title="Editar">✏️</button>
-                    <button onClick={() => cerrarTicket(ticket)} className="p-2 hover:bg-gray-200 rounded" title="Cerrar">❌</button>
+
+                  <div>
+                    <p className="text-[11px] text-slate-500 mb-1">
+                      Descripcion del Problema *
+                    </p>
+                    <textarea
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs"
+                      rows={3}
+                      placeholder="Describe detalladamente el problema que estas experimentando..."
+                    />
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
 
-          {/* Medios */}
-          <div className="bg-white rounded-xl shadow-sm border-l-4 border-yellow-500 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-gray-800">Medios</h3>
-              <span className="w-8 h-8 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center font-bold">
-                {getPrioridadCount("Media")}
-              </span>
-            </div>
-
-            {tickets.filter(t => t.prioridad === "Media" && t.estado !== "Cerrado").map((ticket) => (
-              <div key={ticket.id} className="bg-gray-50 rounded-lg p-4 mb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <p className="font-semibold text-gray-800">{ticket.id}</p>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getEstadoColor(ticket.estado)}`}>
-                        {ticket.estado}
-                      </span>
+                  <div>
+                    <p className="text-[11px] text-slate-500 mb-1">
+                      Prioridad *
+                    </p>
+                    <div className="border rounded-lg px-3 py-2 bg-slate-50 flex justify-between items-center">
+                      <span>Media (Atencion en 24-48 horas)</span>
+                      <span>▾</span>
                     </div>
-                    <p className="text-gray-700 mb-2">{ticket.descripcion}</p>
-                    <p className="text-sm text-gray-600">📍 {ticket.direccion}</p>
-                    <p className="text-sm text-gray-600">📅 {ticket.fecha}</p>
-                    <p className="text-sm text-gray-600">👨‍🔧 Técnico: {ticket.tecnico || "Derivado"}</p>
                   </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => abrirDetalle(ticket)} className="p-2 hover:bg-gray-200 rounded" title="Ver">👁️</button>
-                    <button onClick={() => abrirEditar(ticket)} className="p-2 hover:bg-gray-200 rounded" title="Editar">✏️</button>
-                    <button onClick={() => cerrarTicket(ticket)} className="p-2 hover:bg-gray-200 rounded" title="Cerrar">❌</button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
 
-          {/* Bajos */}
-          <div className="bg-white rounded-xl shadow-sm border-l-4 border-green-500 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-gray-800">Bajos</h3>
-              <span className="w-8 h-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center font-bold">
-                {getPrioridadCount("Baja")}
-              </span>
-            </div>
-
-            {tickets.filter(t => t.prioridad === "Baja" && t.estado !== "Cerrado").map((ticket) => (
-              <div key={ticket.id} className="bg-gray-50 rounded-lg p-4 mb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <p className="font-semibold text-gray-800">{ticket.id}</p>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getEstadoColor(ticket.estado)}`}>
-                        {ticket.estado}
-                      </span>
+                  <div>
+                    <p className="text-[11px] text-slate-500 mb-1">
+                      Adjuntar Imagenes (Opcional)
+                    </p>
+                    <div className="border-dashed border-2 border-slate-300 rounded-lg h-24 flex flex-col items-center justify-center text-[11px] text-slate-500">
+                      <span>📤</span>
+                      <span>Haz clic para seleccionar imagenes</span>
+                      <span>PNG, JPG hasta 5MB</span>
                     </div>
-                    <p className="text-gray-700 mb-2">{ticket.descripcion}</p>
-                    <p className="text-sm text-gray-600">📍 {ticket.direccion}</p>
-                    <p className="text-sm text-gray-600">📅 {ticket.fecha}</p>
-                    <p className="text-sm text-gray-600">👨‍🔧 Técnico: {ticket.tecnico || "No asignado"}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => abrirDetalle(ticket)} className="p-2 hover:bg-gray-200 rounded" title="Ver">👁️</button>
-                    <button onClick={() => abrirEditar(ticket)} className="p-2 hover:bg-gray-200 rounded" title="Editar">✏️</button>
-                    <button onClick={() => cerrarTicket(ticket)} className="p-2 hover:bg-gray-200 rounded" title="Cerrar">❌</button>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </main>
+              </>
+            )}
 
-      {/* MODAL: Histórico */}
-      {modalHistorico && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b p-6 flex items-center justify-between">
-              <div>
-                <h3 className="text-2xl font-bold text-gray-800">Histórico de Tickets</h3>
-                <p className="text-sm text-gray-600">Todos los tickets finalizados y cerrados</p>
-              </div>
-              <button onClick={() => setModalHistorico(false)} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
-            </div>
+            {reportStep === 2 && (
+              <>
+                <div>
+                  <div className="border-dashed border-2 border-slate-300 rounded-lg h-24 flex flex-col items-center justify-center text-[11px] text-slate-500 mb-4">
+                    <span>📤</span>
+                    <span>Haz clic para seleccionar imagenes</span>
+                    <span>PNG, JPG hasta 5MB</span>
+                  </div>
 
-            <div className="p-6">
-              {/* Resumen */}
-              <div className="grid grid-cols-4 gap-4 mb-6">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Total Cerrados</p>
-                  <p className="text-2xl font-bold text-gray-800">{ticketsHistorico.length}</p>
-                </div>
-                <div className="bg-red-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Urgentes</p>
-                  <p className="text-2xl font-bold text-red-600">{ticketsHistorico.filter(t => t.prioridad === "Urgente").length}</p>
-                </div>
-                <div className="bg-yellow-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Medios</p>
-                  <p className="text-2xl font-bold text-yellow-600">{ticketsHistorico.filter(t => t.prioridad === "Media").length}</p>
-                </div>
-                <div className="bg-green-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Bajos</p>
-                  <p className="text-2xl font-bold text-green-600">{ticketsHistorico.filter(t => t.prioridad === "Baja").length}</p>
-                </div>
-              </div>
+                  <p className="text-[11px] text-slate-500 mb-1">
+                    Comentarios Adicionales (Opcional)
+                  </p>
+                  <textarea
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs mb-4"
+                    rows={3}
+                    placeholder="Agrega informacion adicional que consideres relevante..."
+                  />
 
-              {/* Lista de tickets históricos */}
-              <div className="space-y-4">
-                {ticketsHistorico.map((ticket) => (
-                  <div key={ticket.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <p className="font-semibold text-green-600">{ticket.id}</p>
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getPrioridadColor(ticket.prioridad || "Baja")}`}>
-                            {ticket.prioridad}
-                          </span>
-                        </div>
-                        <p className="text-gray-800 font-medium mb-2">{ticket.descripcion}</p>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <p className="text-gray-600">Propiedad: {ticket.direccion}</p>
-                            <p className="text-gray-600">Inquilino: {ticket.inquilino || "N/A"}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-600">Técnico: {ticket.tecnico}</p>
-                            <p className="text-gray-600">Creado: {ticket.fechaCreacion} | Cerrado: {ticket.fechaCerrado}</p>
-                          </div>
-                        </div>
+                  <div className="border rounded-lg bg-white p-3">
+                    <p className="text-[11px] text-slate-500 mb-2">
+                      Resumen del Reporte
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[11px]">
+                      <div>
+                        <p className="text-slate-500">Estado inicial:</p>
+                        <p className="font-semibold">Abierto</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">Prioridad:</p>
+                        <p className="font-semibold">Media</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">Imagenes adjuntas:</p>
+                        <p className="font-semibold">0</p>
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-
-              <div className="mt-6 text-center">
-                <button 
-                  onClick={() => setModalHistorico(false)}
-                  className="px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition font-semibold"
-                >
-                  Cerrar
-                </button>
-              </div>
-            </div>
+                </div>
+              </>
+            )}
           </div>
-        </div>
+
+          <div className="flex justify-end gap-2 px-6 py-4 border-t bg-white rounded-b-xl text-xs">
+            <button
+              onClick={() => {
+                setShowReportar(false);
+                setReportStep(1);
+              }}
+              className="px-4 py-2 border rounded-lg hover:bg-slate-100"
+            >
+              Cancelar
+            </button>
+            {reportStep === 1 && (
+              <button
+                onClick={() => setReportStep(2)}
+                className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
+              >
+                Siguiente
+              </button>
+            )}
+            {reportStep === 2 && (
+              <button
+                onClick={() => {
+                  setShowReportar(false);
+                  setReportStep(1);
+                }}
+                className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
+              >
+                Crear Ticket
+              </button>
+            )}
+          </div>
+        </ModalBase>
       )}
 
-      {/* MODAL: Crear Ticket */}
-      {modalCrear && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b p-6 flex items-center justify-between">
-              <h3 className="text-2xl font-bold text-gray-800">Crear Nuevo Ticket</h3>
-              <button onClick={() => setModalCrear(false)} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
+      {/* ----------------------------- MODAL DETALLE TICKET ----------------------------- */}
+      {openDetalle && ticketSeleccionado && (
+        <ModalBase
+          onClose={() => {
+            setOpenDetalle(false);
+            setTicketSeleccionado(null);
+          }}
+        >
+          {/* Header */}
+          <div className="px-6 py-4 border-b flex items-center justify-between">
+            <div>
+              <p className="text-xs text-slate-500">
+                Informacion completa del ticket
+              </p>
+              <h2 className="font-bold text-sm">
+                Detalles del Ticket {ticketSeleccionado.id}
+              </h2>
             </div>
-
-            <div className="p-6 space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Número de Ticket</label>
-                <input 
-                  value={`TKT-00${tickets.length + 1} (Se genera automáticamente)`}
-                  disabled
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Propiedad *</label>
-                <select 
-                  value={propiedadNueva}
-                  onChange={(e) => setPropiedadNueva(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1a5f4a]"
-                >
-                  <option value="">Selecciona la propiedad</option>
-                  <option value="Calle Secundaria 456">Calle Secundaria 456</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Descripción del Problema *</label>
-                <textarea 
-                  value={descripcionNueva}
-                  onChange={(e) => setDescripcionNueva(e.target.value)}
-                  placeholder="Describe el problema de forma clara y detallada"
-                  rows={4}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1a5f4a]"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Problema</label>
-                  <select 
-                    value={tipoProblema}
-                    onChange={(e) => setTipoProblema(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                  >
-                    <option value="Plomería">Plomería</option>
-                    <option value="Electricidad">Electricidad</option>
-                    <option value="Cerrajería">Cerrajería</option>
-                    <option value="Pintura">Pintura</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Prioridad</label>
-                  <select 
-                    value={prioridadNueva}
-                    onChange={(e) => setPrioridadNueva(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                  >
-                    <option value="Baja">Baja</option>
-                    <option value="Media">Media</option>
-                    <option value="Urgente">Urgente</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
-                  <select 
-                    value={estadoNuevo}
-                    onChange={(e) => setEstadoNuevo(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                  >
-                    <option value="Abierto">Abierto</option>
-                    <option value="En proceso">En proceso</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Adjuntar Imágenes (Opcional)</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition cursor-pointer">
-                  <p className="text-gray-500">📷 Haz clic para seleccionar imágenes</p>
-                  <p className="text-xs text-gray-400 mt-1">PNG, JPG hasta 5MB</p>
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-4 border-t">
-                <button 
-                  onClick={() => setModalCrear(false)}
-                  className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-semibold"
-                >
-                  Cancelar
-                </button>
-                <button 
-                  onClick={handleCrearTicket}
-                  className="flex-1 px-6 py-3 bg-yellow-400 text-gray-800 rounded-lg hover:bg-yellow-500 transition font-semibold"
-                >
-                  Crear Ticket
-                </button>
-              </div>
-            </div>
+            <button
+              onClick={() => {
+                setOpenDetalle(false);
+                setTicketSeleccionado(null);
+              }}
+            >
+              ✕
+            </button>
           </div>
-        </div>
-      )}
 
-      {/* MODAL: Detalle del Ticket */}
-      {modalDetalle && ticketSeleccionado && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b p-6 flex items-center justify-between">
-              <h3 className="text-2xl font-bold text-gray-800">Detalles del Ticket {ticketSeleccionado.id}</h3>
-              <button onClick={() => setModalDetalle(false)} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
-            </div>
-
-            <div className="p-6 space-y-6">
-              {/* Header con prioridad y estado */}
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl">⚠️</span>
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h4 className="text-xl font-semibold text-gray-800">{ticketSeleccionado.id}</h4>
-                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
-                      Prioridad: {ticketSeleccionado.prioridad}
-                    </span>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getEstadoColor(ticketSeleccionado.estado)}`}>
-                      {ticketSeleccionado.estado}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600">Creado el {ticketSeleccionado.fecha}</p>
-                </div>
+          <div className="px-6 py-4 space-y-4 text-xs">
+            {/* Bloque superior */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="border rounded-lg bg-white p-3">
+                <p className="text-[11px] text-slate-500 mb-1">
+                  Descripcion del Problema
+                </p>
+                <p className="font-semibold">
+                  {ticketSeleccionado.descripcion}
+                </p>
               </div>
-
-              {/* Descripción */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h5 className="font-semibold text-gray-800 mb-2">Descripción del Problema</h5>
-                <p className="text-gray-700">{ticketSeleccionado.descripcion}</p>
-              </div>
-
-              {/* Grid de detalles */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Propiedad</p>
-                  <p className="font-semibold text-gray-800">{ticketSeleccionado.direccion}</p>
+              <div className="border rounded-lg bg-white p-3 flex flex-col gap-2">
+                <div>
+                  <p className="text-[11px] text-slate-500 mb-1">
+                    Prioridad
+                  </p>
+                  <span className="inline-flex px-3 py-1 rounded-full text-[11px] bg-rose-50 text-rose-700 border border-rose-200">
+                    {ticketSeleccionado.prioridad}
+                  </span>
                 </div>
-
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Estado</p>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getEstadoColor(ticketSeleccionado.estado)}`}>
+                <div>
+                  <p className="text-[11px] text-slate-500 mb-1">Estado</p>
+                  <span className="inline-flex px-3 py-1 rounded-full text-[11px] bg-sky-50 text-sky-700 border border-sky-200">
                     {ticketSeleccionado.estado}
                   </span>
                 </div>
-
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Tipo de Problema</p>
-                  <p className="font-semibold text-gray-800">{ticketSeleccionado.tipoProblema || "Plomería"}</p>
-                </div>
-
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Subestado</p>
-                  <p className="font-semibold text-gray-800">{ticketSeleccionado.subestado || "No arreglado"}</p>
-                </div>
-              </div>
-
-              {/* Asignación de Técnico */}
-              {ticketSeleccionado.tecnico && (
-                <div className="border-2 border-[#1a5f4a] rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600 mb-1">Técnico Asignado</p>
-                      <p className="font-semibold text-gray-800">👨‍🔧 {ticketSeleccionado.tecnico}</p>
-                    </div>
-                    <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition text-sm">
-                      Cambiar Técnico
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Historial */}
-              {ticketSeleccionado.historial && ticketSeleccionado.historial.length > 0 && (
-                <div>
-                  <h5 className="font-semibold text-gray-800 mb-3">Historial de Movimientos</h5>
-                  <div className="space-y-3">
-                    {ticketSeleccionado.historial.map((item, index) => (
-                      <div key={index} className="flex gap-3 items-start">
-                        <div className="w-8 h-8 bg-[#1a5f4a] text-white rounded-full flex items-center justify-center text-xs flex-shrink-0">
-                          {index + 1}
-                        </div>
-                        <div className="flex-1 bg-gray-50 rounded-lg p-3">
-                          <div className="flex items-center justify-between mb-1">
-                            <p className="font-semibold text-gray-800">{item.accion}</p>
-                            <p className="text-xs text-gray-500">📅 {item.fecha}</p>
-                          </div>
-                          <p className="text-sm text-gray-600">{item.detalle}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Botones */}
-              <div className="flex gap-3 pt-4 border-t">
-                <button 
-                  onClick={() => setModalDetalle(false)}
-                  className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-semibold"
-                >
-                  Cerrar
-                </button>
-                <button 
-                  onClick={() => {
-                    setModalDetalle(false);
-                    abrirEditar(ticketSeleccionado);
-                  }}
-                  className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-semibold"
-                >
-                  Editar
-                </button>
-                <button 
-                  onClick={() => cerrarTicket(ticketSeleccionado)}
-                  className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold"
-                >
-                  Cerrar Ticket
-                </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* MODAL: Editar Ticket */}
-      {modalEditar && ticketSeleccionado && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b p-6 flex items-center justify-between">
-              <h3 className="text-2xl font-bold text-gray-800">Editar Ticket {ticketSeleccionado.id}</h3>
-              <button onClick={() => setModalEditar(false)} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
+            {/* Propiedad / tipo / subestado */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="border rounded-lg bg-white p-3">
+                <p className="text-[11px] text-slate-500 mb-1">Propiedad</p>
+                <p>{ticketSeleccionado.direccion}</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="border rounded-lg bg-white p-3">
+                  <p className="text-[11px] text-slate-500 mb-1">
+                    Tipo de Problema
+                  </p>
+                  <p>Plomeria</p>
+                </div>
+                <div className="border rounded-lg bg-white p-3">
+                  <p className="text-[11px] text-slate-500 mb-1">
+                    Subestado
+                  </p>
+                  <p>{ticketSeleccionado.nota}</p>
+                </div>
+              </div>
             </div>
 
-            <div className="p-6 space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Número de Ticket</label>
-                <input 
-                  value={ticketSeleccionado.id}
-                  disabled
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100"
-                />
+            {/* Asignacion de tecnico */}
+            <div className="border rounded-lg bg-white p-3">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[11px] text-slate-500">
+                  Asignacion de Tecnico
+                </p>
+                <button className="px-3 py-1 text-[11px] border rounded-lg hover:bg-slate-100">
+                  Cambiar Tecnico
+                </button>
               </div>
+              <p className="text-[11px] text-slate-600">
+                Tecnico asignado:{" "}
+                <span className="font-semibold">
+                  {ticketSeleccionado.tecnico} Martinez
+                </span>
+              </p>
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Propiedad</label>
-                <input 
-                  value={ticketSeleccionado.direccion}
-                  disabled
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100"
-                />
+            {/* Historial de movimientos */}
+            <div className="border rounded-lg bg-white p-3 space-y-2">
+              <p className="text-[11px] text-slate-500 mb-1">
+                Historial de Movimientos
+              </p>
+              <div className="bg-slate-50 rounded-md p-2">
+                <p className="text-[11px] text-slate-600">
+                  {ticketSeleccionado.fecha}
+                </p>
+                <p className="text-[11px] text-slate-600">Ticket creado</p>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Descripción del Problema *</label>
-                <textarea 
-                  value={descripcionEdit}
-                  onChange={(e) => setDescripcionEdit(e.target.value)}
-                  placeholder="Describe el problema de forma clara y detallada"
-                  rows={4}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1a5f4a]"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Problema</label>
-                  <select 
-                    value={tipoProblemaEdit}
-                    onChange={(e) => setTipoProblemaEdit(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                  >
-                    <option value="Plomería">Plomería</option>
-                    <option value="Electricidad">Electricidad</option>
-                    <option value="Cerrajería">Cerrajería</option>
-                    <option value="Pintura">Pintura</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Prioridad</label>
-                  <select 
-                    value={prioridadEdit}
-                    onChange={(e) => setPrioridadEdit(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                  >
-                    <option value="Baja">Baja</option>
-                    <option value="Media">Media</option>
-                    <option value="Urgente">Urgente</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
-                  <select 
-                    value={estadoEdit}
-                    onChange={(e) => setEstadoEdit(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                  >
-                    <option value="Abierto">Abierto</option>
-                    <option value="En proceso">En proceso</option>
-                    <option value="Cerrado">Cerrado</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-sm text-yellow-800">
-                  ⚠️ {prioridadEdit === "Urgente" ? "Prioridad Urgente: Este ticket requiere atención inmediata" : "Recuerda actualizar el estado según el avance del ticket"}
+              <div className="bg-slate-50 rounded-md p-2">
+                <p className="text-[11px] text-slate-600">
+                  Tecnico asignado: {ticketSeleccionado.tecnico} Martinez
                 </p>
               </div>
-
-              <div className="flex gap-3 pt-4 border-t">
-                <button 
-                  onClick={() => setModalEditar(false)}
-                  className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-semibold"
-                >
-                  Cancelar
-                </button>
-                <button 
-                  onClick={handleGuardarEdicion}
-                  className="flex-1 px-6 py-3 bg-yellow-400 text-gray-800 rounded-lg hover:bg-yellow-500 transition font-semibold"
-                >
-                  Guardar Cambios
-                </button>
-              </div>
             </div>
           </div>
-        </div>
+
+          <div className="flex justify-end gap-2 px-6 py-4 border-t bg-white rounded-b-xl text-xs">
+            <button
+              onClick={() => {
+                setOpenDetalle(false);
+                setTicketSeleccionado(null);
+              }}
+              className="px-4 py-2 border rounded-lg hover:bg-slate-100"
+            >
+              Cerrar
+            </button>
+            <button className="px-4 py-2 border rounded-lg hover:bg-slate-100">
+              Editar
+            </button>
+            <button className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">
+              Cerrar Ticket
+            </button>
+          </div>
+        </ModalBase>
       )}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                              SUBCOMPONENTES UI                             */
+/* -------------------------------------------------------------------------- */
+
+function ResumenCard({ titulo, valor }: { titulo: string; valor: string }) {
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col justify-between">
+      <p className="text-[11px] text-slate-500">{titulo}</p>
+      <p className="text-2xl font-bold text-[#123528] mt-2">{valor}</p>
+    </div>
+  );
+}
+
+function TicketGrupo({
+  titulo,
+  contador,
+  colorBadge,
+  children,
+}: {
+  titulo: string;
+  contador: number;
+  colorBadge: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="mb-6">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <p className="text-xs font-semibold text-[#123528]">{titulo}</p>
+          <span
+            className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] ${colorBadge}`}
+          >
+            {contador}
+          </span>
+        </div>
+      </div>
+      <div className="space-y-3">{children}</div>
+    </section>
+  );
+}
+
+function TicketCard({
+  ticket,
+  onVerDetalle,
+}: {
+  ticket: Ticket;
+  onVerDetalle: () => void;
+}) {
+  const estadoStyles =
+    ticket.estado === "Abierto"
+      ? "bg-sky-50 text-sky-700 border-sky-200"
+      : ticket.estado === "En proceso"
+      ? "bg-amber-50 text-amber-700 border-amber-200"
+      : "bg-emerald-50 text-emerald-700 border-emerald-200";
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm text-xs flex flex-col gap-2">
+      <div className="flex justify-between items-start">
+        <div>
+          <p className="text-[11px] text-slate-500">{ticket.id}</p>
+          <p className="font-semibold text-[#123528]">{ticket.descripcion}</p>
+          <p className="text-[11px] text-slate-500">{ticket.direccion}</p>
+          <p className="text-[11px] text-slate-500">{ticket.fecha}</p>
+          <p className="text-[11px] text-slate-500">
+            Tecnico: <span>{ticket.tecnico}</span>
+          </p>
+          <p className="inline-flex mt-1 px-2 py-1 rounded-full bg-slate-100 text-[10px]">
+            {ticket.nota}
+          </p>
+        </div>
+        <span
+          className={`px-3 py-1 rounded-full border text-[11px] font-semibold ${estadoStyles}`}
+        >
+          {ticket.estado}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-end gap-2 mt-1">
+        {/* Boton ver detalle (ojo) */}
+        <button
+          onClick={onVerDetalle}
+          className="text-slate-600 hover:text-emerald-600 text-lg"
+          title="Ver detalle"
+        >
+          👁️
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------- componentes Historico ------------------------- */
+
+function HistCard({ titulo, valor }: { titulo: string; valor: string }) {
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
+      <p className="text-[11px] text-slate-500">{titulo}</p>
+      <p className="text-xl font-bold text-[#123528] mt-1">{valor}</p>
+    </div>
+  );
+}
+
+function FiltroCaja({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[11px] text-slate-500 mb-1">{label}</p>
+      <div className="border rounded-lg px-3 py-2 bg-slate-50 flex justify-between items-center">
+        <span>{value}</span>
+        <span>▾</span>
+      </div>
+    </div>
+  );
+}
+
+type TicketHistProps = {
+  id: string;
+  prioridad: "Urgente" | "Media" | "Baja";
+  propiedad: string;
+  inquilino: string;
+  tecnico: string;
+  tiempo: string;
+};
+
+function TicketHistItem({
+  id,
+  prioridad,
+  propiedad,
+  inquilino,
+  tecnico,
+  tiempo,
+}: TicketHistProps) {
+  const prioridadStyles =
+    prioridad === "Urgente"
+      ? "bg-rose-50 text-rose-700 border-rose-200"
+      : prioridad === "Media"
+      ? "bg-amber-50 text-amber-700 border-amber-200"
+      : "bg-emerald-50 text-emerald-700 border-emerald-200";
+
+  return (
+    <div className="border rounded-lg bg-white p-3 text-[11px] space-y-2">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold">{id}</span>
+          <span className={`px-2 py-1 rounded-full border ${prioridadStyles}`}>
+            {prioridad}
+          </span>
+        </div>
+        <p className="text-slate-500">
+          Tiempo de Resolucion: <span className="font-semibold">{tiempo}</span>
+        </p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        <div>
+          <p className="text-slate-500">Propiedad</p>
+          <p>{propiedad}</p>
+        </div>
+        <div>
+          <p className="text-slate-500">Inquilino</p>
+          <p>{inquilino}</p>
+        </div>
+        <div>
+          <p className="text-slate-500">Tecnico Asignado</p>
+          <p>{tecnico}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------- Modal base ------------------------------- */
+
+function ModalBase({
+  children,
+  onClose,
+}: {
+  children: React.ReactNode;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div className="bg-[#f7f5ee] w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-xl shadow-xl border border-slate-300 relative">
+        {children}
+      </div>
+      <button
+        className="absolute inset-0 w-full h-full cursor-default"
+        onClick={onClose}
+      />
     </div>
   );
 }
