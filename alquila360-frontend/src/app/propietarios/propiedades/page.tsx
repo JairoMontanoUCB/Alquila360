@@ -1,63 +1,40 @@
 "use client";
 
-import { useState, ChangeEvent } from "react";
+import { useState, useEffect, ChangeEvent } from "react";
 import Sidebar from "../../components/sideBarPropietario";
+import { propiedadService, PropiedadBackend } from "../../../services/PropiedadService";
+import { useRouter } from "next/navigation";
 
+// Tipo actualizado para usar datos reales
 type Propiedad = {
+  id: number;
   img: string;
   nombre: string;
   tipo: string;
   direccion: string;
   superficie: string;
   ambientes: string;
-  estado: string;
+  estado: "Disponible" | "Ocupada" | "Mantenimiento" | "Inactiva";
   precioAlquiler: string;
   precioGarantia: string;
   descripcion: string;
-  servicios: string; // separados por coma
+  servicios: string;
+  fotos: any[];
 };
 
 export default function MisPropiedades() {
-  // ---- LISTA DE PROPIEDADES EN ESTADO ----
-  const [propiedades, setPropiedades] = useState<Propiedad[]>([
-    {
-      img: "/img1.jpg",
-      nombre: "Av. Principal 123, Piso 5",
-      tipo: "Casa",
-      direccion: "Av. Principal 123, Piso 5",
-      superficie: "120",
-      ambientes: "3",
-      estado: "Disponible",
-      precioAlquiler: "1200",
-      precioGarantia: "2400",
-      descripcion:
-        "Moderno departamento de 2 habitaciones con vista panorámica, balcón amplio y amenities completos.",
-      servicios: "WiFi, Gas, Agua, Luz, Cable, Estacionamiento",
-    },
-    {
-      img: "/img2.jpg",
-      nombre: "Calle Secundaria 456",
-      tipo: "Casa",
-      direccion: "Calle Secundaria 456",
-      superficie: "160",
-      ambientes: "4",
-      estado: "Ocupada",
-      precioAlquiler: "2500",
-      precioGarantia: "3000",
-      descripcion:
-        "Casa de lujo con 4 habitaciones, jardín privado y parqueo para 2 vehículos.",
-      servicios: "WiFi, Gas, Agua, Luz, Cable",
-    },
-  ]);
+  const [propiedades, setPropiedades] = useState<Propiedad[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const stateColor = (estado: string) => {
-    if (estado === "Disponible") return "bg-[#d3f7e8] text-[#1b7c4b]";
-    return "bg-[#dbe7ff] text-[#3b5fb4]";
-  };
-
-  // ---- MODAL AGREGAR PROPIEDAD ----
+  // Estados para modales
   const [openCreate, setOpenCreate] = useState(false);
+  const [openEdit, setOpenEdit] = useState(false);
+  const [openView, setOpenView] = useState(false);
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [viewIndex, setViewIndex] = useState<number | null>(null);
 
+  // Estado del formulario CREAR
   const [nombrePropiedad, setNombrePropiedad] = useState("");
   const [tipoPropiedad, setTipoPropiedad] = useState("Casa");
   const [direccionExacta, setDireccionExacta] = useState("");
@@ -70,6 +47,214 @@ export default function MisPropiedades() {
   const [servicios, setServicios] = useState("");
   const [imagenes, setImagenes] = useState<File[]>([]);
 
+  // Estado del formulario EDITAR
+  const [editNombrePropiedad, setEditNombrePropiedad] = useState("");
+  const [editTipoPropiedad, setEditTipoPropiedad] = useState("Casa");
+  const [editDireccionExacta, setEditDireccionExacta] = useState("");
+  const [editSuperficie, setEditSuperficie] = useState("");
+  const [editAmbientes, setEditAmbientes] = useState("");
+  const [editEstadoActual, setEditEstadoActual] = useState("Disponible");
+  const [editPrecioAlquiler, setEditPrecioAlquiler] = useState("");
+  const [editPrecioGarantia, setEditPrecioGarantia] = useState("");
+  const [editDescripcion, setEditDescripcion] = useState("");
+  const [editServicios, setEditServicios] = useState("");
+  const [editImagenes, setEditImagenes] = useState<File[]>([]);
+
+  const router = useRouter();
+  const [propietarioId, setPropietarioId] = useState<number | null>(null);
+  const [userLoading, setUserLoading] = useState(true);
+
+    // Obtener usuario logueado al cargar el componente
+    useEffect(() => {
+      const obtenerUsuarioLogueado = () => {
+        try {
+          const usuarioStorage = localStorage.getItem('usuario');
+          const role = localStorage.getItem('role');
+  
+          if (usuarioStorage && role === 'propietario') {
+            const usuario = JSON.parse(usuarioStorage);
+            
+            if (usuario && usuario.id) {
+              setPropietarioId(usuario.id);
+            } else {
+              console.error("Usuario no tiene ID");
+              router.push('/login');
+            }
+          } else {
+            console.error("No es propietario o no hay usuario:", { role });
+            router.push('/login');
+          }
+        } catch (error) {
+          console.error("Error obteniendo usuario:", error);
+          router.push('/login');
+        } finally {
+          setUserLoading(false);
+        }
+      };
+  
+      obtenerUsuarioLogueado();
+    }, [router]);
+  // Cargar propiedades del propietario
+  useEffect(() => {
+    cargarPropiedades();
+  }, [propietarioId]);
+
+  const cargarPropiedades = async () => {
+    if (!propietarioId) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+    
+      
+      const propiedadesData = await propiedadService.getPropiedadesPorPropietario(propietarioId);
+
+      // Transformación de datos
+      const propiedadesTransformadas: Propiedad[] = propiedadesData.map(prop => {
+        const primeraImagen = prop.fotos && prop.fotos.length > 0 && prop.fotos[0].url
+          ? `http://localhost:3001${prop.fotos[0].url}`
+          : "/propiedad.png";
+
+        const estadoFrontend = 
+          prop.estado === "disponible" ? "Disponible" :
+          prop.estado === "alquilada" ? "Ocupada" :
+          prop.estado === "mantenimiento" ? "Mantenimiento" : "Inactiva";
+
+        return {
+          id: prop.id,
+          img: primeraImagen,
+          nombre: prop.direccion,
+          tipo: prop.tipo,
+          direccion: prop.direccion,
+          superficie: prop.superficie ? `${prop.superficie} m²` : "No especificado",
+          ambientes: prop.ambientes ? `${prop.ambientes} ambientes` : "No especificado",
+          estado: estadoFrontend,
+          precioAlquiler: `$${prop.precio_referencia}`,
+          precioGarantia: `$${prop.precio_referencia * 2}`,
+          descripcion: prop.descripcion || "Sin descripción",
+          servicios: "Básicos",
+          fotos: prop.fotos || []
+        };
+      });
+
+      setPropiedades(propiedadesTransformadas);
+      
+    } catch (err: any) {
+      console.error("❌ Error cargando propiedades:", err);
+      setError(`Error cargando propiedades: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // También corrige la función de crear propiedad para usar el propietarioId real
+  const handleGuardarPropiedad = async () => {
+    if (!nombrePropiedad || !direccionExacta || !precioAlquiler || !propietarioId) {
+      alert("Completa al menos nombre, dirección y precio de alquiler.");
+      return;
+    }
+
+    try {
+      const propiedadData = {
+        direccion: direccionExacta,
+        ciudad: "Ciudad por defecto",
+        tipo: tipoPropiedad.toLowerCase(),
+        estado: estadoActual.toLowerCase(),
+        descripcion: descripcion || "Sin descripción",
+        precio_referencia: Number(precioAlquiler),
+        propietarioId: propietarioId, // ← USAR EL ID REAL DEL USUARIO LOGUEADO
+      };
+      
+      await propiedadService.crearPropiedad(propiedadData);
+      await cargarPropiedades();
+      
+      resetForm();
+      setOpenCreate(false);
+      alert("Propiedad creada exitosamente");
+      
+    } catch (error: any) {
+      console.error("❌ Error creando propiedad:", error);
+      alert(`Error al crear la propiedad: ${error.message}`);
+    }
+  };
+
+  const stateColor = (estado: string) => {
+    if (estado === "Disponible") return "bg-[#d3f7e8] text-[#1b7c4b]";
+    if (estado === "Ocupada") return "bg-[#dbe7ff] text-[#3b5fb4]";
+    return "bg-[#f0f0f0] text-[#666]";
+  };
+
+  // Funciones de UI
+  // Función para abrir edición 
+const handleOpenEdit = (index: number) => {
+  const p = propiedades[index];
+  
+  setEditIndex(index);
+  setEditNombrePropiedad(p.nombre);
+  setEditTipoPropiedad(p.tipo);
+  setEditDireccionExacta(p.direccion);
+  
+  // CORRECCIÓN: Manejar correctamente "No especificado"
+  const superficieValue = p.superficie.includes('No especificado') 
+    ? '' 
+    : p.superficie.replace(' m²', '');
+  
+  const ambientesValue = p.ambientes.includes('No especificado') 
+    ? '' 
+    : p.ambientes.replace(' ambientes', '');
+  
+  setEditSuperficie(superficieValue);
+  setEditAmbientes(ambientesValue);
+  setEditEstadoActual(p.estado);
+  
+  // CORRECCIÓN: Mejor manejo del precio
+  const precioValue = p.precioAlquiler.replace('$', '').replace('/mes', '');
+  setEditPrecioAlquiler(precioValue);
+  setEditPrecioGarantia(p.precioGarantia.replace('$', ''));
+  setEditDescripcion(p.descripcion);
+  setEditServicios(p.servicios);
+  setEditImagenes([]);
+  setOpenEdit(true);
+};
+
+const handleGuardarEdicion = async () => {
+  if (editIndex === null) return;
+
+  try {
+    const propiedad = propiedades[editIndex];
+    
+    // DATOS MÍNIMOS PARA PRUEBA
+    const propiedadData = {
+      direccion: editDireccionExacta,
+      precio_referencia: Number(editPrecioAlquiler),
+    };
+
+    const respuesta = await propiedadService.actualizarPropiedad(propiedad.id, propiedadData);
+
+    await cargarPropiedades();
+    
+    setOpenEdit(false);
+    setEditIndex(null);
+    alert("✅ Propiedad actualizada exitosamente");
+    
+  } catch (error: any) {
+    console.error("❌ ERROR:", error);
+    alert(`Error: ${error.message}`);
+  }
+};
+
+
+  const handleOpenView = (index: number) => {
+    setViewIndex(index);
+    setOpenView(true);
+  };
+
+  const handleCloseView = () => {
+    setOpenView(false);
+    setViewIndex(null);
+  };
+
+  // Reset form
   const resetForm = () => {
     setNombrePropiedad("");
     setTipoPropiedad("Casa");
@@ -84,115 +269,17 @@ export default function MisPropiedades() {
     setImagenes([]);
   };
 
+  // Handlers para imágenes
   const handleImagenesChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setImagenes(Array.from(e.target.files));
     }
   };
 
-  const handleGuardarPropiedad = () => {
-    if (!nombrePropiedad || !direccionExacta || !precioAlquiler) {
-      alert("Completa al menos nombre, dirección y precio de alquiler.");
-      return;
-    }
-
-    const nuevaPropiedad: Propiedad = {
-      img: "/img1.jpg", // placeholder
-      nombre: nombrePropiedad,
-      tipo: tipoPropiedad,
-      direccion: direccionExacta,
-      superficie,
-      ambientes,
-      estado: estadoActual,
-      precioAlquiler,
-      precioGarantia,
-      descripcion: descripcion || "Sin descripción.",
-      servicios,
-    };
-
-    setPropiedades((prev) => [...prev, nuevaPropiedad]);
-    resetForm();
-    setOpenCreate(false);
-  };
-
-  // ---- MODAL EDITAR PROPIEDAD ----
-  const [openEdit, setOpenEdit] = useState(false);
-  const [editIndex, setEditIndex] = useState<number | null>(null);
-
-  const [editNombrePropiedad, setEditNombrePropiedad] = useState("");
-  const [editTipoPropiedad, setEditTipoPropiedad] = useState("Casa");
-  const [editDireccionExacta, setEditDireccionExacta] = useState("");
-  const [editSuperficie, setEditSuperficie] = useState("");
-  const [editAmbientes, setEditAmbientes] = useState("");
-  const [editEstadoActual, setEditEstadoActual] = useState("Disponible");
-  const [editPrecioAlquiler, setEditPrecioAlquiler] = useState("");
-  const [editPrecioGarantia, setEditPrecioGarantia] = useState("");
-  const [editDescripcion, setEditDescripcion] = useState("");
-  const [editServicios, setEditServicios] = useState("");
-  const [editImagenes, setEditImagenes] = useState<File[]>([]);
-
   const handleEditImagenesChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setEditImagenes(Array.from(e.target.files));
     }
-  };
-
-  const handleOpenEdit = (index: number) => {
-    const p = propiedades[index];
-    setEditIndex(index);
-    setEditNombrePropiedad(p.nombre);
-    setEditTipoPropiedad(p.tipo);
-    setEditDireccionExacta(p.direccion);
-    setEditSuperficie(p.superficie);
-    setEditAmbientes(p.ambientes);
-    setEditEstadoActual(p.estado);
-    setEditPrecioAlquiler(p.precioAlquiler);
-    setEditPrecioGarantia(p.precioGarantia);
-    setEditDescripcion(p.descripcion);
-    setEditServicios(p.servicios);
-    setEditImagenes([]);
-    setOpenEdit(true);
-  };
-
-  const handleGuardarEdicion = () => {
-    if (editIndex === null) return;
-
-    setPropiedades((prev) =>
-      prev.map((p, i) =>
-        i === editIndex
-          ? {
-              ...p,
-              nombre: editNombrePropiedad,
-              tipo: editTipoPropiedad,
-              direccion: editDireccionExacta,
-              superficie: editSuperficie,
-              ambientes: editAmbientes,
-              estado: editEstadoActual,
-              precioAlquiler: editPrecioAlquiler,
-              precioGarantia: editPrecioGarantia,
-              descripcion: editDescripcion,
-              servicios: editServicios,
-            }
-          : p
-      )
-    );
-
-    setOpenEdit(false);
-    setEditIndex(null);
-  };
-
-  // ---- MODAL VER REPORTE (OJO) ----
-  const [openView, setOpenView] = useState(false);
-  const [viewIndex, setViewIndex] = useState<number | null>(null);
-
-  const handleOpenView = (index: number) => {
-    setViewIndex(index);
-    setOpenView(true);
-  };
-
-  const handleCloseView = () => {
-    setOpenView(false);
-    setViewIndex(null);
   };
 
   return (
@@ -204,7 +291,7 @@ export default function MisPropiedades() {
           <div>
             <h2 className="text-[32px] font-bold">Mis Propiedades</h2>
             <p className="text-sm text-gray-600">
-              Gestiona todas tus propiedades
+              Gestiona todas tus propiedades ({propiedades.length} propiedades)
             </p>
           </div>
 
@@ -216,68 +303,97 @@ export default function MisPropiedades() {
           </button>
         </header>
 
+        {loading && (
+          <div className="text-center py-8">
+            <p>Cargando tus propiedades...</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
+
         {/* TABLA */}
         <div className="bg-white border border-[#cfc7b4] rounded-2xl overflow-hidden">
-          <table className="w-full border-collapse">
-            <thead className="bg-[#f7f3e8] text-left text-sm text-gray-700">
-              <tr>
-                <th className="py-4 px-4">Imagen</th>
-                <th className="py-4 px-4">Dirección</th>
-                <th className="py-4 px-4">Estado</th>
-                <th className="py-4 px-4">Precio</th>
-                <th className="py-4 px-4">Descripción</th>
-                <th className="py-4 px-4 text-center">Acciones</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {propiedades.map((p, index) => (
-                <tr key={index} className="border-t border-[#ded7c7]">
-                  <td className="py-3 px-4">
-                    <img
-                      src={p.img}
-                      className="h-16 w-24 rounded-lg object-cover"
-                    />
-                  </td>
-
-                  <td className="py-3 px-4">{p.direccion}</td>
-
-                  <td className="py-3 px-4">
-                    <span
-                      className={`px-3 py-1 text-sm rounded-full ${stateColor(
-                        p.estado
-                      )}`}
-                    >
-                      {p.estado}
-                    </span>
-                  </td>
-
-                  <td className="py-3 px-4 font-semibold">
-                    ${p.precioAlquiler}/mes
-                  </td>
-
-                  <td className="py-3 px-4 text-sm text-gray-700">
-                    {p.descripcion}
-                  </td>
-
-                  <td className="py-3 px-4 flex gap-2 justify-center">
-                    <button
-                      onClick={() => handleOpenEdit(index)}
-                      className="border border-[#1e4633] rounded-lg p-2 hover:bg-gray-100"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={() => handleOpenView(index)}
-                      className="border border-[#1e4633] rounded-lg p-2 hover:bg-gray-100"
-                    >
-                      👁️
-                    </button>
-                  </td>
+          {propiedades.length === 0 && !loading ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500 mb-4">No tienes propiedades registradas</p>
+              <button
+                onClick={() => setOpenCreate(true)}
+                className="bg-[#f4b000] text-white px-4 py-2 rounded-lg hover:bg-[#e0a000] transition"
+              >
+                Agregar tu primera propiedad
+              </button>
+            </div>
+          ) : (
+            <table className="w-full border-collapse">
+              <thead className="bg-[#f7f3e8] text-left text-sm text-gray-700">
+                <tr>
+                  <th className="py-4 px-4">Imagen</th>
+                  <th className="py-4 px-4">Dirección</th>
+                  <th className="py-4 px-4">Estado</th>
+                  <th className="py-4 px-4">Precio</th>
+                  <th className="py-4 px-4">Descripción</th>
+                  <th className="py-4 px-4 text-center">Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+
+              <tbody>
+                {propiedades.map((p, index) => (
+                  <tr key={p.id} className="border-t border-[#ded7c7]">
+                    <td className="py-3 px-4">
+                      <img
+                        src={p.img}
+                        className="h-16 w-24 rounded-lg object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = '/propiedad.png';
+                        }}
+                      />
+                    </td>
+
+                    <td className="py-3 px-4">{p.direccion}</td>
+
+                    <td className="py-3 px-4">
+                      <span
+                        className={`px-3 py-1 text-sm rounded-full ${stateColor(
+                          p.estado
+                        )}`}
+                      >
+                        {p.estado}
+                      </span>
+                    </td>
+
+                    <td className="py-3 px-4 font-semibold">
+                      {p.precioAlquiler}/mes
+                    </td>
+
+                    <td className="py-3 px-4 text-sm text-gray-700">
+                      {p.descripcion}
+                    </td>
+
+                    <td className="py-3 px-4 flex gap-2 justify-center">
+                      <button
+                        onClick={() => handleOpenEdit(index)}
+                        className="border border-[#1e4633] rounded-lg p-2 hover:bg-gray-100"
+                        title="Editar propiedad"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() => handleOpenView(index)}
+                        className="border border-[#1e4633] rounded-lg p-2 hover:bg-gray-100"
+                        title="Ver detalles"
+                      >
+                        👁️
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </main>
 
@@ -397,17 +513,7 @@ export default function MisPropiedades() {
                       onChange={(e) => setPrecioAlquiler(e.target.value)}
                     />
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-700">
-                      Precio de la Garantía ($)
-                    </p>
-                    <input
-                      type="number"
-                      className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
-                      value={precioGarantia}
-                      onChange={(e) => setPrecioGarantia(e.target.value)}
-                    />
-                  </div>
+   
                 </div>
               </section>
 
@@ -425,18 +531,7 @@ export default function MisPropiedades() {
                   />
                 </div>
 
-                <div>
-                  <p className="text-sm font-medium text-slate-700">
-                    Servicios Incluidos
-                  </p>
-                  <input
-                    className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
-                    placeholder="Ej: WiFi, Gas, Agua, Luz, Cable, Estacionamiento"
-                    value={servicios}
-                    onChange={(e) => setServicios(e.target.value)}
-                  />
-                </div>
-
+      
                 <div>
                   <p className="text-sm font-medium text-slate-700 mb-2">
                     Imágenes de la Propiedad
@@ -731,6 +826,9 @@ export default function MisPropiedades() {
                     <img
                       src={p.img}
                       className="w-full max-h-[420px] object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = '/propiedad.png';
+                      }}
                     />
                   </div>
                 </div>
@@ -755,7 +853,7 @@ export default function MisPropiedades() {
                         Precio Mensual
                       </p>
                       <p className="text-sm text-slate-900">
-                        ${Number(p.precioAlquiler).toLocaleString("es-AR")}
+                        {p.precioAlquiler}
                       </p>
                     </div>
                   </div>
@@ -779,7 +877,7 @@ export default function MisPropiedades() {
                         Superficie
                       </p>
                       <p className="text-sm text-slate-800">
-                        {p.superficie} m²
+                        {p.superficie}
                       </p>
                     </div>
 
@@ -788,7 +886,7 @@ export default function MisPropiedades() {
                         Ambientes
                       </p>
                       <p className="text-sm text-slate-800">
-                        {p.ambientes} ambientes
+                        {p.ambientes}
                       </p>
                     </div>
 
@@ -797,10 +895,7 @@ export default function MisPropiedades() {
                         Garantía
                       </p>
                       <p className="text-sm text-slate-800">
-                        $
-                        {Number(p.precioGarantia || "0").toLocaleString(
-                          "es-AR"
-                        )}
+                        {p.precioGarantia}
                       </p>
                     </div>
                   </div>
@@ -862,6 +957,5 @@ export default function MisPropiedades() {
         </div>
       )}
     </div>
-  );qqq
-  
+  );
 }

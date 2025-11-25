@@ -118,4 +118,10 @@ export class UserService {
 
     return repo.save(newUser);
   }
+  async getUsersByRol(rol: string) {
+    return AppDataSource.getRepository(User).find({ where: { rol } });
+  }
+  async getUsuariosActivos() {
+    return AppDataSource.getRepository(User).find({ where: { estado: 'activo' } });
+  }
 }
