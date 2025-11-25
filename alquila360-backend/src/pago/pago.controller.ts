@@ -38,6 +38,11 @@ export class PagoController {
         return this.pagoService.getPagosByPropietario(propietarioId);
     }
 
+    @Get('inquilino/:inquilinoId')
+    async getPagosByInquilino(@Param('inquilinoId') inquilinoId: number) {
+        return this.pagoService.getPagosByInquilino(inquilinoId);
+    }
+
     @Get("descargar/:id")
     async descargarPDF(@Param("id") id: number, @Res() res) {
         const pago = await this.pagoService.getPagoById(id);
