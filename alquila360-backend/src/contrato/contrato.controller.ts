@@ -39,6 +39,8 @@ getContratoActivo(@Param("usuarioId") usuarioId: number) {
 }
 
 
+
+
 }
 
 

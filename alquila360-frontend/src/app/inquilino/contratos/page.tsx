@@ -1,32 +1,53 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import axios from "@/app/utils/axios.util";
 
+// INTERFAZ REALISTA DEL CONTRATO
 interface Contrato {
-  id: string;
-  propiedad: string;
-  inquilino: string;
-  fechaInicio: string;
-  fechaFin: string;
-  cuotaMensual: number;
-  estado: "Vigente" | "Finalizado";
+  id: number;
+  id_propiedad: number;
+  fecha_inicio: string;
+  fecha_fin: string;
+  monto_mensual: number;
+  estado: string;
 }
+
+
 export default function Contratos() {
   const [contratos, setContratos] = useState<Contrato[]>([]);
-  useEffect(() => {
-    // Datos de ejemplo - conecta con tu backend
-    setContratos([
-      {
-        id: "cont1",
-        propiedad: "Calle Secundaria 456",
-        inquilino: "María García",
-        fechaInicio: "31/12/2023",
-        fechaFin: "31/12/2024",
-        cuotaMensual: 2500,
-        estado: "Vigente"
+  const [loading, setLoading] = useState(true);
+
+useEffect(() => {
+  const loadContrato = async () => {
+    try {
+      const userId = Number(localStorage.getItem("userId"));
+      if (!userId) return;
+
+      const res = await fetch(`http://localhost:3001/contrato/actual/${userId}`);
+      const data = await res.json();
+
+      if (!data || !data.id) {
+        setContratos([]);
+        setLoading(false);
+        return;
       }
-    ]);
-  }, []);
+
+      setContratos([data]);  
+      setLoading(false);
+
+    } catch (error) {
+      console.error("Error cargando contrato:", error);
+      setLoading(false);
+    }
+  };
+
+  loadContrato();
+}, []);
+
+
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
@@ -34,13 +55,13 @@ export default function Contratos() {
         <div className="p-6">
           <h1 className="text-2xl font-bold">ALQUILA 360</h1>
         </div>
-        
+
         <nav className="flex-1 px-4 space-y-2">
-          <Link href="/inquilino" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[#156b52]">
+          <Link href="/inquilino" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#156b52]">
             <span>🏠</span>
             <span>Home</span>
           </Link>
-          <Link href="/inquilino/contratos" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#156b52]">
+          <Link href="/inquilino/contratos" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[#156b52]">
             <span>📄</span>
             <span>Contrato</span>
           </Link>
@@ -70,7 +91,8 @@ export default function Contratos() {
           </button>
         </div>
       </aside>
-      {/* Main Content */}
+
+      {/* MAIN */}
       <main className="ml-64 flex-1 p-8">
         <header className="flex items-center justify-between mb-8">
           <div>
@@ -81,55 +103,59 @@ export default function Contratos() {
             Nuevo Contrato
           </button>
         </header>
-        {/* Tabla de Contratos */}
+
+        {/* TABLA */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Propiedad</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Inquilino</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Inicio</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Fin</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cuota Mensual</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Propiedad</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Inquilino</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha Inicio</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha Fin</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cuota Mensual</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
                 </tr>
               </thead>
+
               <tbody className="bg-white divide-y divide-gray-200">
-                {contratos.map((contrato) => (
-                  <tr key={contrato.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      📄 {contrato.id}
+                {loading && (
+                  <tr>
+                    <td colSpan={7} className="text-center py-6 text-gray-500">
+                      Cargando contratos...
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {contrato.propiedad}
+                  </tr>
+                )}
+
+                {!loading && contratos.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="text-center py-6 text-gray-500">
+                      No tienes contratos registrados
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {contrato.inquilino}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {contrato.fechaInicio}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {contrato.fechaFin}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                      ${contrato.cuotaMensual}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                  </tr>
+                )}
+
+                {contratos.map((c) => (
+                  <tr key={c.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">📄 {c.id}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+  Propiedad #{c.id_propiedad}
+</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+  Usted mismo
+</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{c.fecha_inicio}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{c.fecha_fin}</td>
+                    
+<td className="px-6 py-4 text-sm font-semibold text-gray-900">
+  ${c.monto_mensual}
+</td>
+                    <td className="px-6 py-4">
                       <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                        {contrato.estado}
+                        {c.estado}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex gap-2">
-                        <button className="p-2 hover:bg-gray-100 rounded">👁️</button>
-                        <button className="p-2 hover:bg-gray-100 rounded bg-green-600 text-white px-3 py-1 rounded-lg">
-                          Renovar
-                        </button>
-                      </div>
                     </td>
                   </tr>
                 ))}
@@ -137,7 +163,8 @@ export default function Contratos() {
             </table>
           </div>
         </div>
-        {/* Historial de Contratos Finalizados */}
+
+        {/* HISTORIAL FINALIZADOS */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">Historial de Contratos Finalizados</h3>
           <p className="text-gray-600">No hay contratos finalizados para mostrar.</p>
