@@ -1,21 +1,37 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
+
+import {
+  contratoService,
+  ContratoBackend,
+  CreateContratoDto,
+  PropiedadBackend,
+  InquilinoBackend,
+} from "../../../services/ContratoService";
 
 /* -------------------------------------------------------------------------- */
 /*                                   TIPOS                                    */
 /* -------------------------------------------------------------------------- */
 
+type EstadoContrato = "Vigente" | "Finalizado";
+
 interface Contrato {
   id: string;
   propiedad: string;
   inquilino: string;
+  propietario: string;
   fechaInicio: string;
   fechaFin: string;
-  cuotaMensual: number;
-  estado: "Vigente" | "Finalizado";
+  montoAlquiler: string;
+  montoGarantia: string;
+  frecuenciaCobro: string;
+  numeroCuotas: string;
+  diaVencimiento: string;
+  penalidades: string;
+  clausulas: string;
+  estado: EstadoContrato;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -24,7 +40,7 @@ interface Contrato {
 
 const inquilinoMenu = [
   { label: "Home", path: "/inquilino" },
-  { label: "Contrato", path: "/inquilino/contrato" },
+  { label: "Contratos", path: "/inquilino/contratos" }, // ← CAMBIADO
   { label: "Pagos", path: "/inquilino/pagos" },
   { label: "Tickets", path: "/inquilino/tickets" },
   { label: "Expensas", path: "/inquilino/expensas" },
@@ -70,46 +86,91 @@ function SidebarInquilino() {
 }
 
 /* -------------------------------------------------------------------------- */
-/*                              DATOS DEL CONTRATO                            */
+/*                         FORMATEADORES (FECHA / MONEDA)                     */
 /* -------------------------------------------------------------------------- */
 
-const contratoInfo = {
-  estado: "Vigente",
-  mesesRestantes: 10,
-  numero: "C-001",
-  direccion: "Calle Secundaria 456",
-  tipoPropiedad: "Departamento",
-  superficie: "120 m²",
-  ambientes: "3",
-  fechaInicio: "31 de diciembre de 2023",
-  fechaFin: "31 de diciembre de 2024",
-  alquilerMensual: "$2,500",
-  garantia: "$5,000",
-  diaVencimiento: "Dia 10",
-};
+function formatearFechaBonita(fecha: string) {
+  if (!fecha) return "-";
+  const d = new Date(fecha);
+  if (isNaN(d.getTime())) return fecha;
+  return d.toLocaleDateString("es-AR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function formatearMoneda(valor: string) {
+  const num = Number(valor);
+  if (isNaN(num)) return `$${valor}`;
+  return `$${num.toLocaleString("es-AR")}`;
+}
 
 /* -------------------------------------------------------------------------- */
-/*                             PAGINA: CONTRATO                               */
+/*                             PAGINA: CONTRATOS                               */
 /* -------------------------------------------------------------------------- */
 
-export default function ContratoInquilinoPage() {
-  const [openModal, setOpenModal] = useState(false);
+export default function ContratosInquilinoPage() {
   const [contratos, setContratos] = useState<Contrato[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Datos de ejemplo - conecta con tu backend
-    setContratos([
-      {
-        id: "cont1",
-        propiedad: "Calle Secundaria 456",
-        inquilino: "Maria Garcia",
-        fechaInicio: "31/12/2023",
-        fechaFin: "31/12/2024",
-        cuotaMensual: 2500,
-        estado: "Vigente",
-      },
-    ]);
+    cargarContratos();
   }, []);
+
+  const cargarContratos = async () => {
+    try {
+      setLoading(true);
+
+      const [contratosData, propiedadesData, inquilinosData] =
+        await Promise.all([
+          contratoService.getContratos(),
+          contratoService.getPropiedadesDisponibles(),
+          contratoService.getInquilinos(),
+        ]);
+
+      const contratosArray = Array.isArray(contratosData) ? contratosData : [];
+      const propiedadesArray = Array.isArray(propiedadesData)
+        ? propiedadesData
+        : [];
+      const inquilinosArray = Array.isArray(inquilinosData)
+        ? inquilinosData
+        : [];
+
+      const transformado: Contrato[] = contratosArray.map((c, index) => {
+        const propiedad = propiedadesArray.find((p) => p.id === c.id_propiedad);
+
+        const inquilino =
+          inquilinosArray[index] || inquilinosArray[0] || {
+            nombre: "Inquilino",
+            apellido: "No encontrado",
+          };
+
+        return {
+          id: `C-${String(c.id).padStart(3, "0")}`,
+          propiedad: propiedad?.direccion || "Propiedad desconocida",
+          inquilino: `${inquilino.nombre} ${inquilino.apellido}`,
+          propietario: propiedad?.propietario
+            ? `${propiedad.propietario.nombre} ${propiedad.propietario.apellido}`
+            : "Propietario no disponible",
+          fechaInicio: c.fecha_inicio,
+          fechaFin: c.fecha_fin,
+          montoAlquiler: c.monto_mensual?.toString() || "0",
+          montoGarantia: c.garantia?.toString() || "0",
+          frecuenciaCobro: "Mensual",
+          numeroCuotas: "12",
+          diaVencimiento: "10",
+          penalidades: "Mora del 2% por día de atraso...",
+          clausulas: "El locatario se compromete...",
+          estado: c.estado === "activo" ? "Vigente" : "Finalizado",
+        };
+      });
+
+      setContratos(transformado);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex bg-[#0b3b2c] text-slate-900">
@@ -117,472 +178,70 @@ export default function ContratoInquilinoPage() {
 
       <section className="flex-1 bg-[#f7f5ee] px-10 py-8 overflow-y-auto">
         {/* Header */}
-        <header className="mb-6 flex justify-between items-start">
+        <header className="mb-6 flex items-between justify-between">
           <div>
             <h1 className="text-3xl font-extrabold text-[#123528]">
-              Mi Contrato
+              Mis Contratos
             </h1>
-            <p className="text-xs text-slate-500">
-              Informacion de tu contrato de alquiler
+            <p className="text-sm text-slate-500">
+              Lista de tus contratos de alquiler
             </p>
-          </div>
-
-          <div className="flex gap-2">
-            <button className="px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white hover:bg-slate-100 flex items-center gap-2">
-              <span>📄</span>
-              <span>Descargar PDF</span>
-            </button>
-            <button
-              onClick={() => setOpenModal(true)}
-              className="px-3 py-2 text-xs rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-2"
-            >
-              <span>👁️</span>
-              <span>Ver Contrato Completo</span>
-            </button>
           </div>
         </header>
 
-        {/* Tabla de contratos (historial / lista) */}
-        <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ID
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Propiedad
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Inquilino
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha Inicio
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha Fin
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cuota Mensual
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
-                  </th>
+        {loading && (
+          <p className="text-center py-4 text-slate-600">Cargando...</p>
+        )}
+
+        {/* Tabla */}
+        <div className="bg-white border border-slate-300 rounded-xl overflow-hidden shadow-sm mb-6">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-100 text-left">
+              <tr>
+                <th className="p-3">N°</th>
+                <th className="p-3">Propiedad</th>
+                <th className="p-3">Inquilino</th>
+                <th className="p-3">Fecha Inicio</th>
+                <th className="p-3">Fecha Fin</th>
+                <th className="p-3">Cuota</th>
+                <th className="p-3">Estado</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {contratos.map((c) => (
+                <tr key={c.id} className="border-t">
+                  <td className="p-3">{c.id}</td>
+                  <td className="p-3">{c.propiedad}</td>
+                  <td className="p-3">{c.inquilino}</td>
+                  <td className="p-3">{formatearFechaBonita(c.fechaInicio)}</td>
+                  <td className="p-3">{formatearFechaBonita(c.fechaFin)}</td>
+                  <td className="p-3">{formatearMoneda(c.montoAlquiler)}</td>
+                  <td className="p-3">
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold border ${
+                        c.estado === "Vigente"
+                          ? "bg-emerald-100 text-emerald-700 border-emerald-300"
+                          : "bg-gray-100 text-gray-700 border-gray-300"
+                      }`}
+                    >
+                      {c.estado}
+                    </span>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {contratos.map((contrato) => (
-                  <tr key={contrato.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      📄 {contrato.id}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {contrato.propiedad}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {contrato.inquilino}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {contrato.fechaInicio}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {contrato.fechaFin}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                      ${contrato.cuotaMensual}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                        {contrato.estado}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex gap-2">
-                        <button className="p-2 hover:bg-gray-100 rounded">
-                          👁️
-                        </button>
-                        <button className="px-3 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700 text-xs">
-                          Renovar
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+              ))}
 
-        {/* Card principal del contrato */}
-        <section className="bg-white rounded-xl border border-slate-200 shadow-sm mb-6">
-          {/* Estado */}
-          <div className="border-b border-slate-100 px-5 py-3 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-slate-500">Contrato actual</p>
-              <h2 className="text-lg font-semibold text-[#123528]">
-                Contrato {contratos[0]?.id ?? "cont1"}
-              </h2>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="px-3 py-1 rounded-full text-[11px] bg-emerald-100 text-emerald-700 border border-emerald-300 font-semibold">
-                {contratoInfo.estado}
-              </span>
-              <p className="text-xs text-slate-500">
-                {contratoInfo.mesesRestantes} meses restantes
-              </p>
-            </div>
-          </div>
-
-          {/* Informacion de la propiedad y financiera */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-5 py-4 border-b border-slate-100">
-            <div className="border border-slate-200 rounded-lg px-4 py-3 text-xs">
-              <p className="text-[11px] text-slate-500 mb-1">
-                Informacion de la Propiedad
-              </p>
-              <p className="font-semibold text-[#123528]">
-                {contratoInfo.direccion}
-              </p>
-              <p className="text-slate-600">{contratoInfo.tipoPropiedad}</p>
-            </div>
-
-            <div className="border border-slate-200 rounded-lg px-4 py-3 text-xs">
-              <p className="text-[11px] text-slate-500 mb-1">
-                Informacion Financiera
-              </p>
-              <p className="text-slate-500">Cuota Mensual</p>
-              <p className="text-lg font-bold text-[#123528]">
-                {contratoInfo.alquilerMensual}
-              </p>
-              <p className="text-slate-500 mt-1">Garantia Depositada</p>
-              <p className="font-semibold text-[#123528]">
-                {contratoInfo.garantia}
-              </p>
-            </div>
-          </div>
-
-          {/* Duracion del contrato */}
-          <div className="px-5 py-4">
-            <p className="text-xs text-slate-500 mb-2">Duracion del Contrato</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              <div className="border border-slate-200 rounded-lg px-4 py-3">
-                <p className="text-[11px] text-slate-500">Fecha de Inicio</p>
-                <p className="font-semibold text-[#123528]">
-                  {contratoInfo.fechaInicio}
-                </p>
-              </div>
-              <div className="border border-slate-200 rounded-lg px-4 py-3">
-                <p className="text-[11px] text-slate-500">
-                  Fecha de Finalizacion
-                </p>
-                <p className="font-semibold text-[#123528]">
-                  {contratoInfo.fechaFin}
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Condiciones principales (texto) */}
-        <section className="bg-white rounded-xl border border-slate-200 shadow-sm px-5 py-4 mb-10 text-xs leading-relaxed text-slate-700 space-y-4">
-          <div>
-            <p className="font-semibold text-[#123528] mb-1">Pago de Alquiler</p>
-            <p>
-              El pago del alquiler debe realizarse dentro de los primeros 10
-              dias de cada mes. El monto mensual es de {contratoInfo.alquilerMensual}.
-            </p>
-          </div>
-
-          <div>
-            <p className="font-semibold text-[#123528] mb-1">
-              Mantenimiento y Reparaciones
-            </p>
-            <p>
-              El inquilino se compromete a mantener la propiedad en buen estado
-              y realizar las reparaciones menores necesarias. Las reparaciones
-              mayores son responsabilidad del propietario.
-            </p>
-          </div>
-
-          <div>
-            <p className="font-semibold text-[#123528] mb-1">
-              Servicios y Expensas
-            </p>
-            <p>
-              Los servicios publicos (agua, luz, gas) y expensas comunes son a
-              cargo del inquilino durante la vigencia del contrato.
-            </p>
-          </div>
-
-          <div>
-            <p className="font-semibold text-[#123528] mb-1">
-              Uso de la Propiedad
-            </p>
-            <p>
-              La propiedad se destina exclusivamente para vivienda. No se
-              permiten modificaciones estructurales sin autorizacion escrita del
-              propietario.
-            </p>
-          </div>
-        </section>
+              {!loading && contratos.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="p-4 text-center text-slate-400">
+                    No tenes contratos disponibles.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
-
-      {/* MODAL CONTRATO COMPLETO */}
-      {openModal && <ContratoModal onClose={() => setOpenModal(false)} />}
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/*                              MODAL DE CONTRATO                             */
-/* -------------------------------------------------------------------------- */
-
-type ContratoModalProps = {
-  onClose: () => void;
-};
-
-function ContratoModal({ onClose }: ContratoModalProps) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-[#f7f5ee] w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-xl shadow-xl border border-emerald-900/20">
-        {/* Header modal */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-emerald-900/20">
-          <div className="text-center flex-1">
-            <p className="text-xs text-slate-500 mb-1">
-              Sistema de Gestion ALQUILA 360
-            </p>
-            <h2 className="text-xl font-extrabold text-[#123528] tracking-wide">
-              CONTRATO DE LOCACION
-            </h2>
-            <p className="mt-2 inline-flex items-center px-3 py-1 rounded-full text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200">
-              Contrato N° {contratoInfo.numero}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="absolute top-3 right-4 text-slate-500 hover:text-slate-700"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="px-6 py-4 space-y-4 text-xs">
-          {/* Partes del contrato */}
-          <section>
-            <p className="text-[11px] text-slate-500 mb-2">
-              PARTES DEL CONTRATO
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="border border-emerald-900/20 rounded-lg p-3 bg-white">
-                <p className="text-[11px] text-slate-500 mb-1">
-                  LOCADOR (Propietario)
-                </p>
-                <p className="font-semibold text-[#123528]">
-                  Juan Carlos Martinez
-                </p>
-                <p>DNI: 28.456.789</p>
-                <p>martinez@email.com</p>
-              </div>
-              <div className="border border-emerald-900/20 rounded-lg p-3 bg-white">
-                <p className="text-[11px] text-slate-500 mb-1">
-                  LOCATARIO (Inquilino)
-                </p>
-                <p className="font-semibold text-[#123528]">
-                  Maria Gonzalez
-                </p>
-                <p>DNI: 32.654.987</p>
-                <p>maria@email.com</p>
-              </div>
-            </div>
-          </section>
-
-          {/* Inmueble */}
-          <section>
-            <p className="text-[11px] text-slate-500 mb-2">INMUEBLE</p>
-            <div className="border border-emerald-900/20 rounded-lg p-3 bg-white">
-              <p className="font-semibold text-[#123528] mb-1">
-                Direccion de la Propiedad
-              </p>
-              <p>{contratoInfo.direccion}</p>
-              <p>
-                Tipo: Casa · Superficie: {contratoInfo.superficie} · Ambientes:{" "}
-                {contratoInfo.ambientes}
-              </p>
-            </div>
-          </section>
-
-          {/* Plazo */}
-          <section>
-            <p className="text-[11px] text-slate-500 mb-2">
-              PLAZO DEL CONTRATO
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="border border-emerald-900/20 rounded-lg p-3 bg-white">
-                <p className="text-[11px] text-slate-500 mb-1">
-                  Fecha de Inicio
-                </p>
-                <p className="font-semibold text-[#123528]">
-                  {contratoInfo.fechaInicio}
-                </p>
-              </div>
-              <div className="border border-emerald-900/20 rounded-lg p-3 bg-white">
-                <p className="text-[11px] text-slate-500 mb-1">
-                  Fecha de Finalizacion
-                </p>
-                <p className="font-semibold text-[#123528]">
-                  {contratoInfo.fechaFin}
-                </p>
-              </div>
-            </div>
-          </section>
-
-          {/* Condiciones economicas */}
-          <section>
-            <p className="text-[11px] text-slate-500 mb-2">
-              CONDICIONES ECONOMICAS
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="border border-emerald-900/20 rounded-lg p-3 bg-white">
-                <p className="text-[11px] text-slate-500 mb-1">
-                  Alquiler Mensual
-                </p>
-                <p className="font-semibold text-[#123528]">
-                  {contratoInfo.alquilerMensual}
-                </p>
-              </div>
-              <div className="border border-emerald-900/20 rounded-lg p-3 bg-white">
-                <p className="text-[11px] text-slate-500 mb-1">Garantia</p>
-                <p className="font-semibold text-[#123528]">
-                  {contratoInfo.garantia}
-                </p>
-              </div>
-              <div className="border border-emerald-900/20 rounded-lg p-3 bg-white">
-                <p className="text-[11px] text-slate-500 mb-1">
-                  Vencimiento
-                </p>
-                <p className="font-semibold text-[#123528]">
-                  {contratoInfo.diaVencimiento}
-                </p>
-              </div>
-            </div>
-          </section>
-
-          {/* Detalle de cuotas */}
-          <section>
-            <p className="text-[11px] text-slate-500 mb-2">
-              DETALLE DE CUOTAS
-            </p>
-            <div className="border border-emerald-900/20 rounded-lg p-3 bg-white space-y-2">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <p className="text-[11px] text-slate-500 mb-1">Frecuencia</p>
-                  <p className="font-semibold text-[#123528]">Mensual</p>
-                </div>
-                <div>
-                  <p className="text-[11px] text-slate-500 mb-1">
-                    Numero de Cuotas
-                  </p>
-                  <p className="font-semibold text-[#123528]">12 cuotas</p>
-                </div>
-                <div>
-                  <p className="text-[11px] text-slate-500 mb-1">
-                    Valor por Cuota
-                  </p>
-                  <p className="font-semibold text-[#123528]">
-                    {contratoInfo.alquilerMensual}
-                  </p>
-                </div>
-              </div>
-              <p className="text-[11px] text-slate-500 mt-2">
-                Todas las cuotas tendran el mismo valor mensual sin variacion.
-              </p>
-            </div>
-          </section>
-
-          {/* Penalidades */}
-          <section>
-            <p className="text-[11px] text-slate-500 mb-2">PENALIDADES</p>
-            <div className="border border-emerald-900/20 rounded-lg p-3 bg-white space-y-1">
-              <p>· Mora del 2% por dia de atraso en el pago.</p>
-              <p>
-                · El locatario sera responsable de los costos de reparacion por
-                daños causados.
-              </p>
-              <p>
-                · Rescision anticipada: Penalidad equivalente a 2 meses de
-                alquiler.
-              </p>
-            </div>
-          </section>
-
-          {/* Clausulas adicionales */}
-          <section>
-            <p className="text-[11px] text-slate-500 mb-2">
-              CLAUSULAS ADICIONALES
-            </p>
-            <div className="border border-emerald-900/20 rounded-lg p-3 bg-white space-y-1">
-              <p>
-                · El locatario se compromete a mantener la propiedad en buen
-                estado.
-              </p>
-              <p>
-                · No se permiten modificaciones estructurales sin autorizacion
-                escrita.
-              </p>
-              <p>
-                · Los gastos de servicios publicos correran por cuenta del
-                locatario.
-              </p>
-              <p>
-                · Prohibida la cesion o subarriendo sin consentimiento del
-                locador.
-              </p>
-            </div>
-          </section>
-
-          {/* Firmas */}
-          <section>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 text-center">
-              <div>
-                <div className="border-t border-slate-400 pt-2 inline-block px-6">
-                  <p className="font-semibold text-[#123528]">
-                    Juan Carlos Martinez
-                  </p>
-                  <p className="text-[11px] text-slate-500">
-                    Firma del Locador
-                  </p>
-                </div>
-              </div>
-              <div>
-                <div className="border-t border-slate-400 pt-2 inline-block px-6">
-                  <p className="font-semibold text-[#123528]">
-                    Maria Gonzalez
-                  </p>
-                  <p className="text-[11px] text-slate-500">
-                    Firma del Locatario
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
-
-        {/* Footer modal */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-emerald-900/10 bg-white/70 rounded-b-xl">
-          <button className="px-4 py-2 rounded-lg text-xs border border-slate-300 hover:bg-slate-100">
-            Imprimir
-          </button>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg text-xs bg-amber-500 text-white hover:bg-amber-600"
-          >
-            Cerrar
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
