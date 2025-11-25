@@ -6,7 +6,10 @@ import {
   contratoService,
   PropiedadBackend,
   InquilinoBackend,
+  CreateContratoDto,
 } from "../../../services/ContratoService";
+
+const activeLabel = "Contratos";
 
 type EstadoContrato = "Vigente" | "Finalizado";
 
@@ -23,7 +26,7 @@ type Contrato = {
   numeroCuotas: string;
   diaVencimiento: string;
   penalidades: string;
-  clausulasAdicionales: string;
+  clausulas: string;
   estado: EstadoContrato;
 };
 
@@ -45,337 +48,323 @@ function formatearMoneda(valor: string) {
   return `$${num.toLocaleString("es-AR")}`;
 }
 
-const contratosIniciales: Contrato[] = [];
-
 export default function ContratosPage() {
-  const [contratos, setContratos] = useState<Contrato[]>(contratosIniciales);
-
-  // Datos desde backend
+  // Datos dinamicos
+  const [contratos, setContratos] = useState<Contrato[]>([]);
   const [propiedades, setPropiedades] = useState<PropiedadBackend[]>([]);
   const [inquilinos, setInquilinos] = useState<InquilinoBackend[]>([]);
-  const [loadingDatos, setLoadingDatos] = useState(true);
-  const [errorDatos, setErrorDatos] = useState<string | null>(null);
 
-  // Modal crear contrato
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Modal ver contrato
-  const [isViewOpen, setIsViewOpen] = useState(false);
-  const [contratoSeleccionado, setContratoSeleccionado] =
+  // Estados para UI
+  const [selectedContrato, setSelectedContrato] =
     useState<Contrato | null>(null);
+  const [openFormModal, setOpenFormModal] = useState(false);
+  const [openViewModal, setOpenViewModal] = useState(false);
+  const [formMode, setFormMode] = useState<"crear" | "editar" | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Modal editar contrato
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [idEditando, setIdEditando] = useState<string | null>(null);
-
-  // Modal renovar contrato
-  const [isRenewOpen, setIsRenewOpen] = useState(false);
-  const [contratoARenovar, setContratoARenovar] = useState<Contrato | null>(
-    null
+  // --- STATE DEL FORM ---
+  const [formPropiedad, setFormPropiedad] = useState("");
+  const [formInquilino, setFormInquilino] = useState("");
+  const [formPropietario, setFormPropietario] = useState("");
+  const [formFechaInicio, setFormFechaInicio] = useState("");
+  const [formFechaFin, setFormFechaFin] = useState("");
+  const [formMontoAlquiler, setFormMontoAlquiler] = useState("85000");
+  const [formMontoGarantia, setFormMontoGarantia] = useState("170000");
+  const [formFrecuenciaCobro, setFormFrecuenciaCobro] = useState("Mensual");
+  const [formNumeroCuotas, setFormNumeroCuotas] = useState("12");
+  const [formDiaVencimiento, setFormDiaVencimiento] = useState("10");
+  const [formPenalidades, setFormPenalidades] = useState(
+    "Ej: Mora del 2% por día de atraso. Costo de reparaciones por daños..."
+  );
+  const [formClausulas, setFormClausulas] = useState(
+    "Agregue cualquier cláusula adicional del contrato..."
   );
 
-  // Estado del formulario (crear / editar)
-  const [nuevoContrato, setNuevoContrato] = useState({
-    propiedad: "",
-    inquilino: "",
-    propietario: "",
-    fechaInicio: "",
-    fechaFin: "",
-    montoAlquiler: "",
-    montoGarantia: "",
-    frecuenciaCobro: "Mensual",
-    numeroCuotas: "",
-    diaVencimiento: "",
-    penalidades: "",
-    clausulasAdicionales: "",
-  });
-
-  // Estado formulario de renovación
-  const [datosRenovacion, setDatosRenovacion] = useState({
-    nuevaFechaInicio: "",
-    nuevaFechaFin: "",
-    nuevoMontoAlquiler: "",
-    nuevaGarantia: "",
-    frecuenciaCobro: "Mensual",
-    numeroCuotas: "",
-    diaVencimiento: "",
-    condicionesRenovacion: "",
-    observaciones: "",
-  });
-
-  // ===== CARGA DE PROPIEDADES E INQUILINOS DESDE BACKEND =====
+  // ===== CARGA INICIAL =====
   useEffect(() => {
-    const cargarDatos = async () => {
-      try {
-        setLoadingDatos(true);
-        setErrorDatos(null);
+    cargarDatosIniciales();
+  }, []);
 
-        const [propiedadesData, inquilinosData] = await Promise.all([
+  const cargarDatosIniciales = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Cargar todos los datos
+      const [contratosData, propiedadesData, inquilinosData] =
+        await Promise.all([
+          contratoService.getContratos(),
           contratoService.getPropiedadesDisponibles(),
           contratoService.getInquilinos(),
         ]);
 
-        const propiedadesArray = Array.isArray(propiedadesData)
-          ? (propiedadesData as PropiedadBackend[])
-          : [];
-        const inquilinosArray = Array.isArray(inquilinosData)
-          ? (inquilinosData as InquilinoBackend[])
-          : [];
+      // Asegurar que sean arrays
+      const contratosArray = Array.isArray(contratosData) ? contratosData : [];
+      const propiedadesArray = Array.isArray(propiedadesData)
+        ? (propiedadesData as PropiedadBackend[])
+        : [];
+      const inquilinosArray = Array.isArray(inquilinosData)
+        ? (inquilinosData as InquilinoBackend[])
+        : [];
 
-        setPropiedades(propiedadesArray);
-        setInquilinos(inquilinosArray);
-      } catch (err: any) {
-        setErrorDatos(err.message || "Error cargando datos del backend");
-      } finally {
-        setLoadingDatos(false);
+      // CONVERTIR CONTRATOS - SOLUCIÓN TEMPORAL
+      let contratosFrontend: Contrato[] = [];
+
+      if (contratosArray.length > 0) {
+        contratosFrontend = contratosArray.map((contrato: any, index: number) => {
+          // BUSCAR PROPIEDAD
+          const propiedadEncontrada = propiedadesArray.find(
+            (p) => p.id === contrato.id_propiedad
+          );
+
+          const inquilinoEncontrado =
+            inquilinosArray[index] || inquilinosArray[0];
+
+          return {
+            id: `C-${String(contrato.id).padStart(3, "0")}`,
+            propiedad:
+              propiedadEncontrada?.direccion ||
+              `Propiedad ID: ${contrato.id_propiedad}`,
+            inquilino: inquilinoEncontrado
+              ? `${inquilinoEncontrado.nombre} ${inquilinoEncontrado.apellido}`
+              : "Inquilino no disponible",
+            propietario: propiedadEncontrada?.propietario
+              ? `${propiedadEncontrada.propietario.nombre} ${propiedadEncontrada.propietario.apellido}`
+              : "Propietario no disponible",
+            fechaInicio: contrato.fecha_inicio,
+            fechaFin: contrato.fecha_fin,
+            montoAlquiler: contrato.monto_mensual?.toString() || "0",
+            montoGarantia: contrato.garantia?.toString() || "0",
+            frecuenciaCobro: "Mensual",
+            numeroCuotas: "12",
+            diaVencimiento: "10",
+            penalidades: "Mora del 2% por día de atraso...",
+            clausulas: "El locatario se compromete...",
+            estado:
+              contrato.estado === "activo"
+                ? ("Vigente" as EstadoContrato)
+                : ("Finalizado" as EstadoContrato),
+          };
+        });
       }
-    };
 
-    cargarDatos();
-  }, []);
+      setContratos(contratosFrontend);
+      setPropiedades(propiedadesArray);
+      setInquilinos(inquilinosArray);
+    } catch (err: any) {
+      setError(`Error cargando datos: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // ---- HELPERS PARA FORM ----
   const resetForm = () => {
-    setNuevoContrato({
-      propiedad: "",
-      inquilino: "",
-      propietario: "",
-      fechaInicio: "",
-      fechaFin: "",
-      montoAlquiler: "",
-      montoGarantia: "",
-      frecuenciaCobro: "Mensual",
-      numeroCuotas: "",
-      diaVencimiento: "",
-      penalidades: "",
-      clausulasAdicionales: "",
-    });
+    setFormPropiedad("");
+    setFormInquilino("");
+    setFormPropietario("");
+    setFormFechaInicio("");
+    setFormFechaFin("");
+    setFormMontoAlquiler("85000");
+    setFormMontoGarantia("170000");
+    setFormFrecuenciaCobro("Mensual");
+    setFormNumeroCuotas("12");
+    setFormDiaVencimiento("10");
+    setFormPenalidades(
+      "Mora del 2% por día de atraso. Costo de reparaciones por daños..."
+    );
+    setFormClausulas(`    1. El inquilino se compromete a pagar el monto mensual acordado en la fecha establecida.
+    2. El propietario se compromete a mantener la propiedad en condiciones habitables.
+    3. Cualquier daño a la propiedad será responsabilidad del inquilino, salvo desgaste por uso normal.
+    4. El contrato podrá ser renovado previo acuerdo entre ambas partes.
+    5. Cualquier disputa será resuelta conforme a las leyes vigentes.
+    `);
   };
 
-  const resetRenovacion = () => {
-    setDatosRenovacion({
-      nuevaFechaInicio: "",
-      nuevaFechaFin: "",
-      nuevoMontoAlquiler: "",
-      nuevaGarantia: "",
-      frecuenciaCobro: "Mensual",
-      numeroCuotas: "",
-      diaVencimiento: "",
-      condicionesRenovacion: "",
-      observaciones: "",
-    });
+  const cargarFormDesdeContrato = (c: Contrato) => {
+    setFormPropiedad(c.propiedad);
+    setFormInquilino(c.inquilino);
+    setFormPropietario(c.propietario);
+    setFormFechaInicio(c.fechaInicio);
+    setFormFechaFin(c.fechaFin);
+    setFormMontoAlquiler(c.montoAlquiler);
+    setFormMontoGarantia(c.montoGarantia);
+    setFormFrecuenciaCobro(c.frecuenciaCobro);
+    setFormNumeroCuotas(c.numeroCuotas);
+    setFormDiaVencimiento(c.diaVencimiento);
+    setFormPenalidades(c.penalidades);
+    setFormClausulas(c.clausulas);
   };
 
-  // ---------- MODAL NUEVO CONTRATO ----------
-  const handleOpenModal = () => {
-    resetForm();
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-  };
-
-  const handleChange = (
+  // handler generico de cambios del form
+  const handleFormChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
 
-    // Si cambia la propiedad, auto-completamos propietario
-    if (name === "propiedad") {
-      const propiedadSel = propiedades.find((p) => p.direccion === value);
-      let propietarioNombre = "";
+    switch (name) {
+      case "propiedad": {
+        setFormPropiedad(value);
+        const propiedadSel = propiedades.find((p) => p.direccion === value);
+        if (propiedadSel && (propiedadSel as any).propietario) {
+          const prop = (propiedadSel as any).propietario;
+          setFormPropietario(`${prop.nombre} ${prop.apellido}`);
+        } else {
+          setFormPropietario("");
+        }
+        break;
+      }
+      case "inquilino":
+        setFormInquilino(value);
+        break;
+      case "fechaInicio":
+        setFormFechaInicio(value);
+        break;
+      case "fechaFin":
+        setFormFechaFin(value);
+        break;
+      case "montoAlquiler":
+        setFormMontoAlquiler(value);
+        break;
+      case "montoGarantia":
+        setFormMontoGarantia(value);
+        break;
+      case "frecuenciaCobro":
+        setFormFrecuenciaCobro(value);
+        break;
+      case "numeroCuotas":
+        setFormNumeroCuotas(value);
+        break;
+      case "diaVencimiento":
+        setFormDiaVencimiento(value);
+        break;
+      case "penalidades":
+        setFormPenalidades(value);
+        break;
+      case "clausulas":
+        setFormClausulas(value);
+        break;
+      default:
+        break;
+    }
+  };
 
-      if (propiedadSel && (propiedadSel as any).propietario) {
-        const propObj = (propiedadSel as any).propietario;
-        propietarioNombre = `${propObj.nombre} ${propObj.apellido}`;
+  // ---- ABRIR / CERRAR MODALES ----
+  const abrirModalNuevo = () => {
+    setFormMode("crear");
+    setSelectedContrato(null);
+    resetForm();
+    setOpenFormModal(true);
+  };
+
+  const abrirModalVer = (contrato: Contrato) => {
+    setSelectedContrato(contrato);
+    setOpenViewModal(true);
+  };
+
+  const cerrarModalForm = () => {
+    setOpenFormModal(false);
+    setFormMode(null);
+  };
+
+  const cerrarModalVer = () => {
+    setOpenViewModal(false);
+  };
+
+  const abrirEditorDesdeVista = () => {
+    if (!selectedContrato) return;
+    setFormMode("editar");
+    cargarFormDesdeContrato(selectedContrato);
+    setOpenViewModal(false);
+    setOpenFormModal(true);
+  };
+
+  // Crear contrato en backend
+  const crearContratoBackend = async () => {
+    try {
+      // Validaciones
+      if (
+        !formPropiedad ||
+        !formInquilino ||
+        !formFechaInicio ||
+        !formFechaFin
+      ) {
+        alert("Por favor completa todos los campos obligatorios");
+        return;
       }
 
-      setNuevoContrato((prev) => ({
-        ...prev,
-        propiedad: value,
-        propietario: propietarioNombre,
-      }));
+      // Encontrar los IDs basados en la selección
+      const propiedadSeleccionada = propiedades.find(
+        (p) => p.direccion === formPropiedad
+      );
+      const inquilinoSeleccionado = inquilinos.find(
+        (i) => `${i.nombre} ${i.apellido}` === formInquilino
+      );
+
+      if (!propiedadSeleccionada || !inquilinoSeleccionado) {
+        alert("Por favor selecciona una propiedad e inquilino válidos");
+        return;
+      }
+
+      const contratoData: CreateContratoDto = {
+        propiedadId: propiedadSeleccionada.id,
+        inquilinoId: inquilinoSeleccionado.id,
+        monto_mensual: Number(formMontoAlquiler),
+        fecha_inicio: formFechaInicio,
+        fecha_fin: formFechaFin,
+      };
+
+      // Llamar al servicio para crear en el backend
+      await contratoService.registrarContrato(contratoData);
+
+      // Recargar datos
+      await cargarDatosIniciales();
+
+      setOpenFormModal(false);
+      resetForm();
+    } catch (error: any) {
+      alert(
+        `Error al crear el contrato: ${
+          error.response?.data?.message || error.message
+        }`
+      );
+    }
+  };
+
+  // ---- GUARDAR CONTRATO (CREAR / EDITAR) ----
+  const guardarContrato = async () => {
+    if (
+      !formPropiedad ||
+      !formInquilino ||
+      !formFechaInicio ||
+      !formFechaFin
+    ) {
+      alert(
+        "Completa todos los campos obligatorios: Propiedad, Inquilino, Fechas de inicio y fin."
+      );
       return;
     }
 
-    setNuevoContrato((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    try {
+      if (formMode === "crear") {
+        await crearContratoBackend();
+      } else {
+        alert("La edición de contratos estará disponible pronto");
+        setOpenFormModal(false);
+        setFormMode(null);
+      }
+    } catch (error: any) {
+      console.error(" Error en guardarContrato:", error);
+      alert(`Error: ${error.response?.data?.message || error.message}`);
+    }
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  // handler de submit del <form>
+  const handleSubmitForm = async (e: FormEvent) => {
     e.preventDefault();
-
-    const nuevoId = `C-${String(contratos.length + 1).padStart(3, "0")}`;
-
-    const contratoAInsertar: Contrato = {
-      id: nuevoId,
-      propiedad: nuevoContrato.propiedad,
-      inquilino: nuevoContrato.inquilino,
-      propietario: nuevoContrato.propietario,
-      fechaInicio: nuevoContrato.fechaInicio,
-      fechaFin: nuevoContrato.fechaFin,
-      montoAlquiler: nuevoContrato.montoAlquiler || "0",
-      montoGarantia: nuevoContrato.montoGarantia || "0",
-      frecuenciaCobro: nuevoContrato.frecuenciaCobro,
-      numeroCuotas: nuevoContrato.numeroCuotas || "0",
-      diaVencimiento: nuevoContrato.diaVencimiento,
-      penalidades: nuevoContrato.penalidades,
-      clausulasAdicionales: nuevoContrato.clausulasAdicionales,
-      estado: "Vigente",
-    };
-
-    setContratos((prev) => [...prev, contratoAInsertar]);
-    setIsModalOpen(false);
-    resetForm();
+    await guardarContrato();
   };
-
-  // ---------- MODAL VER CONTRATO ----------
-  const handleVerContrato = (contrato: Contrato) => {
-    setContratoSeleccionado(contrato);
-    setIsViewOpen(true);
-  };
-
-  const handleCloseView = () => {
-    setIsViewOpen(false);
-    setContratoSeleccionado(null);
-  };
-
-  // ---------- MODAL EDITAR CONTRATO ----------
-  const handleOpenEdit = (contrato: Contrato) => {
-    setNuevoContrato({
-      propiedad: contrato.propiedad,
-      inquilino: contrato.inquilino,
-      propietario: contrato.propietario,
-      fechaInicio: contrato.fechaInicio,
-      fechaFin: contrato.fechaFin,
-      montoAlquiler: contrato.montoAlquiler,
-      montoGarantia: contrato.montoGarantia,
-      frecuenciaCobro: contrato.frecuenciaCobro,
-      numeroCuotas: contrato.numeroCuotas,
-      diaVencimiento: contrato.diaVencimiento,
-      penalidades: contrato.penalidades,
-      clausulasAdicionales: contrato.clausulasAdicionales,
-    });
-
-    setIdEditando(contrato.id);
-    setIsEditOpen(true);
-  };
-
-  const handleCloseEdit = () => {
-    setIsEditOpen(false);
-    setIdEditando(null);
-  };
-
-  const handleSubmitEdit = (e: FormEvent) => {
-    e.preventDefault();
-    if (!idEditando) return;
-
-    setContratos((prev) =>
-      prev.map((c) =>
-        c.id === idEditando
-          ? {
-              ...c,
-              propiedad: nuevoContrato.propiedad || c.propiedad,
-              inquilino: nuevoContrato.inquilino || c.inquilino,
-              propietario: nuevoContrato.propietario || c.propietario,
-              fechaInicio: nuevoContrato.fechaInicio || c.fechaInicio,
-              fechaFin: nuevoContrato.fechaFin || c.fechaFin,
-              montoAlquiler: nuevoContrato.montoAlquiler || c.montoAlquiler,
-              montoGarantia: nuevoContrato.montoGarantia || c.montoGarantia,
-              frecuenciaCobro:
-                nuevoContrato.frecuenciaCobro || c.frecuenciaCobro,
-              numeroCuotas: nuevoContrato.numeroCuotas || c.numeroCuotas,
-              diaVencimiento: nuevoContrato.diaVencimiento || c.diaVencimiento,
-              penalidades: nuevoContrato.penalidades || c.penalidades,
-              clausulasAdicionales:
-                nuevoContrato.clausulasAdicionales || c.clausulasAdicionales,
-            }
-          : c
-      )
-    );
-
-    setIsEditOpen(false);
-    setIdEditando(null);
-  };
-
-  // ---------- MODAL RENOVAR CONTRATO ----------
-  const handleOpenRenew = (contrato: Contrato) => {
-    setContratoARenovar(contrato);
-    setDatosRenovacion({
-      nuevaFechaInicio: "",
-      nuevaFechaFin: "",
-      nuevoMontoAlquiler: contrato.montoAlquiler,
-      nuevaGarantia: contrato.montoGarantia,
-      frecuenciaCobro: contrato.frecuenciaCobro || "Mensual",
-      numeroCuotas: contrato.numeroCuotas || "",
-      diaVencimiento: contrato.diaVencimiento || "",
-      condicionesRenovacion: "",
-      observaciones: "",
-    });
-    setIsRenewOpen(true);
-  };
-
-  const handleCloseRenew = () => {
-    setIsRenewOpen(false);
-    setContratoARenovar(null);
-    resetRenovacion();
-  };
-
-  const handleChangeRenovacion = (
-    e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setDatosRenovacion((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmitRenew = (e: FormEvent) => {
-    e.preventDefault();
-    if (!contratoARenovar) return;
-
-    const {
-      nuevaFechaInicio,
-      nuevaFechaFin,
-      nuevoMontoAlquiler,
-      nuevaGarantia,
-    } = datosRenovacion;
-
-    setContratos((prev) =>
-      prev.map((c) =>
-        c.id === contratoARenovar.id
-          ? {
-              ...c,
-              fechaInicio: nuevaFechaInicio || c.fechaInicio,
-              fechaFin: nuevaFechaFin || c.fechaFin,
-              montoAlquiler: nuevoMontoAlquiler || c.montoAlquiler,
-              montoGarantia: nuevaGarantia || c.montoGarantia,
-              frecuenciaCobro:
-                datosRenovacion.frecuenciaCobro || c.frecuenciaCobro,
-              numeroCuotas: datosRenovacion.numeroCuotas || c.numeroCuotas,
-              diaVencimiento:
-                datosRenovacion.diaVencimiento || c.diaVencimiento,
-            }
-          : c
-      )
-    );
-
-    handleCloseRenew();
-  };
-
-  // Cálculos resumen renovación
-  const montoAnteriorLimpio = contratoARenovar
-    ? contratoARenovar.montoAlquiler || "0"
-    : "0";
-
-  const montoNuevoNum = Number(
-    datosRenovacion.nuevoMontoAlquiler || montoAnteriorLimpio || "0"
-  );
-  const cuotasNum = Number(datosRenovacion.numeroCuotas || "0");
-  const totalContrato = montoNuevoNum * cuotasNum;
 
   return (
     <div className="min-h-screen flex bg-[#f3efe3] text-[#15352b]">
@@ -389,19 +378,19 @@ export default function ContratosPage() {
             <p className="text-sm text-gray-600">
               Historial de contratos de alquiler
             </p>
-            {loadingDatos && (
+            {loading && (
               <p className="text-xs text-gray-500 mt-1">
                 Cargando propiedades e inquilinos...
               </p>
             )}
-            {errorDatos && (
-              <p className="text-xs text-red-600 mt-1">Error: {errorDatos}</p>
+            {error && (
+              <p className="text-xs text-red-600 mt-1">Error: {error}</p>
             )}
           </div>
 
           {/* Botón Nuevo Contrato */}
           <button
-            onClick={handleOpenModal}
+            onClick={abrirModalNuevo}
             className="bg-[#f4b000] text-white px-5 py-2.5 rounded-lg shadow-md hover:bg-[#d89c00] transition"
           >
             Nuevo Contrato
@@ -454,21 +443,15 @@ export default function ContratosPage() {
                     {/* Acciones */}
                     <td className="py-3 px-4 flex gap-2 justify-center">
                       <button
-                        onClick={() => handleVerContrato(c)}
+                        onClick={() => abrirModalVer(c)}
                         className="border border-[#15352b] rounded-lg p-2 hover:bg-gray-100 transition"
                       >
                         👁️
                       </button>
-                      <button
-                        onClick={() => handleOpenRenew(c)}
-                        className="border border-[#15352b] rounded-lg px-4 py-2 hover:bg-gray-100 transition"
-                      >
-                        Renovar
-                      </button>
                     </td>
                   </tr>
                 ))}
-                {contratos.length === 0 && (
+                {contratos.length === 0 && !loading && (
                   <tr>
                     <td
                       colSpan={8}
@@ -497,22 +480,26 @@ export default function ContratosPage() {
         </section>
       </main>
 
-      {/* ========= MODAL NUEVO CONTRATO ========= */}
-      {isModalOpen && (
+      {/* ========= MODAL NUEVO / EDITAR CONTRATO ========= */}
+      {openFormModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto p-8">
             {/* Header modal */}
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-semibold">Crear Nuevo Contrato</h2>
+              <h2 className="text-2xl font-semibold">
+                {formMode === "editar"
+                  ? "Editar Contrato"
+                  : "Crear Nuevo Contrato"}
+              </h2>
               <button
                 className="text-2xl leading-none px-2"
-                onClick={handleCloseModal}
+                onClick={cerrarModalForm}
               >
                 ×
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmitForm} className="space-y-6">
               {/* PARTES DEL CONTRATO */}
               <section className="mb-6 border border-emerald-900/40 rounded-2xl bg-[#f9f6ef] p-5 space-y-4">
                 <h3 className="font-semibold text-[#123528] text-lg mb-1">
@@ -527,14 +514,13 @@ export default function ContratosPage() {
                     <select
                       className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
                       name="propiedad"
-                      value={nuevoContrato.propiedad}
-                      onChange={handleChange}
-                      disabled={loadingDatos}
-
+                      value={formPropiedad}
+                      onChange={handleFormChange}
+                      disabled={loading}
                       required
                     >
                       <option value="">
-                        {loadingDatos
+                        {loading
                           ? "Cargando propiedades..."
                           : "Seleccionar propiedad"}
                       </option>
@@ -547,7 +533,7 @@ export default function ContratosPage() {
                         </option>
                       ))}
                     </select>
-                    {propiedades.length === 0 && !loadingDatos && (
+                    {propiedades.length === 0 && !loading && (
                       <p className="text-xs text-red-500 mt-1">
                         No hay propiedades disponibles
                       </p>
@@ -562,13 +548,13 @@ export default function ContratosPage() {
                     <select
                       className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
                       name="inquilino"
-                      value={nuevoContrato.inquilino}
-                      onChange={handleChange}
-                      disabled={loadingDatos}
+                      value={formInquilino}
+                      onChange={handleFormChange}
+                      disabled={loading}
                       required
                     >
                       <option value="">
-                        {loadingDatos
+                        {loading
                           ? "Cargando inquilinos..."
                           : "Seleccionar inquilino"}
                       </option>
@@ -581,7 +567,7 @@ export default function ContratosPage() {
                         </option>
                       ))}
                     </select>
-                    {inquilinos.length === 0 && !loadingDatos && (
+                    {inquilinos.length === 0 && !loading && (
                       <p className="text-xs text-red-500 mt-1">
                         No hay inquilinos disponibles
                       </p>
@@ -596,7 +582,7 @@ export default function ContratosPage() {
                     <input
                       type="text"
                       name="propietario"
-                      value={nuevoContrato.propietario}
+                      value={formPropietario}
                       readOnly
                       placeholder="Se auto-completa al seleccionar propiedad"
                       className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm text-gray-500"
@@ -616,9 +602,10 @@ export default function ContratosPage() {
                     <input
                       type="date"
                       name="fechaInicio"
-                      value={nuevoContrato.fechaInicio}
-                      onChange={handleChange}
+                      value={formFechaInicio}
+                      onChange={handleFormChange}
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
+                      required
                     />
                   </div>
                   <div>
@@ -629,9 +616,10 @@ export default function ContratosPage() {
                     <input
                       type="date"
                       name="fechaFin"
-                      value={nuevoContrato.fechaFin}
-                      onChange={handleChange}
+                      value={formFechaFin}
+                      onChange={handleFormChange}
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
+                      required
                     />
                   </div>
                 </div>
@@ -651,35 +639,115 @@ export default function ContratosPage() {
                     <input
                       type="number"
                       name="montoAlquiler"
-                      value={nuevoContrato.montoAlquiler}
-                      onChange={handleChange}
+                      value={formMontoAlquiler}
+                      onChange={handleFormChange}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-1">
+                      Monto de la Garantía ($)
+                    </label>
+                    <input
+                      type="number"
+                      name="montoGarantia"
+                      value={formMontoGarantia}
+                      onChange={handleFormChange}
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
                     />
                   </div>
-                  
                 </div>
               </section>
 
-             
+              {/* DETALLE DE CUOTAS */}
+              <section className="border border-[#e1dac8] rounded-2xl p-6 space-y-4">
+                <h3 className="text-lg font-semibold">Detalle de Cuotas</h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm mb-1">
+                      Frecuencia de Cobro
+                    </label>
+                    <select
+                      name="frecuenciaCobro"
+                      value={formFrecuenciaCobro}
+                      onChange={handleFormChange}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
+                    >
+                      <option value="Mensual">Mensual</option>
+                      <option value="Trimestral">Trimestral</option>
+                      <option value="Semestral">Semestral</option>
+                      <option value="Anual">Anual</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm mb-1">
+                      Número de Cuotas
+                    </label>
+                    <input
+                      type="number"
+                      name="numeroCuotas"
+                      value={formNumeroCuotas}
+                      onChange={handleFormChange}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm mb-1">
+                      Día de Vencimiento
+                    </label>
+                    <input
+                      type="number"
+                      name="diaVencimiento"
+                      value={formDiaVencimiento}
+                      onChange={handleFormChange}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
+                    />
+                  </div>
+                </div>
+
+                <p className="text-sm text-gray-500">
+                  Nota: Todas las cuotas tendrán el mismo valor mensual de{" "}
+                  <strong>
+                    {formatearMoneda(formMontoAlquiler || "0")}
+                  </strong>
+                </p>
+              </section>
+
+              {/* PENALIDADES POR INCUMPLIMIENTO */}
+              <section className="border border-[#e1dac8] rounded-2xl p-6 space-y-4">
+                <h3 className="text-lg font-semibold">
+                  Penalidades por Incumplimiento
+                </h3>
+                <textarea
+                  name="penalidades"
+                  value={formPenalidades}
+                  onChange={handleFormChange}
+                  placeholder="Detalle aquí las penalidades acordadas por incumplimiento..."
+                  className="w-full h-20 rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
+                />
+              </section>
 
               {/* CLÁUSULAS ADICIONALES (modelo fijo de lectura) */}
               <section className="border border-[#e1dac8] rounded-2xl p-6 space-y-4">
                 <h3 className="text-lg font-semibold">Cláusulas Adicionales</h3>
 
-                <div className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100 text-gray-700 whitespace-pre-line">
-                  {`1. El inquilino se compromete a pagar el monto mensual acordado en la fecha establecida.
-2. El propietario se compromete a mantener la propiedad en condiciones habitables.
-3. Cualquier daño a la propiedad será responsabilidad del inquilino, salvo desgaste por uso normal.
-4. El contrato podrá ser renovado previo acuerdo entre ambas partes.
-5. Cualquier disputa será resuelta conforme a las leyes vigentes.`}
-                </div>
+                <textarea
+                  name="clausulas"
+                  value={formClausulas}
+                  onChange={handleFormChange}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100 text-gray-700 whitespace-pre-line h-32"
+                />
               </section>
 
               {/* Botones del modal */}
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={handleCloseModal}
+                  onClick={cerrarModalForm}
                   className="px-4 py-2 rounded-lg border border-gray-400 text-gray-700 hover:bg-gray-100 transition"
                 >
                   Cancelar
@@ -697,7 +765,7 @@ export default function ContratosPage() {
       )}
 
       {/* ========= MODAL VER CONTRATO ========= */}
-      {isViewOpen && contratoSeleccionado && (
+      {openViewModal && selectedContrato && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto p-10">
             {/* Header */}
@@ -705,7 +773,7 @@ export default function ContratosPage() {
               <h2 className="text-lg font-semibold">Contrato de Alquiler</h2>
               <button
                 className="text-2xl leading-none px-2"
-                onClick={handleCloseView}
+                onClick={cerrarModalVer}
               >
                 ×
               </button>
@@ -721,7 +789,7 @@ export default function ContratosPage() {
                 Sistema de Gestión ALQUILA 360
               </p>
               <p className="mt-2 text-sm text-[#c9904a] flex items-center justify-center gap-2">
-                <span>📄</span> Contrato N° {contratoSeleccionado.id}
+                <span>📄</span> Contrato N° {selectedContrato.id}
               </p>
             </div>
 
@@ -736,16 +804,14 @@ export default function ContratosPage() {
                     👤 LOCADOR (Propietario)
                   </p>
                   <p className="font-semibold">
-                    {contratoSeleccionado.propietario || "Propietario"}
+                    {selectedContrato.propietario || "Propietario"}
                   </p>
                 </div>
                 <div className="border border-[#315c47] rounded-2xl px-5 py-4">
                   <p className="text-xs font-semibold text-[#7aa278] mb-1">
                     👤 LOCATARIO (Inquilino)
                   </p>
-                  <p className="font-semibold">
-                    {contratoSeleccionado.inquilino}
-                  </p>
+                  <p className="font-semibold">{selectedContrato.inquilino}</p>
                 </div>
               </div>
             </section>
@@ -760,7 +826,7 @@ export default function ContratosPage() {
                   🏠 Dirección de la Propiedad
                 </p>
                 <p className="font-semibold mb-1">
-                  {contratoSeleccionado.propiedad}
+                  {selectedContrato.propiedad}
                 </p>
               </div>
             </section>
@@ -776,7 +842,7 @@ export default function ContratosPage() {
                     📅 Fecha de Inicio
                   </p>
                   <p className="text-sm text-gray-700">
-                    {formatearFechaBonita(contratoSeleccionado.fechaInicio)}
+                    {formatearFechaBonita(selectedContrato.fechaInicio)}
                   </p>
                 </div>
                 <div className="border border-[#315c47] rounded-2xl px-5 py-4">
@@ -784,7 +850,7 @@ export default function ContratosPage() {
                     📅 Fecha de Finalización
                   </p>
                   <p className="text-sm text-gray-700">
-                    {formatearFechaBonita(contratoSeleccionado.fechaFin)}
+                    {formatearFechaBonita(selectedContrato.fechaFin)}
                   </p>
                 </div>
               </div>
@@ -801,7 +867,7 @@ export default function ContratosPage() {
                     💲 Alquiler Mensual
                   </p>
                   <p className="text-2xl font-semibold">
-                    {formatearMoneda(contratoSeleccionado.montoAlquiler)}
+                    {formatearMoneda(selectedContrato.montoAlquiler)}
                   </p>
                 </div>
                 <div className="bg-[#fbf5ea] rounded-2xl px-5 py-4">
@@ -809,13 +875,13 @@ export default function ContratosPage() {
                     💲 Garantía
                   </p>
                   <p className="text-2xl font-semibold">
-                    {formatearMoneda(contratoSeleccionado.montoGarantia)}
+                    {formatearMoneda(selectedContrato.montoGarantia)}
                   </p>
                 </div>
                 <div className="bg-[#fbf5ea] rounded-2xl px-5 py-4">
                   <p className="text-sm font-semibold mb-1">Vencimiento</p>
                   <p className="text-xl font-semibold">
-                    {contratoSeleccionado.diaVencimiento || "-"}
+                    {selectedContrato.diaVencimiento || "-"}
                   </p>
                 </div>
               </div>
@@ -831,19 +897,19 @@ export default function ContratosPage() {
                   <div>
                     <p className="text-sm font-semibold">Frecuencia</p>
                     <p className="text-sm text-gray-700">
-                      {contratoSeleccionado.frecuenciaCobro}
+                      {selectedContrato.frecuenciaCobro}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm font-semibold">Número de Cuotas</p>
                     <p className="text-sm text-gray-700">
-                      {contratoSeleccionado.numeroCuotas || "-"}
+                      {selectedContrato.numeroCuotas || "-"}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm font-semibold">Valor por Cuota</p>
                     <p className="text-sm text-gray-700">
-                      {formatearMoneda(contratoSeleccionado.montoAlquiler)}
+                      {formatearMoneda(selectedContrato.montoAlquiler)}
                     </p>
                   </div>
                 </div>
@@ -860,8 +926,8 @@ export default function ContratosPage() {
                 PENALIDADES
               </h3>
               <div className="border border-[#315c47] rounded-2xl px-5 py-4 text-sm text-gray-800">
-                {contratoSeleccionado.penalidades
-                  ? contratoSeleccionado.penalidades
+                {selectedContrato.penalidades
+                  ? selectedContrato.penalidades
                   : "Las penalidades por incumplimiento se regirán por lo que las partes acuerden expresamente en el contrato."}
               </div>
             </section>
@@ -872,7 +938,7 @@ export default function ContratosPage() {
                 CLÁUSULAS ADICIONALES
               </h3>
               <div className="border border-[#315c47] rounded-2xl px-5 py-4 text-sm text-gray-800 whitespace-pre-line">
-                {contratoSeleccionado.clausulasAdicionales ||
+                {selectedContrato.clausulas ||
                   `1. El inquilino se compromete a pagar el monto mensual acordado en la fecha establecida.
 2. El propietario se compromete a mantener la propiedad en condiciones habitables.
 3. Cualquier daño a la propiedad será responsabilidad del inquilino, salvo desgaste por uso normal.
@@ -888,15 +954,13 @@ export default function ContratosPage() {
                 <div>
                   <div className="border-t border-[#d7cec0] pt-4" />
                   <p className="font-semibold">
-                    {contratoSeleccionado.propietario || "____________________"}
+                    {selectedContrato.propietario || "____________________"}
                   </p>
                   <p className="text-sm text-gray-700">Firma del Locador</p>
                 </div>
                 <div>
                   <div className="border-t border-[#d7cec0] pt-4" />
-                  <p className="font-semibold">
-                    {contratoSeleccionado.inquilino}
-                  </p>
+                  <p className="font-semibold">{selectedContrato.inquilino}</p>
                   <p className="text-sm text-gray-700">Firma del Locatario</p>
                 </div>
               </div>
@@ -908,569 +972,18 @@ export default function ContratosPage() {
                 Imprimir
               </button>
               <button
-                onClick={() =>
-                  contratoSeleccionado && handleOpenEdit(contratoSeleccionado)
-                }
+                onClick={abrirEditorDesdeVista}
                 className="px-5 py-2 rounded-lg border border-[#315c47] text-[#315c47] hover:bg-gray-100 transition"
               >
                 Editar
               </button>
               <button
-                onClick={handleCloseView}
+                onClick={cerrarModalVer}
                 className="px-5 py-2 rounded-lg bg-[#f4b000] text-white hover:bg-[#d89c00] transition"
               >
                 Cerrar
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========= MODAL EDITAR CONTRATO ========= */}
-      {isEditOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto p-8">
-            {/* Header modal */}
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-semibold">Editar Contrato</h2>
-              <button
-                className="text-2xl leading-none px-2"
-                onClick={handleCloseEdit}
-              >
-                ×
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitEdit} className="space-y-6">
-              {/* PARTES DEL CONTRATO */}
-              <section className="mb-6 border border-emerald-900/40 rounded-2xl bg-[#f9f6ef] p-5 space-y-4">
-                <h3 className="font-semibold text-[#123528] text-lg mb-1">
-                  Partes del Contrato
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Propiedad - DINÁMICO */}
-                  <div>
-                    <p className="text-sm font-medium text-slate-700">
-                      Propiedad
-                    </p>
-                    <select
-                      className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
-                      name="propiedad"
-                      value={nuevoContrato.propiedad}
-                      onChange={handleChange}
-                      disabled={loadingDatos || !!errorDatos}
-                    >
-                      <option value="">
-                        {loadingDatos
-                          ? "Cargando propiedades..."
-                          : "Seleccionar propiedad"}
-                      </option>
-                      {propiedades.map((propiedad) => (
-                        <option
-                          key={propiedad.id}
-                          value={propiedad.direccion}
-                        >
-                          {propiedad.direccion} - {propiedad.tipo}
-                        </option>
-                      ))}
-                    </select>
-                    {propiedades.length === 0 && !loadingDatos && (
-                      <p className="text-xs text-red-500 mt-1">
-                        No hay propiedades disponibles
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Inquilino - DINÁMICO */}
-                  <div>
-                    <p className="text-sm font-medium text-slate-700">
-                      Inquilino
-                    </p>
-                    <select
-                      className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
-                      name="inquilino"
-                      value={nuevoContrato.inquilino}
-                      onChange={handleChange}
-                      disabled={loadingDatos || !!errorDatos}
-                    >
-                      <option value="">
-                        {loadingDatos
-                          ? "Cargando inquilinos..."
-                          : "Seleccionar inquilino"}
-                      </option>
-                      {inquilinos.map((inquilino) => (
-                        <option
-                          key={inquilino.id}
-                          value={`${inquilino.nombre} ${inquilino.apellido}`}
-                        >
-                          {inquilino.nombre} {inquilino.apellido}
-                        </option>
-                      ))}
-                    </select>
-                    {inquilinos.length === 0 && !loadingDatos && (
-                      <p className="text-xs text-red-500 mt-1">
-                        No hay inquilinos disponibles
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Propietario (auto-completado) */}
-                  <div>
-                    <p className="text-sm font-medium text-slate-700">
-                      Propietario
-                    </p>
-                    <input
-                      type="text"
-                      name="propietario"
-                      value={nuevoContrato.propietario}
-                      readOnly
-                      placeholder="Se auto-completa al seleccionar propiedad"
-                      className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm text-gray-500"
-                    />
-                  </div>
-                </div>
-              </section>
-
-              {/* Duración del Contrato */}
-              <section className="border border-[#e1dac8] rounded-2xl p-6 space-y-4">
-                <h3 className="text-lg font-semibold">Duración del Contrato</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm mb-1">
-                      Fecha de Inicio
-                    </label>
-                    <input
-                      type="date"
-                      name="fechaInicio"
-                      value={nuevoContrato.fechaInicio}
-                      onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-1">
-                      Fecha de Finalización
-                    </label>
-                    <input
-                      type="date"
-                      name="fechaFin"
-                      value={nuevoContrato.fechaFin}
-                      onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
-                    />
-                  </div>
-                </div>
-              </section>
-
-              {/* Información Financiera */}
-              <section className="border border-[#e1dac8] rounded-2xl p-6 space-y-4">
-                <h3 className="text-lg font-semibold">
-                  Información Financiera
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm mb-1">
-                      Monto del Alquiler ($/mes)
-                    </label>
-                    <input
-                      type="number"
-                      name="montoAlquiler"
-                      value={nuevoContrato.montoAlquiler}
-                      onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-1">
-                      Monto de la Garantía ($)
-                    </label>
-                    <input
-                      type="number"
-                      name="montoGarantia"
-                      value={nuevoContrato.montoGarantia}
-                      onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
-                    />
-                  </div>
-                </div>
-              </section>
-
-              {/* DETALLE DE CUOTAS */}
-              <section className="border border-[#e1dac8] rounded-2xl p-6 space-y-4">
-                <h3 className="text-lg font-semibold">Detalle de Cuotas</h3>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm mb-1">
-                      Frecuencia de Cobro
-                    </label>
-                    <select
-                      name="frecuenciaCobro"
-                      value={nuevoContrato.frecuenciaCobro}
-                      onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
-                    >
-                      <option value="Mensual">Mensual</option>
-                      <option value="Trimestral">Trimestral</option>
-                      <option value="Semestral">Semestral</option>
-                      <option value="Anual">Anual</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm mb-1">
-                      Número de Cuotas
-                    </label>
-                    <input
-                      type="number"
-                      name="numeroCuotas"
-                      value={nuevoContrato.numeroCuotas}
-                      onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm mb-1">
-                      Día de Vencimiento
-                    </label>
-                    <input
-                      type="number"
-                      name="diaVencimiento"
-                      value={nuevoContrato.diaVencimiento}
-                      onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
-                    />
-                  </div>
-                </div>
-
-                <p className="text-sm text-gray-500">
-                  Nota: Todas las cuotas tendrán el mismo valor mensual de{" "}
-                  <strong>
-                    {formatearMoneda(nuevoContrato.montoAlquiler || "0")}
-                  </strong>
-                </p>
-              </section>
-
-              {/* PENALIDADES POR INCUMPLIMIENTO */}
-              <section className="border border-[#e1dac8] rounded-2xl p-6 space-y-4">
-                <h3 className="text-lg font-semibold">
-                  Penalidades por Incumplimiento
-                </h3>
-                <textarea
-                  name="penalidades"
-                  value={nuevoContrato.penalidades}
-                  onChange={handleChange}
-                  placeholder="Detalle aquí las penalidades acordadas por incumplimiento..."
-                  className="w-full h-20 rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
-                />
-              </section>
-
-              {/* CLÁUSULAS ADICIONALES */}
-              <section className="border border-[#e1dac8] rounded-2xl p-6 space-y-4">
-                <h3 className="text-lg font-semibold">Cláusulas Adicionales</h3>
-                <textarea
-                  name="clausulasAdicionales"
-                  value={nuevoContrato.clausulasAdicionales}
-                  onChange={handleChange}
-                  placeholder="Agregue cualquier cláusula adicional del contrato..."
-                  className="w-full h-20 rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
-                />
-              </section>
-
-              {/* Botones del modal */}
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={handleCloseEdit}
-                  className="px-4 py-2 rounded-lg border border-gray-400 text-gray-700 hover:bg-gray-100 transition"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-lg bg-[#f4b000] text-white hover:bg-[#d89c00] transition"
-                >
-                  Guardar Contrato
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ========= MODAL RENOVAR CONTRATO ========= */}
-      {isRenewOpen && contratoARenovar && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto p-8">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-semibold">
-                Renovar Contrato de Alquiler
-              </h2>
-              <button
-                className="text-2xl leading-none px-2"
-                onClick={handleCloseRenew}
-              >
-                ×
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitRenew} className="space-y-6">
-              {/* CONTRATO ACTUAL */}
-              <section className="bg-[#fbf8f1] border border-[#e1dac8] rounded-2xl p-6 space-y-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <span className="text-xl">📄</span> Contrato Actual
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <p className="font-semibold">Contrato N°</p>
-                    <p>{contratoARenovar.id}</p>
-                    <p className="mt-2 font-semibold">Fecha de Finalización</p>
-                    <p>{formatearFechaBonita(contratoARenovar.fechaFin)}</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold">Propiedad</p>
-                    <p>{contratoARenovar.propiedad}</p>
-                    <p className="mt-2 font-semibold">Monto Actual</p>
-                    <p>
-                      {formatearMoneda(contratoARenovar.montoAlquiler)}/mes
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-semibold">Inquilino</p>
-                    <p>{contratoARenovar.inquilino}</p>
-                  </div>
-                  <div className="flex items-center md:justify-end">
-                    <span className="px-4 py-1 rounded-full bg-[#d3f7e8] text-[#1b7c4b] text-sm font-semibold">
-                      {contratoARenovar.estado}
-                    </span>
-                  </div>
-                </div>
-              </section>
-
-              {/* NUEVA DURACIÓN DEL CONTRATO */}
-              <section className="border border-[#e1dac8] rounded-2xl p-6 space-y-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <span>📅</span> Nueva Duración del Contrato
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm mb-1">
-                      Nueva Fecha de Inicio
-                    </label>
-                    <input
-                      type="date"
-                      name="nuevaFechaInicio"
-                      value={datosRenovacion.nuevaFechaInicio}
-                      onChange={handleChangeRenovacion}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
-                    />
-                    <p className="mt-1 text-xs text-gray-500">
-                      Inicia automáticamente después del contrato actual
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-1">
-                      Nueva Fecha de Finalización
-                    </label>
-                    <input
-                      type="date"
-                      name="nuevaFechaFin"
-                      value={datosRenovacion.nuevaFechaFin}
-                      onChange={handleChangeRenovacion}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
-                    />
-                    <p className="mt-1 text-xs text-gray-500">
-                      Duración: {datosRenovacion.numeroCuotas || "-"} meses
-                    </p>
-                  </div>
-                </div>
-              </section>
-
-              {/* INFORMACIÓN FINANCIERA ACTUALIZADA */}
-              <section className="border border-[#e1dac8] rounded-2xl p-6 space-y-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <span>💲</span> Información Financiera Actualizada
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm mb-1">
-                      Nuevo Monto del Alquiler ($/mes)
-                    </label>
-                    <input
-                      type="number"
-                      name="nuevoMontoAlquiler"
-                      value={datosRenovacion.nuevoMontoAlquiler}
-                      onChange={handleChangeRenovacion}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
-                    />
-                    <p className="mt-1 text-xs text-gray-500">
-                      Monto anterior:{" "}
-                      {formatearMoneda(contratoARenovar.montoAlquiler)}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-1">
-                      Monto de la Garantía ($)
-                    </label>
-                    <input
-                      type="number"
-                      name="nuevaGarantia"
-                      value={datosRenovacion.nuevaGarantia}
-                      onChange={handleChangeRenovacion}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
-                    />
-                    <p className="mt-1 text-xs text-gray-500">
-                      Valor anterior:{" "}
-                      {formatearMoneda(contratoARenovar.montoGarantia)}
-                    </p>
-                  </div>
-                </div>
-              </section>
-
-              {/* DETALLE DE CUOTAS */}
-              <section className="border border-[#e1dac8] rounded-2xl p-6 space-y-4">
-                <h3 className="text-lg font-semibold">Detalle de Cuotas</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm mb-1">
-                      Frecuencia de Cobro
-                    </label>
-                    <select
-                      name="frecuenciaCobro"
-                      value={datosRenovacion.frecuenciaCobro}
-                      onChange={handleChangeRenovacion}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
-                    >
-                      <option value="Mensual">Mensual</option>
-                      <option value="Trimestral">Trimestral</option>
-                      <option value="Semestral">Semestral</option>
-                      <option value="Anual">Anual</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-1">
-                      Número de Cuotas
-                    </label>
-                    <input
-                      type="number"
-                      name="numeroCuotas"
-                      value={datosRenovacion.numeroCuotas}
-                      onChange={handleChangeRenovacion}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-1">
-                      Día de Vencimiento
-                    </label>
-                    <input
-                      type="number"
-                      name="diaVencimiento"
-                      value={datosRenovacion.diaVencimiento}
-                      onChange={handleChangeRenovacion}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-100"
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-3 rounded-xl bg-[#fff7cf] px-4 py-3 text-sm text-gray-700">
-                  <span className="font-semibold">Importante: </span>
-                  Todas las cuotas tendrán el mismo valor mensual de{" "}
-                  {formatearMoneda(
-                    datosRenovacion.nuevoMontoAlquiler ||
-                      montoAnteriorLimpio ||
-                      "0"
-                  )}
-                </div>
-              </section>
-
-              {/* CONDICIONES DE RENOVACIÓN */}
-              <section className="border border-[#e1dac8] rounded-2xl p-6 space-y-4">
-                <h3 className="text-lg font-semibold">
-                  Condiciones de Renovación
-                </h3>
-                <textarea
-                  name="condicionesRenovacion"
-                  value={datosRenovacion.condicionesRenovacion}
-                  onChange={handleChangeRenovacion}
-                  placeholder="Especificar las condiciones y términos de la renovación del contrato..."
-                  className="w-full h-20 rounded-lg border border-gray-300 px-3 py-2 bg-gray-100 text-sm"
-                />
-                <p className="text-xs text-gray-500">
-                  Incluir información sobre actualizaciones, modificaciones o
-                  condiciones especiales.
-                </p>
-              </section>
-
-              {/* OBSERVACIONES ADICIONALES */}
-              <section className="border border-[#e1dac8] rounded-2xl p-6 space-y-4">
-                <h3 className="text-lg font-semibold">
-                  Observaciones Adicionales (Opcional)
-                </h3>
-                <textarea
-                  name="observaciones"
-                  value={datosRenovacion.observaciones}
-                  onChange={handleChangeRenovacion}
-                  placeholder="Agregar cualquier observación o nota adicional sobre la renovación..."
-                  className="w-full h-20 rounded-lg border border-gray-300 px-3 py-2 bg-gray-100 text-sm"
-                />
-              </section>
-
-              {/* RESUMEN DE LA RENOVACIÓN */}
-              <section className="rounded-2xl bg-[#d5fae5] p-6 space-y-3 text-sm">
-                <h3 className="text-lg font-semibold text-[#169257] mb-2">
-                  Resumen de la Renovación
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="font-semibold">Contrato Original:</p>
-                    <p>{contratoARenovar.id}</p>
-                    <p className="mt-2 font-semibold">
-                      Nuevo Monto Mensual:
-                    </p>
-                    <p>
-                      {formatearMoneda(
-                        datosRenovacion.nuevoMontoAlquiler ||
-                          montoAnteriorLimpio ||
-                          "0"
-                      )}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-semibold">Nuevo Período:</p>
-                    <p>
-                      {datosRenovacion.nuevaFechaInicio || "?"} -{" "}
-                      {datosRenovacion.nuevaFechaFin || "?"}
-                    </p>
-                    <p className="mt-2 font-semibold">Total del Contrato:</p>
-                    <p>
-                      {Number.isNaN(totalContrato)
-                        ? "$0"
-                        : formatearMoneda(String(totalContrato))}
-                    </p>
-                  </div>
-                </div>
-              </section>
-
-              {/* BOTONES */}
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={handleCloseRenew}
-                  className="px-5 py-2 rounded-lg border border-gray-400 text-gray-700 hover:bg-gray-100 transition"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-lg bg-[#2e7c4f] text-white hover:bg-[#256341] transition"
-                >
-                  Confirmar Renovación
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}
