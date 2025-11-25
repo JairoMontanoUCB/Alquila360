@@ -27,23 +27,36 @@ export interface PagoBackend {
   medio_pago: string;
   recibo_numero?: string;
   ruta_pdf?: string;
-  contrato?: {
+  contrato: {
     id: number;
-    propiedad?: {
+    propiedad: {
+      id: number;
       direccion: string;
-      descripcion: string;
+      ciudad: string;
+      tipo: string;
     };
+    inquilino: {
+      id: number;
+      nombre: string;
+      apellido: string;
+      email: string;
+    };
+    monto_mensual: number;
+    estado: string;
   };
-  inquilino?: {
+  inquilino: {
     id: number;
     nombre: string;
+    apellido: string;
     email: string;
+    rol: string;
   };
-  cuota?: {
+  cuota: {
     id: number;
     numero_referencia: string;
     estado: string;
     fecha_vencimiento: string;
+    monto: number;
   };
 }
 
@@ -86,6 +99,16 @@ class PagoService {
     const response = await api.get(`/pago/descargar/${id}`, {
       responseType: 'blob',
     });
+    return response.data;
+  }
+
+  async getPagosByPropietario(propietarioId: number): Promise<PagoBackend[]> {
+    const response = await api.get(`/pago/propietario/${propietarioId}`);
+    return response.data;
+  }
+
+  async getPagosByInquilino(inquilinoId: number): Promise<PagoBackend[]> {
+    const response = await api.get(`/pago/inquilino/${inquilinoId}`);
     return response.data;
   }
 

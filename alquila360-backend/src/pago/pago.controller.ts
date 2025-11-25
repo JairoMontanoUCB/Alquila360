@@ -33,6 +33,11 @@ export class PagoController {
         return this.pagoService.deletePago(id);
     }
 
+    @Get('propietario/:propietarioId')
+    async getPagosByPropietario(@Param('propietarioId') propietarioId: number) {
+        return this.pagoService.getPagosByPropietario(propietarioId);
+    }
+
     @Get("descargar/:id")
     async descargarPDF(@Param("id") id: number, @Res() res) {
         const pago = await this.pagoService.getPagoById(id);
