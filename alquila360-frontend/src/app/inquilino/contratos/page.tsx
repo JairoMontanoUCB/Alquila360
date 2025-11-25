@@ -7,12 +7,27 @@ import axios from "@/app/utils/axios.util";
 // INTERFAZ REALISTA DEL CONTRATO
 interface Contrato {
   id: number;
-  id_propiedad: number;
   fecha_inicio: string;
   fecha_fin: string;
   monto_mensual: number;
   estado: string;
+  propiedad: {
+    id: number;
+    direccion: string;
+    ciudad: string;
+    tipo: string;
+    descripcion: string | null;
+    precio_referencia: number;
+    fotos: { url: string }[];
+    propietario: {
+      id: number;
+      nombre: string;
+      apellido: string;
+      email: string;
+    };
+  };
 }
+
 
 
 export default function Contratos() {
@@ -141,8 +156,13 @@ useEffect(() => {
                   <tr key={c.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">📄 {c.id}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">
-  Propiedad #{c.id_propiedad}
+  {c.propiedad?.direccion ?? "Sin dirección"}
+  <br />
+  <span className="text-gray-400 text-xs">
+    {c.propiedad?.tipo}
+  </span>
 </td>
+
                     <td className="px-6 py-4 text-sm text-gray-600">
   Usted mismo
 </td>

@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { getTicketsUsuario, crearTicket } from "@/services/ticketService";
+import { getPropiedadesDeInquilino } from "@/services/propiedadService";
+
 
 interface Ticket {
   id: string;
@@ -26,6 +28,8 @@ interface Ticket {
 }
 
 export default function GestionTickets() {
+  const [propiedades, setPropiedades] = useState<any[]>([]);
+
   const [fotoArchivo, setFotoArchivo] = useState<File | null>(null);
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -51,21 +55,49 @@ export default function GestionTickets() {
   const [prioridadEdit, setPrioridadEdit] = useState("");
   const [estadoEdit, setEstadoEdit] = useState("");
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const userId = Number(localStorage.getItem("userId"));
-        if (!userId) return;
+useEffect(() => {
+  const load = async () => {
+    try {
+      const userId = Number(localStorage.getItem("userId"));
+      if (!userId) return;
 
-        const data = await getTicketsUsuario(userId);
-        setTickets(data);
-      } catch (e) {
-        console.error("Error cargando tickets:", e);
-      }
-    };
+      const data = await getTicketsUsuario(userId);
+      const props = await getPropiedadesDeInquilino(userId);
+      setPropiedades(props);
 
-    load();
-  }, []);
+
+
+      const mapped = data.map((t: any) => ({
+        id: "TKT-" + t.id.toString().padStart(3, "0"),
+        descripcion: t.descripcion,
+        direccion: t.propiedad?.direccion ?? "Sin dirección",
+        fecha: t.fecha_creacion ?? "Sin fecha",
+        tecnico: t.tecnico ? `${t.tecnico.nombre} ${t.tecnico.apellido}` : "Sin técnico",
+        estado:
+          t.estado === "pendiente"
+            ? "Abierto"
+            : t.estado === "proceso"
+            ? "En proceso"
+            : "Cerrado",
+        prioridad:
+          t.prioridad === "alta"
+            ? "Urgente"
+            : t.prioridad === "media"
+            ? "Media"
+            : "Baja",
+        tipoProblema: t.tipoProblema,
+        fotos: t.fotos,
+      }));
+
+      setTickets(mapped);
+    } catch (e) {
+      console.error("Error cargando tickets:", e);
+    }
+  };
+
+  load();
+}, []);
+
 
   const getEstadoColor = (estado: string) => {
     switch (estado) {
@@ -679,14 +711,19 @@ export default function GestionTickets() {
                   Propiedad *
                 </label>
                 <select
-                  value={propiedadNueva}
-                  onChange={(e) => setPropiedadNueva(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1a5f4a]"
-                >
-                  <option value="">Selecciona la propiedad</option>
-                  <option value="1">Calle Secundaria 456</option>
-                  {/* usa el id real de la propiedad en value */}
-                </select>
+  value={propiedadNueva}
+  onChange={(e) => setPropiedadNueva(e.target.value)}
+  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1a5f4a]"
+>
+  <option value="">Selecciona la propiedad</option>
+
+  {propiedades.map((p) => (
+    <option key={p.id} value={p.id}>
+      {p.direccion} — {p.tipo}
+    </option>
+  ))}
+</select>
+
               </div>
 
               <div>
