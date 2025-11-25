@@ -5,6 +5,7 @@ import { UserRating } from "src/entity/user_rating.entity";
 import { CreateUserDto } from "./userDto/create-user.dto";
 import { RateUserDto } from "./userDto/rate-user.dto";
 import * as bcrypt from "bcryptjs";
+import { UserRules } from "src/common/Rules/UserRules";
 
 @Injectable()
 export class UserService {
@@ -89,5 +90,38 @@ export class UserService {
         ratingPromedio: usuario.ratingPromedio,
         ratingCount: usuario.ratingCount
     };
-}
+  }
+
+  async RegistrarTecnico(dto: CreateUserDto) {
+    var repo = AppDataSource.getRepository(User);
+
+    var existingUser = await repo.findOne({ where: { email: dto.email } });
+
+    UserRules.ValidarUsuarioExistente(existingUser!);
+
+    UserRules.ValidarDtoCrearUsuario(dto); //Valida todos los datos del DTO
+    
+    // Generar hash de contraseña
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(dto.password, salt);
+
+    // Crear usuario por defecto como técnico
+    const newUser = repo.create({
+      nombre: dto.nombre,
+      apellido: dto.apellido,
+      email: dto.email,
+      rol: "tecnico",
+      estado: "activo",
+      password_hash: hashedPassword,
+      fecha_registro: new Date(),
+    });
+
+    return repo.save(newUser);
+  }
+  async getUsersByRol(rol: string) {
+    return AppDataSource.getRepository(User).find({ where: { rol } });
+  }
+  async getUsuariosActivos() {
+    return AppDataSource.getRepository(User).find({ where: { estado: 'activo' } });
+  }
 }

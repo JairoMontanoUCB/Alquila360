@@ -4,13 +4,25 @@ import Link from "next/link";
 
 export default function Navbar() {
   return (
-    <nav className="flex items-center justify-between px-8 py-4 shadow-md bg-white">
-      <Link href="/" className="text-2xl font-bold">Alquila360</Link>
+    <nav className="flex items-center justify-between px-8 py-4 shadow-md bg-[#063F2E]">
+      {/* Logo */}
+      <Link href="/" className="text-2xl font-bold text-white">
+        Alquila360
+      </Link>
 
-      <div className="flex gap-6 text-gray-700">
-        <Link href="/properties" className="hover:text-black transition">Propiedades</Link>
-        <Link href="/signup" className="hover:text-black transition">Sign up</Link>
-        <Link href="/login" className="hover:text-black transition">Log in</Link>
+      {/* Botones amarillos */}
+      <div className="flex gap-4">
+        <Link href="/signup">
+          <button className="bg-[#FFC300] text-black font-medium px-5 py-2 rounded-full hover:bg-[#eab308] transition">
+            Sign up
+          </button>
+        </Link>
+
+        <Link href="/login">
+          <button className="bg-[#FFC300] text-black font-medium px-5 py-2 rounded-full hover:bg-[#eab308] transition">
+            Log in
+          </button>
+        </Link>
       </div>
     </nav>
   );

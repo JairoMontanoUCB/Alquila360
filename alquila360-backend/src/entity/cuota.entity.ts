@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { Entity,OneToMany, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
 import { Contrato } from "./contrato.entity";
+import { Pago } from "./pago.entity";
 
 @Entity("cuotas")
 export class Cuota {
@@ -12,6 +13,9 @@ export class Cuota {
 
   @Column()
   contrato_id: number;
+
+  @OneToMany(() => Pago, pago => pago.cuota)
+  pagos: Pago[];
 
   @Column({ unique: true })
   numero_referencia: string;
@@ -36,5 +40,13 @@ export class Cuota {
   fecha_actualizacion: Date;
 
   @Column({ type: "date", nullable: true })
-  fecha_pago: Date;
+  fecha_pago: Date | null;
+
+  //CAMBIOS PARA EXPENSAS
+  @Column({
+    type: "enum",
+    enum: ["ALQUILER", "EXPENSA"], // Indica el tipo de obligación
+    default: "ALQUILER"
+  })
+  tipo: string; 
 }
