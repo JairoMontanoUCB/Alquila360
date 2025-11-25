@@ -251,11 +251,11 @@ export default function ContratosInquilinoPage() {
               <tr>
                 <th className="p-3">N°</th>
                 <th className="p-3">Propiedad</th>
-                <th className="p-3">Inquilino</th>
                 <th className="p-3">Fecha Inicio</th>
                 <th className="p-3">Fecha Fin</th>
                 <th className="p-3">Cuota</th>
                 <th className="p-3">Estado</th>
+                <th className="p-3">Descargar</th>
               </tr>
             </thead>
 
@@ -278,6 +278,14 @@ export default function ContratosInquilinoPage() {
                       {c.estado}
                     </span>
                   </td>
+                    <td>
+                      <button 
+                    onClick={() => descargarPDF(c.id)}
+                    className="px-4 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-sm font-medium"
+                      >
+                    Imprimir
+                    </button>
+                    </td>
                 </tr>
               ))}
 
