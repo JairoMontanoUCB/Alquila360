@@ -9,6 +9,8 @@ import {
   CreateContratoDto,
 } from "../../../services/ContratoService";
 
+import { useRouter } from "next/navigation";
+
 const activeLabel = "Contratos";
 
 type EstadoContrato = "Vigente" | "Finalizado";
@@ -18,11 +20,11 @@ type Contrato = {
   propiedad: string;
   inquilino: string;
   propietario: string;
-  fechaInicio: string; // YYYY-MM-DD
-  fechaFin: string; // YYYY-MM-DD
-  montoAlquiler: string; // solo número, ej: "85000"
-  montoGarantia: string; // solo número
-  frecuenciaCobro: string; // Mensual / Trimestral / Anual
+  fechaInicio: string;
+  fechaFin: string;
+  montoAlquiler: string;
+  montoGarantia: string;
+  frecuenciaCobro: string;
   numeroCuotas: string;
   diaVencimiento: string;
   penalidades: string;
@@ -49,14 +51,19 @@ function formatearMoneda(valor: string) {
 }
 
 export default function ContratosPage() {
-  // Datos dinamicos
+  const router = useRouter();
+  
+  // Estados de autenticación
+  const [propietarioId, setPropietarioId] = useState<number | null>(null);
+  const [userLoading, setUserLoading] = useState(true);
+
+  // Datos dinámicos
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [propiedades, setPropiedades] = useState<PropiedadBackend[]>([]);
   const [inquilinos, setInquilinos] = useState<InquilinoBackend[]>([]);
 
   // Estados para UI
-  const [selectedContrato, setSelectedContrato] =
-    useState<Contrato | null>(null);
+  const [selectedContrato, setSelectedContrato] = useState<Contrato | null>(null);
   const [openFormModal, setOpenFormModal] = useState(false);
   const [openViewModal, setOpenViewModal] = useState(false);
   const [formMode, setFormMode] = useState<"crear" | "editar" | null>(null);
@@ -81,79 +88,100 @@ export default function ContratosPage() {
     "Agregue cualquier cláusula adicional del contrato..."
   );
 
-  // ===== CARGA INICIAL =====
+  // ===== VERIFICACIÓN DE USUARIO =====
   useEffect(() => {
-    cargarDatosIniciales();
-  }, []);
+    const obtenerUsuarioLogueado = () => {
+      try {
+        const usuarioStorage = localStorage.getItem('usuario');
+        const role = localStorage.getItem('role');
+
+        if (usuarioStorage && role === 'propietario') {
+          const usuario = JSON.parse(usuarioStorage);
+          
+          if (usuario && usuario.id) {
+            setPropietarioId(usuario.id);
+          } else {
+            console.error("Usuario no tiene ID");
+            router.push('/login');
+          }
+        } else {
+          console.error("No es propietario o no hay usuario:", { role });
+          router.push('/login');
+        }
+      } catch (error) {
+        console.error("Error obteniendo usuario:", error);
+        router.push('/login');
+      } finally {
+        setUserLoading(false);
+      }
+    };
+
+    obtenerUsuarioLogueado();
+  }, [router]);
+
+  // ===== CARGA DE DATOS =====
+  useEffect(() => {
+    if (propietarioId) {
+      cargarDatosIniciales();
+    }
+  }, [propietarioId]);
+
 
   const cargarDatosIniciales = async () => {
+    if (!propietarioId) return;
+    
     try {
       setLoading(true);
       setError(null);
 
-      // Cargar todos los datos
-      const [contratosData, propiedadesData, inquilinosData] =
-        await Promise.all([
-          contratoService.getContratos(),
-          contratoService.getPropiedadesDisponibles(),
-          contratoService.getInquilinos(),
-        ]);
+      // Cargar datos
+      const [contratosData, propiedadesData, inquilinosData] = await Promise.all([
+        contratoService.getContratosPorPropietario(propietarioId),
+        contratoService.getPropiedadesDisponibles(),
+        contratoService.getInquilinos(),
+      ]);
 
-      // Asegurar que sean arrays
-      const contratosArray = Array.isArray(contratosData) ? contratosData : [];
-      const propiedadesArray = Array.isArray(propiedadesData)
-        ? (propiedadesData as PropiedadBackend[])
-        : [];
-      const inquilinosArray = Array.isArray(inquilinosData)
-        ? (inquilinosData as InquilinoBackend[])
-        : [];
+      // Mapear CONTRATOS 
+      const contratosFrontend: Contrato[] = contratosData.map((contrato: any) => {
+        // Buscar propiedad
+        const propiedad = propiedadesData.find(p => p.id === contrato.id_propiedad);
+        
+        // Buscar inquilino - múltiples estrategias
+        let inquilino = null;
+        
+        // Estrategia 1: Si el contrato ya trae el inquilino completo
+        if (contrato.inquilino && contrato.inquilino.id) {
+          inquilino = contrato.inquilino;
+        }
 
-      // CONVERTIR CONTRATOS - SOLUCIÓN TEMPORAL
-      let contratosFrontend: Contrato[] = [];
-
-      if (contratosArray.length > 0) {
-        contratosFrontend = contratosArray.map((contrato: any, index: number) => {
-          // BUSCAR PROPIEDAD
-          const propiedadEncontrada = propiedadesArray.find(
-            (p) => p.id === contrato.id_propiedad
-          );
-
-          const inquilinoEncontrado =
-            inquilinosArray[index] || inquilinosArray[0];
-
-          return {
-            id: `C-${String(contrato.id).padStart(3, "0")}`,
-            propiedad:
-              propiedadEncontrada?.direccion ||
-              `Propiedad ID: ${contrato.id_propiedad}`,
-            inquilino: inquilinoEncontrado
-              ? `${inquilinoEncontrado.nombre} ${inquilinoEncontrado.apellido}`
-              : "Inquilino no disponible",
-            propietario: propiedadEncontrada?.propietario
-              ? `${propiedadEncontrada.propietario.nombre} ${propiedadEncontrada.propietario.apellido}`
-              : "Propietario no disponible",
-            fechaInicio: contrato.fecha_inicio,
-            fechaFin: contrato.fecha_fin,
-            montoAlquiler: contrato.monto_mensual?.toString() || "0",
-            montoGarantia: contrato.garantia?.toString() || "0",
-            frecuenciaCobro: "Mensual",
-            numeroCuotas: "12",
-            diaVencimiento: "10",
-            penalidades: "Mora del 2% por día de atraso...",
-            clausulas: "El locatario se compromete...",
-            estado:
-              contrato.estado === "activo"
-                ? ("Vigente" as EstadoContrato)
-                : ("Finalizado" as EstadoContrato),
-          };
-        });
-      }
+        return {
+          id: `C-${String(contrato.id).padStart(3, "0")}`,
+          propiedad: propiedad?.direccion || `Propiedad ${contrato.id_propiedad}`,
+          inquilino: inquilino 
+            ? `${inquilino.nombre} ${inquilino.apellido}`
+            : "Inquilino no disponible",
+          propietario: propiedad?.propietario
+            ? `${propiedad.propietario.nombre} ${propiedad.propietario.apellido}`
+            : "Propietario no disponible",
+          fechaInicio: contrato.fecha_inicio || "",
+          fechaFin: contrato.fecha_fin || "",
+          montoAlquiler: contrato.monto_mensual?.toString() || "0",
+          montoGarantia: contrato.garantia?.toString() || "0",
+          frecuenciaCobro: "Mensual",
+          numeroCuotas: "12",
+          diaVencimiento: "10",
+          penalidades: "Mora del 2% por día de atraso...",
+          clausulas: "El locatario se compromete...",
+          estado: (contrato.estado === "activo" || contrato.estado === "Vigente") ? "Vigente" : "Finalizado",
+        };
+      });
 
       setContratos(contratosFrontend);
-      setPropiedades(propiedadesArray);
-      setInquilinos(inquilinosArray);
+      setPropiedades(propiedadesData);
+      setInquilinos(inquilinosData);
+      
     } catch (err: any) {
-      setError(`Error cargando datos: ${err.message}`);
+      setError(`Error: ${err.message}`);
     } finally {
       setLoading(false);
     }

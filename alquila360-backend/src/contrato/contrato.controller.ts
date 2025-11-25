@@ -32,6 +32,11 @@ export class ContratoController {
     TerminarContrato(@Param('id') id: number) {
         return this.contratoService.FinalizarContrato(id);
     }
+
+    @Get('propietario/:propietarioId')
+        async getContratosPorPropietario(@Param('propietarioId') propietarioId: number) {
+        return this.contratoService.getContratosPorPropietario(propietarioId);
+    }
 }
 
 

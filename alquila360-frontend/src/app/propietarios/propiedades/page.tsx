@@ -70,25 +70,22 @@ export default function MisPropiedades() {
         try {
           const usuarioStorage = localStorage.getItem('usuario');
           const role = localStorage.getItem('role');
-          
-          console.log("🔍 Verificando usuario:", { usuarioStorage, role });
   
           if (usuarioStorage && role === 'propietario') {
             const usuario = JSON.parse(usuarioStorage);
-            console.log("👤 Usuario propietario encontrado:", usuario);
             
             if (usuario && usuario.id) {
               setPropietarioId(usuario.id);
             } else {
-              console.error("❌ Usuario no tiene ID");
+              console.error("Usuario no tiene ID");
               router.push('/login');
             }
           } else {
-            console.error("❌ No es propietario o no hay usuario:", { role });
+            console.error("No es propietario o no hay usuario:", { role });
             router.push('/login');
           }
         } catch (error) {
-          console.error("❌ Error obteniendo usuario:", error);
+          console.error("Error obteniendo usuario:", error);
           router.push('/login');
         } finally {
           setUserLoading(false);
@@ -108,10 +105,9 @@ export default function MisPropiedades() {
     try {
       setLoading(true);
       setError(null);
-      console.log("🔄 Cargando propiedades del propietario ID:", propietarioId);
+    
       
       const propiedadesData = await propiedadService.getPropiedadesPorPropietario(propietarioId);
-      console.log("✅ Propiedades del propietario recibidas:", propiedadesData);
 
       // Transformación de datos
       const propiedadesTransformadas: Propiedad[] = propiedadesData.map(prop => {
@@ -168,8 +164,6 @@ export default function MisPropiedades() {
         precio_referencia: Number(precioAlquiler),
         propietarioId: propietarioId, // ← USAR EL ID REAL DEL USUARIO LOGUEADO
       };
-
-      console.log("📤 Creando propiedad para propietario:", propietarioId, propiedadData);
       
       await propiedadService.crearPropiedad(propiedadData);
       await cargarPropiedades();
@@ -194,7 +188,6 @@ export default function MisPropiedades() {
   // Función para abrir edición 
 const handleOpenEdit = (index: number) => {
   const p = propiedades[index];
-  console.log("📝 Editando propiedad:", p);
   
   setEditIndex(index);
   setEditNombrePropiedad(p.nombre);
@@ -209,10 +202,6 @@ const handleOpenEdit = (index: number) => {
   const ambientesValue = p.ambientes.includes('No especificado') 
     ? '' 
     : p.ambientes.replace(' ambientes', '');
-  
-  console.log("🔍 Valores procesados:");
-  console.log("  - superficieValue:", superficieValue);
-  console.log("  - ambientesValue:", ambientesValue);
   
   setEditSuperficie(superficieValue);
   setEditAmbientes(ambientesValue);

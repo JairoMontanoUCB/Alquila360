@@ -94,7 +94,7 @@ export type PropietarioBackend = {
 
   // Obtener todos los contratos
   export const contratoService = {
-    // Contratos - RUTAS CORREGIDAS
+    // Contratos 
     async getContratos(): Promise<ContratoBackend[]> {
       const response = await api.get('/contrato');
       return response.data;
@@ -119,8 +119,13 @@ export type PropietarioBackend = {
       const response = await api.put(`/contrato/${id}`, contratoData);
       return response.data;
     },
+    
+    async getContratosPorPropietario(propietarioId: number): Promise<ContratoBackend[]> {
+      const response = await api.get(`/contrato/propietario/${propietarioId}`);
+      return response.data;
+    },
   
-    // Propiedades - RUTAS CORREGIDAS
+    // Propiedades
     async getPropiedadesDisponibles(): Promise<PropiedadBackend[]> {
       const response = await api.get('/propiedad/disponibles/contratos');
       return response.data;
@@ -131,7 +136,7 @@ export type PropietarioBackend = {
       return response.data;
     },
   
-    // Inquilinos - RUTAS CORREGIDAS
+    // Inquilinos 
     async getInquilinos(): Promise<InquilinoBackend[]> {
       const response = await api.get('/user/rol/inquilinos');
       return response.data;
