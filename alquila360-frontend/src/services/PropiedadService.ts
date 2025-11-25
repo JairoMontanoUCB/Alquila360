@@ -141,5 +141,6 @@ export const propiedadService = {
   // Eliminar foto de una propiedad
   async eliminarFotoPropiedad(propiedadId: number, fotoId: number): Promise<void> {
     await api.delete(`/propiedad/${propiedadId}/fotos/${fotoId}`);
-  }
+  },
+  
 };
