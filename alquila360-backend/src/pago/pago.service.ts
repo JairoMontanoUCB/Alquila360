@@ -152,4 +152,21 @@ export class PagoService {
 
     return await AppDataSource.getRepository(Pago).delete(id);
   }
+
+  async getPagosByInquilino(inquilinoId: number) {
+  return await AppDataSource.getRepository(Pago).find({
+    where: { inquilino: { id: inquilinoId } },
+    relations: ['contrato', 'inquilino', 'cuota']
+  });
+  }
+  async getPagosByPropietario(propietarioId: number) {
+  return await AppDataSource.getRepository(Pago)
+    .createQueryBuilder('pago')
+    .leftJoinAndSelect('pago.contrato', 'contrato')
+    .leftJoinAndSelect('contrato.propiedad', 'propiedad')
+    .leftJoinAndSelect('contrato.inquilino', 'inquilino')
+    .leftJoinAndSelect('pago.cuota', 'cuota')
+    .where('propiedad.propietario = :propietarioId', { propietarioId })
+    .getMany();
+}
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { PagoBackend, pagoService } from "@/services/pagoService";
 
 interface Pago {
   id: string;
@@ -14,59 +15,255 @@ interface Pago {
 
 export default function GestionPagos() {
   const [pagos, setPagos] = useState<Pago[]>([]);
-  const [pagosRecibidos, setPagosRecibidos] = useState(2500);
-  const [pagosPendientes, setpagosPendientes] = useState(2500);
-  const [enMora, setEnMora] = useState(2500);
+  const [pagosRecibidos, setPagosRecibidos] = useState(0);
+  const [pagosPendientes, setPagosPendientes] = useState(0);
+  const [enMora, setEnMora] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [showHistorial, setShowHistorial] = useState(false);
-
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [pagoSeleccionado, setPagoSeleccionado] = useState<Pago | null>(null);
 
+  // CONEXIÓN CON BACKEND PARA INQUILINO
   useEffect(() => {
-    // Datos de ejemplo - conecta con tu backend
-    const data: Pago[] = [
-      {
-        id: "pay1",
-        mes: "Noviembre 2024",
-        monto: 250,
-        fechaLimite: "2024-11-10",
-        fechaPago: "2024-11-01",
-        estado: "Pagado",
-      },
-      {
-        id: "pay2",
-        mes: "Diciembre 2024",
-        monto: 250,
-        fechaLimite: "2024-12-10",
-        fechaPago: null,
-        estado: "Pendiente",
-      },
-      {
-        id: "pay3",
-        mes: "Octubre 2024",
-        monto: 250,
-        fechaLimite: "2024-10-10",
-        fechaPago: null,
-        estado: "En Mora",
-      },
-    ];
-    setPagos(data);
+    const cargarPagosInquilino = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const userData = localStorage.getItem('user');
+      if (!userData) {
+        setError("Usuario no autenticado");
+        return;
+      }
+      
+      const user = JSON.parse(userData);
+      const inquilinoId = user.id;
+      
+      console.log("Cargando pagos para inquilino ID:", inquilinoId);
+      
+        
+        // Obtener todos los pagos del backend
+        const todosLosPagos = await pagoService.getAllPagos();
+        
+        // Filtrar pagos del inquilino actual
+        const pagosInquilino = todosLosPagos.filter(pago => 
+        pago.inquilino?.id === inquilinoId
+        );
+        console.log("Pagos del inquilino:", pagosInquilino);
+        
+        // Transformar datos del backend al formato del frontend
+        const pagosTransformados: Pago[] = pagosInquilino.map((pago: PagoBackend) => {
+          const fechaPago = new Date(pago.fecha_pago);
+          
+          // Calcular fecha límite basada en la fecha de pago + 30 días
+          const fechaVencimiento = new Date(fechaPago);
+          fechaVencimiento.setDate(fechaVencimiento.getDate() + 30);
+          
+          // Determinar estado basado en la cuota y fechas
+          let estado: "Pagado" | "Pendiente" | "En Mora";
+          if (pago.cuota?.estado === 'pagada') {
+            estado = "Pagado";
+          } else if (fechaVencimiento < new Date()) {
+            estado = "En Mora";
+          } else {
+            estado = "Pendiente";
+          }
 
-    const totalPagado = data
-      .filter((p) => p.estado === "Pagado")
-      .reduce((sum, p) => sum + p.monto, 0);
-    const totalPendiente = data
-      .filter((p) => p.estado === "Pendiente")
-      .reduce((sum, p) => sum + p.monto, 0);
-    const totalMora = data
-      .filter((p) => p.estado === "En Mora")
-      .reduce((sum, p) => sum + p.monto, 0);
+          return {
+            id: pago.id.toString(),
+            mes: fechaPago.toLocaleDateString('es-ES', { 
+              month: 'long', 
+              year: 'numeric' 
+            }),
+            monto: pago.monto,
+            fechaLimite: fechaVencimiento.toISOString().split('T')[0],
+            fechaPago: pago.cuota?.estado === 'pagada' ? fechaPago.toISOString().split('T')[0] : null,
+            estado: estado
+          };
+        });
 
-    setPagosRecibidos(totalPagado);
-    setpagosPendientes(totalPendiente);
-    setEnMora(totalMora);
+        setPagos(pagosTransformados);
+
+        // Calcular estadísticas con datos reales del backend
+        const totalPagado = pagosTransformados
+          .filter(p => p.estado === "Pagado")
+          .reduce((sum, p) => sum + p.monto, 0);
+        
+        const totalPendiente = pagosTransformados
+          .filter(p => p.estado === "Pendiente")
+          .reduce((sum, p) => sum + p.monto, 0);
+        
+        const totalMora = pagosTransformados
+          .filter(p => p.estado === "En Mora")
+          .reduce((sum, p) => sum + p.monto, 0);
+
+        setPagosRecibidos(totalPagado);
+        setPagosPendientes(totalPendiente);
+        setEnMora(totalMora);
+
+      } catch (err) {
+        console.error("Error cargando pagos:", err);
+        setError("Error al cargar los pagos del sistema");
+        setPagos([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarPagosInquilino();
   }, []);
+
+  // Estados de carga y error
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#f7f5ee] flex">
+        <aside className="fixed left-0 top-0 h-full w-64 bg-[#0b3b2c] text-white flex flex-col">
+          <div className="p-6">
+            <h1 className="text-2xl font-bold tracking-wide">ALQUILA 360</h1>
+          </div>
+
+          <nav className="flex-1 px-4 space-y-2">
+            <Link
+              href="/inquilino"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#164332]"
+            >
+              <span>🏠</span>
+              <span>Home</span>
+            </Link>
+            <Link
+              href="/inquilino/contratos"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#164332]"
+            >
+              <span>📄</span>
+              <span>Contrato</span>
+            </Link>
+            <Link
+              href="/inquilino/pagos"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[#4b7f5e]"
+            >
+              <span>💳</span>
+              <span>Pagos</span>
+            </Link>
+            <Link
+              href="/inquilino/ticket"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#164332]"
+            >
+              <span>🔧</span>
+              <span>Tickets</span>
+            </Link>
+            <Link
+              href="/inquilino/expensas"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#164332]"
+            >
+              <span>📊</span>
+              <span>Expensas</span>
+            </Link>
+            <Link
+              href="/inquilino/perfil"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#164332]"
+            >
+              <span>👤</span>
+              <span>Perfil</span>
+            </Link>
+          </nav>
+
+          <div className="p-4 border-t border-white/10">
+            <p className="text-sm text-slate-200 mb-2">Inquilino</p>
+            <button className="flex items-center gap-3 px-4 py-3 w-full rounded-lg hover:bg-[#164332] text-sm">
+              <span>🚪</span>
+              <span>Cerrar Sesión</span>
+            </button>
+          </div>
+        </aside>
+
+        <main className="ml-64 flex-1 p-8 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0b3b2c] mx-auto"></div>
+            <p className="mt-4 text-slate-600">Cargando pagos...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#f7f5ee] flex">
+        <aside className="fixed left-0 top-0 h-full w-64 bg-[#0b3b2c] text-white flex flex-col">
+          <div className="p-6">
+            <h1 className="text-2xl font-bold tracking-wide">ALQUILA 360</h1>
+          </div>
+
+          <nav className="flex-1 px-4 space-y-2">
+            <Link
+              href="/inquilino"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#164332]"
+            >
+              <span>🏠</span>
+              <span>Home</span>
+            </Link>
+            <Link
+              href="/inquilino/contratos"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#164332]"
+            >
+              <span>📄</span>
+              <span>Contrato</span>
+            </Link>
+            <Link
+              href="/inquilino/pagos"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[#4b7f5e]"
+            >
+              <span>💳</span>
+              <span>Pagos</span>
+            </Link>
+            <Link
+              href="/inquilino/ticket"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#164332]"
+            >
+              <span>🔧</span>
+              <span>Tickets</span>
+            </Link>
+            <Link
+              href="/inquilino/expensas"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#164332]"
+            >
+              <span>📊</span>
+              <span>Expensas</span>
+            </Link>
+            <Link
+              href="/inquilino/perfil"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#164332]"
+            >
+              <span>👤</span>
+              <span>Perfil</span>
+            </Link>
+          </nav>
+
+          <div className="p-4 border-t border-white/10">
+            <p className="text-sm text-slate-200 mb-2">Inquilino</p>
+            <button className="flex items-center gap-3 px-4 py-3 w-full rounded-lg hover:bg-[#164332] text-sm">
+              <span>🚪</span>
+              <span>Cerrar Sesión</span>
+            </button>
+          </div>
+        </aside>
+
+        <main className="ml-64 flex-1 p-8 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-red-500 text-lg mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-[#0b3b2c] text-white rounded-lg"
+            >
+              Reintentar
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   const getEstadoColor = (estado: string) => {
     switch (estado) {
@@ -158,7 +355,7 @@ export default function GestionPagos() {
         <header className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-3xl font-bold text-[#123528]">Mis Pagos</h2>
-            <p className="text-slate-600">Historial de cuotas y alquileres</p>
+            <p className="text-slate-600">Historial de cuotas y alquileres - {pagos.length} registros</p>
           </div>
           <button
             onClick={() => setShowHistorial(true)}
@@ -302,6 +499,12 @@ export default function GestionPagos() {
                 })}
               </tbody>
             </table>
+            
+            {pagos.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-slate-500">No se encontraron pagos registrados</p>
+              </div>
+            )}
           </div>
         </section>
 
@@ -472,6 +675,12 @@ function HistorialPagosModal({
                   ))}
                 </tbody>
               </table>
+              
+              {pagos.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-slate-500">No hay pagos para mostrar</p>
+                </div>
+              )}
             </div>
           </section>
 
@@ -564,7 +773,7 @@ function RealizarPagoModal({ pago, onClose }: { pago: Pago; onClose: () => void 
               <div>
                 <p className="font-medium">Monto a Pagar</p>
                 <p className="text-3xl font-extrabold text-amber-500">
-                  ${pago.monto}.500
+                  ${pago.monto}
                 </p>
               </div>
             </div>
@@ -626,7 +835,7 @@ function RealizarPagoModal({ pago, onClose }: { pago: Pago; onClose: () => void 
               <p className="text-xs md:text-sm text-slate-700">
                 Al confirmar, aceptas que has realizado o realizarás el pago de{" "}
                 <span className="font-semibold">
-                  ${pago.monto}.500
+                  ${pago.monto}
                 </span>{" "}
                 correspondiente al periodo{" "}
                 <span className="font-semibold">{pago.mes}</span> mediante el

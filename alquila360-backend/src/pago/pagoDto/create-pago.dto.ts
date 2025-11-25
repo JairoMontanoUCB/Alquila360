@@ -9,7 +9,12 @@ export class CreatePagoDto {
   @IsNumber()
   @Min(1)
   cuota_id: number;
-  
+
+  @IsNumber()
+  @Min(1)
+  @IsOptional()
+  inquilinoId?: number;
+
   @IsDate()
   @Type(() => Date)
   fecha_pago: Date;
