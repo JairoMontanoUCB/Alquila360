@@ -5,7 +5,8 @@ import Link from "next/link";
 
 // IMPORTAR SERVICES
 import { getContratoActual } from "@/services/contratoService";
-import { getProximoPago } from "@/services/pagoService";
+//import { getProximoPago } from "@/services/pagoService";
+import { pagoService } from "@/services/pagoService";
 import { getTicketsUsuario, crearTicket } from "@/services/ticketService";
 import { getExpensasPendientes } from "@/services/expensaService";
 
@@ -28,7 +29,8 @@ export default function InquilinoDashboard() {
         const contrato = await getContratoActual(userId);
         setContratoActivo(contrato);
 
-        const pago = await getProximoPago(contrato.id);
+        //const pago = await getProximoPago(contrato.id);
+        const pago = await pagoService.getProximoPago(userId);
         setProximoPago(pago);
 
         const tks = await getTicketsUsuario(userId);

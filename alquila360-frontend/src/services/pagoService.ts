@@ -112,6 +112,31 @@ class PagoService {
     return response.data;
   }
 
+  async getProximoPago(inquilinoId: number): Promise<PagoBackend | null> {
+    try {
+      const pagos = await this.getPagosByInquilino(inquilinoId);
+      
+      // Filtrar pagos pendientes y ordenar por fecha de vencimiento
+      const pagosPendientes = pagos.filter(pago => 
+        !pago.fecha_pago && pago.cuota?.fecha_vencimiento
+      );
+
+      if (pagosPendientes.length === 0) {
+        return null;
+      }
+
+      // Ordenar por fecha de vencimiento más cercana
+      const proximoPago = pagosPendientes.sort((a, b) => 
+        new Date(a.cuota.fecha_vencimiento).getTime() - new Date(b.cuota.fecha_vencimiento).getTime()
+      )[0];
+
+      return proximoPago;
+    } catch (error) {
+      console.error("Error al obtener próximo pago:", error);
+      return null;
+    }
+  }
+
   
 }
 
