@@ -90,6 +90,17 @@ export type PropietarioBackend = {
   rol: string;
   estado: string;
 };
+
+export const getContratoActual = async (userId: number) => {
+  try {
+    const res = await axios.get(`/contrato/actual/${userId}`);
+    return res.data;
+  } catch (error) {
+    console.error("Error obteniendo contrato actual:", error);
+    throw error;
+  }
+};
+
 //Contratos
 
   // Obtener todos los contratos

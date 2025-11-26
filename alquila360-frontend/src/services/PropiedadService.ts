@@ -84,6 +84,11 @@ export type RatePropiedadDto = {
   userId: number;
 };
 
+export const getPropiedadesDeInquilino = async (userId: number) => {
+  const res = await axios.get(`/propiedad/inquilino/${userId}`);
+  return res.data;
+};
+
 export const propiedadService = {
   // Obtener todas las propiedades
   async getPropiedades(): Promise<PropiedadBackend[]> {

@@ -274,7 +274,7 @@ export class ContratoService {
       "inquilino"
     ],
   });
-}
+    }
 
     async getContratosPorPropietario(propietarioId: number): Promise<Contrato[]> {
         return AppDataSource.getRepository(Contrato).find({
@@ -285,7 +285,7 @@ export class ContratoService {
             },
             relations: ["propiedad", "propiedad.propietario", "inquilino"]
           });
-        }
+    }
 
         
 }
