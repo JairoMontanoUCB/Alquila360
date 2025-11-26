@@ -37,7 +37,11 @@ export class Ticket {
   })
   estado: string;
 
+  @Column({ type: "text", name: "tipo_problema", nullable: true })
+  tipoProblema: string;
+
   @ManyToOne(() => User, user => user.ticketsAsignados, { nullable: true })
   @JoinColumn({ name: "tecnico_id" })
   tecnico: User | null;
 }
+

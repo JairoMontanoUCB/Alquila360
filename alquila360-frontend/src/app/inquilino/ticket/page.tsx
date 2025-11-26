@@ -151,6 +151,8 @@ useEffect(() => {
       formData.append("tipo", tipoProblema);
       formData.append("prioridad", prioridadNueva);
       formData.append("estado", estadoNuevo);
+      formData.append("tipoProblema", tipoProblema);
+
 
       if (fotoArchivo) {
         formData.append("fotos", fotoArchivo);
