@@ -22,6 +22,9 @@ export class CreateTicketDto {
 
   @IsOptional()
   tecnico_asignadoId?: number;
+ @IsEnum(["Plomeria", "Electricidad", "Cerrajeria","Pintura"])
+  tipoProblema: string;
+
 
   @IsOptional()
   UrlFoto?: string[];

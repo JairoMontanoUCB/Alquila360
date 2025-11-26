@@ -44,35 +44,8 @@ getContratoActivo(@Param("usuarioId") usuarioId: number) {
 }
 
 
-    @Get('propietario/:propietarioId')
-        async getContratosPorPropietario(@Param('propietarioId') propietarioId: number) {
-        return this.contratoService.getContratosPorPropietario(propietarioId);
-    }
 
-    @Get(':id/pdf')
-    async descargarContratoPDF(@Param('id') id: number, @Res() res: Response) {
-        try {
-            const contrato = await this.contratoService.getContratoById(id);
-            
-            if (!contrato || !contrato.archivo_pdf) {
-            throw new BusinessException('PDF no encontrado');
-            }
-            
-            // USAR LA RUTA COMPLETA DIRECTAMENTE
-            const filePath = contrato.archivo_pdf;
-            
-            if (!existsSync(filePath)) {
-            throw new BusinessException('Archivo PDF no encontrado');
-            }
-            
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', `attachment; filename=contrato-${id}.pdf`);
-            
-            return res.sendFile(filePath);
-        } catch (error) {
-            throw error;
-        }
-    }
+
 }
 
 

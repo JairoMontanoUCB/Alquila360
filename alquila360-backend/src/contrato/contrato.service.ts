@@ -263,11 +263,16 @@ export class ContratoService {
 
     async getContratoActivo(usuarioId: number) {
   return AppDataSource.getRepository(Contrato).findOne({
-    where: { 
+    where: {
       inquilino: { id: usuarioId },
-      estado: "activo"
+      estado: "activo",
     },
-    relations: ["propiedad", "inquilino"]
+    relations: [
+      "propiedad",
+      "propiedad.fotos",
+      "propiedad.propietario",
+      "inquilino"
+    ],
   });
 }
 

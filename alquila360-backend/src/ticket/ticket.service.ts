@@ -19,7 +19,8 @@ export class TicketService {
       estado: dto.estado,
       propiedad: { id: dto.propiedadId },
       usuario: { id: dto.inquilinoId },
-      tecnico: dto.tecnico_asignadoId ? { id: dto.tecnico_asignadoId } : null
+      tecnico: dto.tecnico_asignadoId ? { id: dto.tecnico_asignadoId } : null,
+      tipoProblema: dto.tipoProblema,
     });
 
     await repo.save(ticket);
@@ -43,7 +44,8 @@ export class TicketService {
       estado: "pendiente",
       usuario: usuario,
       propiedad: propiedad,
-      tecnico: null
+      tecnico: null,
+      tipoProblema: data.tipoProblema,
     });
 
     await ticketRepo.save(ticket);
