@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
+import { contratoService, ContratoBackend, CreateContratoDto, PropiedadBackend, InquilinoBackend } from "../../../services/ContratoService";
 import SidebarAdministrador from "../../components/sideBarAdministrador";
 
 const activeLabel = "Contratos";
@@ -24,27 +25,6 @@ type Contrato = {
   estado: EstadoContrato;
 };
 
-const contratosIniciales: Contrato[] = [
-  {
-    id: "C-001",
-    propiedad: "Av. Principal 123, Piso 5",
-    inquilino: "María González",
-    propietario: "Juan Carlos Martínez",
-    fechaInicio: "2024-01-01",
-    fechaFin: "2024-12-31",
-    montoAlquiler: "85000",
-    montoGarantia: "170000",
-    frecuenciaCobro: "Mensual",
-    numeroCuotas: "12",
-    diaVencimiento: "10",
-    penalidades:
-      "Mora del 2% por día de atraso en el pago. El locatario será responsable de los costos de reparación por daños causados.",
-    clausulas:
-      "El locatario se compromete a mantener la propiedad en buen estado. No se permiten modificaciones estructurales sin autorización escrita. Los gastos de servicios públicos correrán por cuenta del locatario.",
-    estado: "Vigente",
-  },
-];
-
 function formatearFechaBonita(fecha: string) {
   if (!fecha) return "-";
   const d = new Date(fecha);
@@ -64,37 +44,101 @@ function formatearMoneda(valor: string) {
 }
 
 export default function ContratosPage() {
-  const [contratos, setContratos] = useState<Contrato[]>(contratosIniciales);
+  // Datos dinamicos
+  const [contratos, setContratos] = useState<Contrato[]>([]);
+  const [propiedades, setPropiedades] = useState<PropiedadBackend[]>([]);
+  const [inquilinos, setInquilinos] = useState<InquilinoBackend[]>([]);
 
-  const [selectedContrato, setSelectedContrato] = useState<Contrato | null>(
-    null
-  );
-
+  // Estados para UI
+  const [selectedContrato, setSelectedContrato] = useState<Contrato | null>(null);
   const [openFormModal, setOpenFormModal] = useState(false);
   const [openViewModal, setOpenViewModal] = useState(false);
   const [formMode, setFormMode] = useState<"crear" | "editar" | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // --- STATE DEL FORM ---
   const [formPropiedad, setFormPropiedad] = useState("");
   const [formInquilino, setFormInquilino] = useState("");
   const [formPropietario, setFormPropietario] = useState("");
-
   const [formFechaInicio, setFormFechaInicio] = useState("");
   const [formFechaFin, setFormFechaFin] = useState("");
-
   const [formMontoAlquiler, setFormMontoAlquiler] = useState("85000");
   const [formMontoGarantia, setFormMontoGarantia] = useState("170000");
-
   const [formFrecuenciaCobro, setFormFrecuenciaCobro] = useState("Mensual");
   const [formNumeroCuotas, setFormNumeroCuotas] = useState("12");
   const [formDiaVencimiento, setFormDiaVencimiento] = useState("10");
-
   const [formPenalidades, setFormPenalidades] = useState(
     "Ej: Mora del 2% por día de atraso. Costo de reparaciones por daños..."
   );
   const [formClausulas, setFormClausulas] = useState(
     "Agregue cualquier cláusula adicional del contrato..."
   );
+  
+  useEffect(() => {
+    cargarDatosIniciales();
+  }, []);
+
+  const cargarDatosIniciales = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+  
+      // Cargar todos los datos
+      const [contratosData, propiedadesData, inquilinosData] = await Promise.all([
+        contratoService.getContratos(),
+        contratoService.getPropiedadesDisponibles(),
+        contratoService.getInquilinos()        
+      ]);
+  
+      // Asegurar que sean arrays
+      const contratosArray = Array.isArray(contratosData) ? contratosData : [];
+      const propiedadesArray = Array.isArray(propiedadesData) ? propiedadesData as PropiedadBackend[] : [];
+      const inquilinosArray = Array.isArray(inquilinosData) ? inquilinosData as InquilinoBackend[] : [];
+  
+      // CONVERTIR CONTRATOS 
+      let contratosFrontend: Contrato[] = [];
+      
+      if (contratosArray.length > 0) {
+        contratosFrontend = contratosArray.map((contrato, index) => {
+          // BUSCAR PROPIEDAD
+          const propiedadEncontrada = propiedadesArray.find(p => p.id === contrato.id_propiedad);
+
+          const inquilinoEncontrado = contrato.inquilino;
+  
+          return {
+            id: `C-${String(contrato.id).padStart(3, "0")}`,
+            propiedad: propiedadEncontrada?.direccion || `Propiedad ID: ${contrato.id_propiedad}`,
+            inquilino: inquilinoEncontrado ? 
+              `${inquilinoEncontrado.nombre} ${inquilinoEncontrado.apellido}` : 
+              'Inquilino no disponible',
+            propietario: propiedadEncontrada?.propietario ?
+              `${propiedadEncontrada.propietario.nombre} ${propiedadEncontrada.propietario.apellido}` :
+              'Propietario no disponible',
+            fechaInicio: contrato.fecha_inicio,
+            fechaFin: contrato.fecha_fin,
+            montoAlquiler: contrato.monto_mensual?.toString() || "0",
+            montoGarantia: contrato.garantia?.toString() || "0",
+            frecuenciaCobro: "Mensual",
+            numeroCuotas: "12", 
+            diaVencimiento: "10",
+            penalidades: "Mora del 2% por día de atraso...",
+            clausulas: "El locatario se compromete...",
+            estado: contrato.estado === 'activo' ? 'Vigente' : 'Finalizado' as EstadoContrato 
+          };
+        });
+      }
+      
+      setContratos(contratosFrontend);
+      setPropiedades(propiedadesArray);
+      setInquilinos(inquilinosArray);
+      
+    } catch (err: any) {
+      setError(`Error cargando datos: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // ---- HELPERS PARA FORM ----
   const resetForm = () => {
@@ -109,14 +153,17 @@ export default function ContratosPage() {
     setFormNumeroCuotas("12");
     setFormDiaVencimiento("10");
     setFormPenalidades(
-      "Ej: Mora del 2% por día de atraso. Costo de reparaciones por daños..."
+      "Mora del 2% por día de atraso. Costo de reparaciones por daños..."
     );
-    setFormClausulas(
-      "Agregue cualquier cláusula adicional del contrato..."
-    );
+    setFormClausulas(`    1. El inquilino se compromete a pagar el monto mensual acordado en la fecha establecida.
+    2. El propietario se compromete a mantener la propiedad en condiciones habitables.
+    3. Cualquier daño a la propiedad será responsabilidad del inquilino, salvo desgaste por uso normal.
+    4. El contrato podrá ser renovado previo acuerdo entre ambas partes.
+    5. Cualquier disputa será resuelta conforme a las leyes vigentes.
+    `);
   };
 
-  const cargarFormDesdeContrato = (c: Contrato) => {
+    const cargarFormDesdeContrato = (c: Contrato) => {
     setFormPropiedad(c.propiedad);
     setFormInquilino(c.inquilino);
     setFormPropietario(c.propietario);
@@ -161,64 +208,86 @@ export default function ContratosPage() {
     setOpenFormModal(true);
   };
 
-  // ---- GUARDAR CONTRATO (CREAR / EDITAR) ----
-  const guardarContrato = () => {
-    if (!formPropiedad || !formInquilino) {
-      alert("Completa al menos Propiedad e Inquilino para guardar el contrato.");
+  // Crear contrato en backend
+const crearContratoBackend = async () => {
+  try {
+    
+    // Validaciones
+    if (!formPropiedad || !formInquilino || !formFechaInicio || !formFechaFin) {
+      alert("Por favor completa todos los campos obligatorios");
       return;
     }
 
-    if (formMode === "crear") {
-      const nextNumber = contratos.length + 1;
-      const nuevoId = `C-${String(nextNumber).padStart(3, "0")}`;
+    // Encontrar los IDs basados en la selección
+    const propiedadSeleccionada = propiedades.find(p => 
+      p.direccion === formPropiedad
+    );
+    const inquilinoSeleccionado = inquilinos.find(i => 
+      `${i.nombre} ${i.apellido}` === formInquilino
+    );
 
-      const nuevoContrato: Contrato = {
-        id: nuevoId,
-        propiedad: formPropiedad,
-        inquilino: formInquilino,
-        propietario: formPropietario || "Propietario sin definir",
-        fechaInicio: formFechaInicio,
-        fechaFin: formFechaFin,
-        montoAlquiler: formMontoAlquiler,
-        montoGarantia: formMontoGarantia,
-        frecuenciaCobro: formFrecuenciaCobro,
-        numeroCuotas: formNumeroCuotas,
-        diaVencimiento: formDiaVencimiento,
-        penalidades: formPenalidades,
-        clausulas: formClausulas,
-        estado: "Vigente",
-      };
-
-      setContratos((prev) => [...prev, nuevoContrato]);
-      setSelectedContrato(nuevoContrato);
+    if (!propiedadSeleccionada || !inquilinoSeleccionado) {
+      alert("Por favor selecciona una propiedad e inquilino válidos");
+      return;
     }
 
-    if (formMode === "editar" && selectedContrato) {
-      const actualizado: Contrato = {
-        ...selectedContrato,
-        propiedad: formPropiedad,
-        inquilino: formInquilino,
-        propietario: formPropietario,
-        fechaInicio: formFechaInicio,
-        fechaFin: formFechaFin,
-        montoAlquiler: formMontoAlquiler,
-        montoGarantia: formMontoGarantia,
-        frecuenciaCobro: formFrecuenciaCobro,
-        numeroCuotas: formNumeroCuotas,
-        diaVencimiento: formDiaVencimiento,
-        penalidades: formPenalidades,
-        clausulas: formClausulas,
-      };
+    const contratoData: CreateContratoDto = {
+      propiedadId: propiedadSeleccionada.id,
+      inquilinoId: inquilinoSeleccionado.id,
+      monto_mensual: Number(formMontoAlquiler),
+      fecha_inicio: formFechaInicio,
+      fecha_fin: formFechaFin
+    };
+    
+    // Llamar al servicio para crear en el backend
+    const nuevoContrato = await contratoService.registrarContrato(contratoData);
 
-      setContratos((prev) =>
-        prev.map((c) => (c.id === actualizado.id ? actualizado : c))
-      );
-      setSelectedContrato(actualizado);
-    }
-
+    // Recargar datos
+    await cargarDatosIniciales();
+    
     setOpenFormModal(false);
-    setFormMode(null);
-  };
+    resetForm();
+    
+  } catch (error: any) {
+    alert(`Error al crear el contrato: ${error.response?.data?.message || error.message}`);
+  }
+};
+
+// ---- GUARDAR CONTRATO (CREAR / EDITAR) ----
+const guardarContrato = async () => {
+
+  // Validaciones
+  if (!formPropiedad || !formInquilino || !formFechaInicio || !formFechaFin) {
+    alert("Completa todos los campos obligatorios: Propiedad, Inquilino, Fechas de inicio y fin.");
+    return;
+  }
+
+  try {
+    // SOLO para crear - llamar a la función del backend
+    if (formMode === "crear") {
+      await crearContratoBackend();
+    } else {
+      // Para editar, por ahora mensaje temporal
+      alert("La edición de contratos estará disponible pronto");
+      setOpenFormModal(false);
+      setFormMode(null);
+    }
+  } catch (error: any) {
+    console.error(" Error en guardarContrato:", error);
+    alert(`Error: ${error.response?.data?.message || error.message}`);
+  }
+};
+
+const descargarPDF = async (contratoId: string) => {
+  try {
+    const idNumerico = contratoId.replace('C-', '');
+    
+    await contratoService.descargarContratoPDF(Number(idNumerico));
+  } catch (error: any) {
+    console.error('Error completo:', error);
+    alert(`Error al descargar el PDF: ${error.response?.data?.message || error.message}`);
+  }
+};
 
   return (
     <div className="min-h-screen flex bg-[#0b3b2c] text-slate-900">
@@ -226,7 +295,7 @@ export default function ContratosPage() {
 
       {/* CONTENIDO PRINCIPAL */}
       <section className="flex-1 bg-[#f7f5ee] px-10 py-8 overflow-y-auto">
-        <header className="mb-4flex justify-between items-start flex mb-4 justify-between">
+        <header className="mb-4 flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-extrabold text-[#123528]">
               Contratos
@@ -243,6 +312,9 @@ export default function ContratosPage() {
             Nuevo Contrato
           </button>
         </header>
+
+        {loading && <p className="text-center py-4">Cargando contratos...</p>}
+        {error && <p className="text-red-500 text-center py-4">{error}</p>}
 
         {/* TABLA CONTRATOS VIGENTES */}
         <div className="bg-white border border-slate-300 rounded-xl overflow-hidden shadow-sm mb-6">
@@ -269,7 +341,11 @@ export default function ContratosPage() {
                   <td className="p-3">{formatearFechaBonita(c.fechaFin)}</td>
                   <td className="p-3">{formatearMoneda(c.montoAlquiler)}</td>
                   <td className="p-3">
-                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-300">
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${
+                      c.estado === 'Vigente' 
+                        ? 'bg-emerald-100 text-emerald-700 border-emerald-300' 
+                        : 'bg-gray-100 text-gray-700 border-gray-300'
+                    }`}>
                       {c.estado}
                     </span>
                   </td>
@@ -288,8 +364,8 @@ export default function ContratosPage() {
                   </td>
                 </tr>
               ))}
-
-              {contratos.length === 0 && (
+              
+              {contratos.length === 0 && !loading &&(
                 <tr>
                   <td colSpan={8} className="p-4 text-center text-slate-400">
                     No hay contratos vigentes para mostrar.
@@ -501,9 +577,13 @@ export default function ContratosPage() {
               <h3 className="font-semibold text-[#123528] mb-3">
                 CLÁUSULAS ADICIONALES
               </h3>
-              <div className="border border-emerald-900/40 rounded-2xl p-4 text-sm text-slate-700 whitespace-pre-line">
+            <div
+                className="border border-emerald-900/40 rounded-2xl p-4 text-sm text-slate-700 whitespace-pre-line"
+
+              >
                 {selectedContrato.clausulas}
               </div>
+
             </section>
 
             {/* FIRMAS */}
@@ -532,8 +612,11 @@ export default function ContratosPage() {
 
             {/* BOTONES ABAJO */}
             <div className="flex justify-end gap-3 mt-6">
-              <button className="px-4 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-sm font-medium">
-                Imprimir
+              <button 
+                  onClick={() => descargarPDF(selectedContrato.id)}
+                  className="px-4 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-sm font-medium"
+              >
+                  Imprimir
               </button>
               <button
                 onClick={abrirEditorDesdeVista}
@@ -571,55 +654,74 @@ export default function ContratosPage() {
               </button>
             </div>
 
-            {/* PARTES DEL CONTRATO */}
+            {/* PARTES DEL CONTRATO - ACTUALIZADO CON DATOS DINÁMICOS */}
             <section className="mb-6 border border-emerald-900/40 rounded-2xl bg-[#f9f6ef] p-5 space-y-4">
               <h3 className="font-semibold text-[#123528] text-lg mb-1">
                 Partes del Contrato
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Propiedad - DINÁMICO */}
                 <div>
-                  <p className="text-sm font-medium text-slate-700">
-                    Propiedad
-                  </p>
+                  <p className="text-sm font-medium text-slate-700">Propiedad *</p>
                   <select
                     className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
                     value={formPropiedad}
-                    onChange={(e) => setFormPropiedad(e.target.value)}
+                    onChange={(e) => {
+                      setFormPropiedad(e.target.value);
+                      // Auto-completar propietario cuando se selecciona propiedad
+                      const propiedad = propiedades.find(p => p.direccion === e.target.value);
+                      if (propiedad) {
+                        setFormPropietario(`${propiedad.propietario.nombre} ${propiedad.propietario.apellido}`);
+                      }
+                    }}
+                    required
                   >
                     <option value="">Seleccionar propiedad</option>
-                    <option>Av. Principal 123, Piso 5</option>
-                    <option>Calle Secundaria 456</option>
-                    <option>Plaza Central 789, Apto 12</option>
+                    {propiedades.map(propiedad => (
+                      <option key={propiedad.id} value={propiedad.direccion}>
+                        {propiedad.direccion} - {propiedad.tipo}
+                      </option>
+                    ))}
                   </select>
+                  {propiedades.length === 0 && !loading && (
+                    <p className="text-xs text-red-500 mt-1">No hay propiedades disponibles</p>
+                  )}
                 </div>
+
+                {/* Inquilino - DINÁMICO */}
                 <div>
-                  <p className="text-sm font-medium text-slate-700">
-                    Inquilino
-                  </p>
+                  <p className="text-sm font-medium text-slate-700">Inquilino *</p>
                   <select
                     className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
                     value={formInquilino}
                     onChange={(e) => setFormInquilino(e.target.value)}
+                    required
                   >
                     <option value="">Seleccionar inquilino</option>
-                    <option>María González</option>
-                    <option>Carlos Rodríguez</option>
-                    <option>Ana Martínez</option>
+                    {inquilinos.map(inquilino => (
+                      <option 
+                        key={inquilino.id} 
+                        value={`${inquilino.nombre} ${inquilino.apellido}`}
+                      >
+                        {inquilino.nombre} {inquilino.apellido}
+                      </option>
+                    ))}
                   </select>
+                  {inquilinos.length === 0 && !loading && (
+                    <p className="text-xs text-red-500 mt-1">No hay inquilinos disponibles</p>
+                  )}
                 </div>
+
+                {/* Propietario (auto-completado) - DINÁMICO */}
                 <div>
-                  <p className="text-sm font-medium text-slate-700">
-                    Propietario
-                  </p>
-                  <select
+                  <p className="text-sm font-medium text-slate-700">Propietario</p>
+                  <input
+                    type="text"
                     className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
                     value={formPropietario}
-                    onChange={(e) => setFormPropietario(e.target.value)}
-                  >
-                    <option value="">Seleccionar propietario</option>
-                    <option>Juan Carlos Martínez</option>
-                    <option>Empresa Inmobiliaria SRL</option>
-                  </select>
+                    readOnly
+                    placeholder="Se auto-completa al seleccionar propiedad"
+                  />
                 </div>
               </div>
             </section>
@@ -632,103 +734,49 @@ export default function ContratosPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium text-slate-700">
-                    Fecha de Inicio
+                    Fecha de Inicio *
                   </p>
                   <input
                     type="date"
                     className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
                     value={formFechaInicio}
                     onChange={(e) => setFormFechaInicio(e.target.value)}
+                    required
                   />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-slate-700">
-                    Fecha de Finalización
+                    Fecha de Finalización *
                   </p>
                   <input
                     type="date"
                     className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
                     value={formFechaFin}
                     onChange={(e) => setFormFechaFin(e.target.value)}
+                    required
                   />
                 </div>
               </div>
             </section>
 
-            {/* INFORMACIÓN FINANCIERA */}
-            <section className="mb-6 border border-emerald-900/40 rounded-2xl p-5 space-y-4">
-              <h3 className="font-semibold text-[#123528] text-lg">
-                Información Financiera
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-slate-700">
-                    Monto del Alquiler ($/mes)
-                  </p>
-                  <input
-                    className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
-                    value={formMontoAlquiler}
-                    onChange={(e) => setFormMontoAlquiler(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-700">
-                    Monto de la Garantía ($)
-                  </p>
-                  <input
-                    className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
-                    value={formMontoGarantia}
-                    onChange={(e) => setFormMontoGarantia(e.target.value)}
-                  />
-                </div>
-              </div>
-            </section>
+          {/* INFORMACIÓN FINANCIERA */}
+          <section className="mb-6 border border-emerald-900/40 rounded-2xl p-5 space-y-4">
+            <h3 className="font-semibold text-[#123528] text-lg">
+              Información Financiera
+            </h3>
 
-            {/* DETALLE DE CUOTAS */}
-            <section className="mb-6 border border-emerald-900/40 rounded-2xl p-5 space-y-4">
-              <h3 className="font-semibold text-[#123528] text-lg">
-                Detalle de Cuotas
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-slate-700">
-                    Frecuencia de Cobro
-                  </p>
-                  <select
-                    className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
-                    value={formFrecuenciaCobro}
-                    onChange={(e) => setFormFrecuenciaCobro(e.target.value)}
-                  >
-                    <option>Mensual</option>
-                    <option>Trimestral</option>
-                    <option>Anual</option>
-                  </select>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-700">
-                    Número de Cuotas
-                  </p>
-                  <input
-                    className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
-                    value={formNumeroCuotas}
-                    onChange={(e) => setFormNumeroCuotas(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-700">
-                    Día de Vencimiento
-                  </p>
-                  <input
-                    className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
-                    value={formDiaVencimiento}
-                    onChange={(e) => setFormDiaVencimiento(e.target.value)}
-                  />
-                </div>
-              </div>
-              <p className="text-xs text-slate-500 mt-2">
-                Nota: Todas las cuotas tendrán el mismo valor mensual.
+            <div>
+              <p className="text-sm font-medium text-slate-700">
+                Monto del Alquiler ($/mes) *
               </p>
-            </section>
+              <input
+                className="mt-1 w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm"
+                value={formMontoAlquiler}
+                onChange={(e) => setFormMontoAlquiler(e.target.value)}
+                required
+              />
+            </div>
+          </section>
 
             {/* PENALIDADES */}
             <section className="mb-6 space-y-3">
@@ -743,14 +791,14 @@ export default function ContratosPage() {
             </section>
 
             {/* CLÁUSULAS ADICIONALES */}
-            <section className="mb-6 space-y-3">
+                <section className="mb-6 space-y-3">
               <h3 className="font-semibold text-[#123528] text-lg">
                 Cláusulas Adicionales
               </h3>
               <textarea
                 className="w-full rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm h-20"
                 value={formClausulas}
-                onChange={(e) => setFormClausulas(e.target.value)}
+                readOnly
               />
             </section>
 
@@ -766,7 +814,7 @@ export default function ContratosPage() {
                 onClick={guardarContrato}
                 className="px-5 py-2 rounded-lg bg-yellow-400 hover:bg-yellow-500 text-black text-sm font-semibold"
               >
-                Guardar Contrato
+                {formMode === "crear" ? "Crear Contrato" : "Guardar Cambios"}
               </button>
             </div>
           </div>

@@ -6,26 +6,101 @@ import { getTicketsUsuario, crearTicket } from "@/services/ticketService";
 import { getPropiedadesDeInquilino } from "@/services/propiedadService";
 
 
-interface Ticket {
+  return (
+    <aside className="w-64 bg-[#0b3b2c] text-white flex flex-col py-6 px-4">
+      <div
+        className="text-2xl font-extrabold tracking-wide mb-10 px-2 cursor-pointer"
+        onClick={() => router.push("/inquilino")}
+      >
+        ALQUILA 360
+      </div>
+
+      <nav className="flex-1 space-y-1">
+        {inquilinoMenu.map((item) => {
+          const active = pathname === item.path;
+          return (
+            <button
+              key={item.path}
+              onClick={() => router.push(item.path)}
+              className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition ${
+                active ? "bg-[#4b7f5e] font-semibold" : "hover:bg-[#164332]"
+              }`}
+            >
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      <div className="mt-6 px-2 text-xs text-slate-300">Inquilino</div>
+      <button className="mt-2 px-3 py-2 text-xs text-slate-200 hover:bg-[#164332] rounded-lg text-left">
+        Cerrar Sesion
+      </button>
+    </aside>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                  DATOS MOCK                                */
+/* -------------------------------------------------------------------------- */
+
+type Ticket = {
   id: string;
-  titulo: string;
+  prioridad: "Urgente" | "Media" | "Baja";
   descripcion: string;
   direccion: string;
   fecha: string;
-  tecnico: string;
   estado: "Abierto" | "En proceso" | "Cerrado";
-  prioridad: "Urgente" | "Media" | "Baja";
-  tipoProblema?: string;
-  subestado?: string;
-  fechaCreacion?: string;
-  fechaCerrado?: string;
-  inquilino?: string;
-  historial?: Array<{
-    fecha: string;
-    accion: string;
-    detalle: string;
-  }>;
-}
+  tecnico: string;
+  nota: string;
+};
+
+const ticketsMock: Ticket[] = [
+  {
+    id: "TKT-001",
+    prioridad: "Urgente",
+    descripcion: "Fuga de agua en el baño principal",
+    direccion: "Calle Secundaria 456",
+    fecha: "2024-11-18",
+    estado: "Abierto",
+    tecnico: "Carlos",
+    nota: "No arreglado",
+  },
+  {
+    id: "TKT-002",
+    prioridad: "Media",
+    descripcion: "La puerta de entrada no cierra correctamente",
+    direccion: "Calle Secundaria 456",
+    fecha: "2024-11-15",
+    estado: "En proceso",
+    tecnico: "Carlos",
+    nota: "Derivado",
+  },
+  {
+    id: "TKT-003",
+    prioridad: "Baja",
+    descripcion: "Pintura descascarada en la pared del dormitorio",
+    direccion: "Calle Secundaria 456",
+    fecha: "2024-11-10",
+    estado: "Abierto",
+    tecnico: "Carlos",
+    nota: "Sin revision",
+  },
+];
+
+/* -------------------------------------------------------------------------- */
+/*                              PAGINA DE TICKETS                             */
+/* -------------------------------------------------------------------------- */
+
+export default function TicketsInquilinoPage() {
+  const [showHistorial, setShowHistorial] = useState(false);
+  const [showReportar, setShowReportar] = useState(false);
+  const [reportStep, setReportStep] = useState<1 | 2>(1);
+
+  const [openDetalle, setOpenDetalle] = useState(false);
+  const [ticketSeleccionado, setTicketSeleccionado] = useState<Ticket | null>(
+    null
+  );
 
 export default function GestionTickets() {
   const [propiedades, setPropiedades] = useState<any[]>([]);
@@ -294,9 +369,9 @@ useEffect(() => {
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="ml-64 flex-1 p-8">
-        <header className="flex items-center justify-between mb-8">
+      <section className="flex-1 bg-[#f7f5ee] px-10 py-8 overflow-y-auto">
+        {/* Header */}
+        <header className="mb-6 flex justify-between items-start">
           <div>
             <h2 className="text-3xl font-bold text-gray-800">Gestión de Tickets</h2>
             <p className="text-gray-600">
@@ -308,13 +383,15 @@ useEffect(() => {
               onClick={() => setModalHistorico(true)}
               className="px-6 py-2 bg-white border border-gray-300 text-gray-800 rounded-lg hover:bg-gray-50 transition font-semibold"
             >
-              Ver Histórico
+              <span>📊</span>
+              <span>Ver Historico</span>
             </button>
             <button
               onClick={() => setModalCrear(true)}
               className="px-6 py-2 bg-yellow-400 text-gray-800 rounded-lg hover:bg-yellow-500 transition font-semibold"
             >
-              Crear Ticket
+              <span>➕</span>
+              <span>Reportar Problema</span>
             </button>
           </div>
         </header>
@@ -341,15 +418,13 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Tickets por Prioridad */}
-        <div className="space-y-6">
-          {/* Urgentes */}
-          <div className="bg-white rounded-xl shadow-sm border-l-4 border-red-500 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-gray-800">Urgentes</h3>
-              <span className="w-8 h-8 bg-red-100 text-red-600 rounded-full flex items-center justify-center font-bold">
-                {getPrioridadCount("Urgente")}
-              </span>
+          <div className="px-6 py-4 space-y-4 text-sm">
+            {/* Resumen top */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <HistCard titulo="Total Cerrados" valor="5" />
+              <HistCard titulo="Urgentes" valor="2" />
+              <HistCard titulo="Medios" valor="2" />
+              <HistCard titulo="Bajos" valor="1" />
             </div>
 
             {tickets
@@ -413,15 +488,40 @@ useEffect(() => {
                 </div>
               ))}
           </div>
+        </ModalBase>
+      )}
 
-          {/* Medios */}
-          <div className="bg-white rounded-xl shadow-sm border-l-4 border-yellow-500 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-gray-800">Medios</h3>
-              <span className="w-8 h-8 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center font-bold">
-                {getPrioridadCount("Media")}
-              </span>
+      {/* ----------------------------- MODAL REPORTAR ----------------------------- */}
+      {showReportar && (
+        <ModalBase
+          onClose={() => {
+            setShowReportar(false);
+            setReportStep(1);
+          }}
+        >
+          <div className="px-6 py-4 border-b flex items-center justify-between">
+            <div>
+              <h2 className="font-bold text-sm">Reportar Problema</h2>
             </div>
+            <button
+              onClick={() => {
+                setShowReportar(false);
+                setReportStep(1);
+              }}
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="px-6 py-4 text-xs space-y-4">
+            {reportStep === 1 && (
+              <>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <p className="text-[11px] text-slate-600">
+                    Describe el problema de forma clara y detallada. Un tecnico
+                    sera asignado para revisar tu solicitud.
+                  </p>
+                </div>
 
             {tickets
               .filter((t) => t.prioridad === "Media" && t.estado !== "Cerrado")
@@ -485,14 +585,16 @@ useEffect(() => {
               ))}
           </div>
 
-          {/* Bajos */}
-          <div className="bg-white rounded-xl shadow-sm border-l-4 border-green-500 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-gray-800">Bajos</h3>
-              <span className="w-8 h-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center font-bold">
-                {getPrioridadCount("Baja")}
-              </span>
-            </div>
+                  <div>
+                    <p className="text-[11px] text-slate-500 mb-1">
+                      Descripcion del Problema *
+                    </p>
+                    <textarea
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs"
+                      rows={3}
+                      placeholder="Describe detalladamente el problema que estas experimentando..."
+                    />
+                  </div>
 
             {tickets
               .filter((t) => t.prioridad === "Baja" && t.estado !== "Cerrado")
@@ -664,8 +766,10 @@ useEffect(() => {
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              </>
+            )}
+          </div>
 
               <div className="mt-6 text-center">
                 <button
@@ -677,7 +781,7 @@ useEffect(() => {
               </div>
             </div>
           </div>
-        </div>
+        </ModalBase>
       )}
 
       {/* MODAL: Crear Ticket */}
@@ -695,6 +799,15 @@ useEffect(() => {
                 ✕
               </button>
             </div>
+            <button
+              onClick={() => {
+                setOpenDetalle(false);
+                setTicketSeleccionado(null);
+              }}
+            >
+              ✕
+            </button>
+          </div>
 
             <div className="p-6 space-y-6">
               <div>
@@ -740,8 +853,7 @@ useEffect(() => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1a5f4a]"
                 />
               </div>
-
-              <div className="grid grid-cols-3 gap-4">
+              <div className="border rounded-lg bg-white p-3 flex flex-col gap-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Tipo de Problema
@@ -772,7 +884,6 @@ useEffect(() => {
                     <option value="Urgente">Urgente</option>
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Estado
@@ -787,6 +898,7 @@ useEffect(() => {
                   </select>
                 </div>
               </div>
+            </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -814,6 +926,7 @@ useEffect(() => {
                   )}
                 </label>
               </div>
+            </div>
 
               <div className="flex gap-3 pt-4 border-t">
                 <button
@@ -885,6 +998,8 @@ useEffect(() => {
                   {ticketSeleccionado.descripcion}
                 </p>
               </div>
+            </div>
+          </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-gray-50 rounded-lg p-4">
@@ -997,7 +1112,11 @@ useEffect(() => {
             </div>
           </div>
         </div>
-      )}
+      </div>
+      <div className="space-y-3">{children}</div>
+    </section>
+  );
+}
 
       {/* MODAL: Editar Ticket */}
       {modalEditar && ticketSeleccionado && (

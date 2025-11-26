@@ -111,12 +111,13 @@ useEffect(() => {
       <main className="ml-64 flex-1 p-8">
         <header className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-3xl font-bold text-gray-800">Contratos</h2>
-            <p className="text-gray-600">Historial de contratos de alquiler</p>
+            <h1 className="text-3xl font-extrabold text-[#123528]">
+              Mis Contratos
+            </h1>
+            <p className="text-sm text-slate-500">
+              Lista de tus contratos de alquiler
+            </p>
           </div>
-          <button className="px-6 py-2 bg-yellow-400 text-gray-800 rounded-lg hover:bg-yellow-500 transition font-semibold">
-            Nuevo Contrato
-          </button>
         </header>
 
         {/* TABLA */}
@@ -189,7 +190,7 @@ useEffect(() => {
           <h3 className="text-xl font-semibold text-gray-800 mb-4">Historial de Contratos Finalizados</h3>
           <p className="text-gray-600">No hay contratos finalizados para mostrar.</p>
         </div>
-      </main>
+      </section>
     </div>
   );
 }

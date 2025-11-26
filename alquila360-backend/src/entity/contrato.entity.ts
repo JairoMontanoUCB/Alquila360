@@ -18,7 +18,7 @@ export class Contrato {
   @Column()
   id_propiedad: number;
 
-  @ManyToOne(() => User, user => user.contratos)
+  @ManyToOne(() => User, user => user.contratos, { eager: true })
   inquilino: User;
 
   @Column({ type: "date" })

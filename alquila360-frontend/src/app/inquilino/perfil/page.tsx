@@ -2,6 +2,37 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
+
+/* -------------------------------------------------------------------------- */
+/*                                  SIDEBAR                                   */
+/* -------------------------------------------------------------------------- */
+
+const inquilinoMenu = [
+  { label: "Home", path: "/inquilino" },
+  { label: "Contrato", path: "/inquilino/contrato" },
+  { label: "Pagos", path: "/inquilino/pagos" },
+  { label: "Tickets", path: "/inquilino/tickets" },
+  { label: "Expensas", path: "/inquilino/expensas" },
+  { label: "Perfil", path: "/inquilino/perfil" },
+];
+
+function SidebarInquilino() {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  return (
+    <aside className="w-64 bg-[#0b3b2c] text-white flex flex-col py-6 px-4 min-h-screen">
+      <div
+        className="text-2xl font-extrabold tracking-wide mb-8 px-2 cursor-pointer"
+        onClick={() => router.push("/inquilino")}
+      >
+        ALQUILA 360
+      </div>
+
+      <nav className="flex-1 space-y-1">
+        {inquilinoMenu.map((item) => {
+          const active = pathname === item.path;
 
 interface Usuario {
   id: number;
@@ -163,8 +194,24 @@ export default function MiPerfil() {
               </button>
             </div>
           </div>
+
+          {/* Botones */}
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              onClick={handleGuardar}
+              className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold"
+            >
+              Guardar cambios
+            </button>
+            <button
+              onClick={handleCerrarSesion}
+              className="px-5 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-semibold"
+            >
+              Cerrar sesion
+            </button>
+          </div>
         </div>
-      </main>
+      </section>
     </div>
   );
 }
