@@ -276,4 +276,13 @@ export class ContratoService {
   });
 }
 
+async getContratoPorInquilino(inquilinoId: number) {
+  return AppDataSource.getRepository(Contrato).findOne({
+    where: { inquilino_id: inquilinoId },
+    relations: ["propiedad"],
+  });
+}
+
+
+
 }

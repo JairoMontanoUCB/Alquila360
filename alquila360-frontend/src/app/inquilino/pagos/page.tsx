@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { PagoBackend, pagoService } from "@/services/pagoService";
+import { contratoService } from "@/services/contratoService";
+import { cuotaService } from "@/services/cuotaService";
 
 interface Pago {
   id: string;
@@ -26,94 +28,61 @@ export default function GestionPagos() {
   const [pagoSeleccionado, setPagoSeleccionado] = useState<Pago | null>(null);
 
   // CONEXIÓN CON BACKEND PARA INQUILINO
-  useEffect(() => {
-    const cargarPagosInquilino = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const userData = localStorage.getItem('user');
-      if (!userData) {
-        setError("Usuario no autenticado");
-        return;
-      }
-      
+ useEffect(() => {
+  const cargarCuotasInquilino = async () => {
+    try {
+      setLoading(true);
+
+      const userData = localStorage.getItem("user");
+      if (!userData) return;
+
       const user = JSON.parse(userData);
       const inquilinoId = user.id;
-      
-      console.log("Cargando pagos para inquilino ID:", inquilinoId);
-      
-        
-        // Obtener todos los pagos del backend
-        const todosLosPagos = await pagoService.getAllPagos();
-        
-        // Filtrar pagos del inquilino actual
-        const pagosInquilino = todosLosPagos.filter(pago => 
-        pago.inquilino?.id === inquilinoId
-        );
-        console.log("Pagos del inquilino:", pagosInquilino);
-        
-        // Transformar datos del backend al formato del frontend
-        const pagosTransformados: Pago[] = pagosInquilino.map((pago: PagoBackend) => {
-          const fechaPago = new Date(pago.fecha_pago);
-          
-          // Calcular fecha límite basada en la fecha de pago + 30 días
-          const fechaVencimiento = new Date(fechaPago);
-          fechaVencimiento.setDate(fechaVencimiento.getDate() + 30);
-          
-          // Determinar estado basado en la cuota y fechas
-          let estado: "Pagado" | "Pendiente" | "En Mora";
-          if (pago.cuota?.estado === 'pagada') {
-            estado = "Pagado";
-          } else if (fechaVencimiento < new Date()) {
-            estado = "En Mora";
-          } else {
-            estado = "Pendiente";
-          }
 
-          return {
-            id: pago.id.toString(),
-            mes: fechaPago.toLocaleDateString('es-ES', { 
-              month: 'long', 
-              year: 'numeric' 
-            }),
-            monto: pago.monto,
-            fechaLimite: fechaVencimiento.toISOString().split('T')[0],
-            fechaPago: pago.cuota?.estado === 'pagada' ? fechaPago.toISOString().split('T')[0] : null,
-            estado: estado
-          };
-        });
+      // 1. Buscar contrato del inquilino
+      const contrato = await contratoService.getContratoDeInquilino(inquilinoId);
+      const contratoId = contrato.id;
 
-        setPagos(pagosTransformados);
+      // 2. Obtener cuotas normales del contrato
+      const cuotas = await cuotaService.getCuotasPorContrato(contratoId);
 
-        // Calcular estadísticas con datos reales del backend
-        const totalPagado = pagosTransformados
-          .filter(p => p.estado === "Pagado")
-          .reduce((sum, p) => sum + p.monto, 0);
-        
-        const totalPendiente = pagosTransformados
-          .filter(p => p.estado === "Pendiente")
-          .reduce((sum, p) => sum + p.monto, 0);
-        
-        const totalMora = pagosTransformados
-          .filter(p => p.estado === "En Mora")
-          .reduce((sum, p) => sum + p.monto, 0);
+      // 3. Mapear al formato del frontend
+      const pagosTransformados = cuotas.map((c) => {
+        const fechaV = new Date(c.fecha_vencimiento);
+        let estadoFront = "Pendiente";
 
-        setPagosRecibidos(totalPagado);
-        setPagosPendientes(totalPendiente);
-        setEnMora(totalMora);
+        if (c.estado === "pagada") estadoFront = "Pagado";
+        if (c.estado === "vencida") estadoFront = "En Mora";
 
-      } catch (err) {
-        console.error("Error cargando pagos:", err);
-        setError("Error al cargar los pagos del sistema");
-        setPagos([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+        return {
+          id: c.id.toString(),
+          mes: fechaV.toLocaleDateString("es-ES", { month: "long", year: "numeric" }),
+          monto: Number(c.monto),
+          fechaLimite: c.fecha_vencimiento,
+          fechaPago: c.fecha_pago ?? null,
+          estado: estadoFront as "Pagado" | "Pendiente" | "En Mora",
+        };
+      });
 
-    cargarPagosInquilino();
-  }, []);
+      // guardar
+      setPagos(pagosTransformados);
+
+      // KPIs
+      setPagosRecibidos(pagosTransformados.filter(x => x.estado === "Pagado").reduce((a, x) => a + x.monto, 0));
+      setPagosPendientes(pagosTransformados.filter(x => x.estado === "Pendiente").reduce((a, x) => a + x.monto, 0));
+      setEnMora(pagosTransformados.filter(x => x.estado === "En Mora").reduce((a, x) => a + x.monto, 0));
+
+    } catch (e) {
+      console.error("Error cargando cuotas:", e);
+      setError("No se pudieron cargar las cuotas");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  cargarCuotasInquilino();
+}, []);
+
 
   // Estados de carga y error
   if (loading) {
@@ -724,10 +693,32 @@ function HistorialPagosModal({
 function RealizarPagoModal({ pago, onClose }: { pago: Pago; onClose: () => void }) {
   const [referencia, setReferencia] = useState("");
 
-  const handleConfirm = () => {
-    console.log("Confirmar pago", pago.id, referencia);
+ const handleConfirm = async () => {
+  try {
+    if (!referencia || referencia.trim() === "") {
+      alert("Debes ingresar el número de comprobante");
+      return;
+    }
+
+    // Fecha de pago: hoy
+    const hoy = new Date().toISOString().split("T")[0];
+
+    // Llamar al backend para actualizar la cuota como pagada
+    await cuotaService.pagarCuota(Number(pago.id), hoy);
+
+    alert("Pago registrado correctamente");
+
     onClose();
-  };
+
+    // Recargar para actualizar tabla
+    window.location.reload();
+    
+  } catch (error) {
+    console.error("Error confirmando pago:", error);
+    alert("Ocurrió un error al registrar el pago");
+  }
+};
+
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 px-4 md:px-10">

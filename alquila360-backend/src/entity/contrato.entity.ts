@@ -18,8 +18,16 @@ export class Contrato {
   @Column()
   id_propiedad: number;
 
+
+  // --------- ESTA ES LA PARTE CORREGIDA ---------
   @ManyToOne(() => User, user => user.contratos)
+  @JoinColumn({ name: "inquilino_id" })
   inquilino: User;
+
+  @Column()
+  inquilino_id: number;
+  // ----------------------------------------------
+
 
   @Column({ type: "date" })
   fecha_inicio: Date;

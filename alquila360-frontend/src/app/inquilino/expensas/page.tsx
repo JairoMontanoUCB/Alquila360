@@ -1,11 +1,15 @@
 "use client";
-import { useState, useEffect } from "react";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { contratoService } from "@/services/contratoService";
+import { cuotaService } from "@/services/cuotaService";
+
 
 interface Expensa {
   id: string;
   propiedad: string;
-  tipo: "Agua" | "Luz" | "Gas" | "Mantenimiento";
+tipo: "Mantenimiento",
   descripcion: string;
   monto: number;
   fecha: string;
@@ -16,47 +20,51 @@ export default function GestionExpensas() {
   const [totalExpensas, setTotalExpensas] = useState(400);
   const [pagadas, setPagadas] = useState(280);
   const [noPagadas, setNoPagadas] = useState(120);
-  useEffect(() => {
-    // Datos de ejemplo - conecta con tu backend
-    setExpensas([
-      {
-        id: "exp1",
-        propiedad: "Calle Secundaria 456",
-        tipo: "Agua",
-        descripcion: "Factura de agua del mes de noviembre",
-        monto: 45,
-        fecha: "2024-11-15",
-        estado: "Pagado"
-      },
-      {
-        id: "exp2",
-        propiedad: "Calle Secundaria 456",
-        tipo: "Luz",
-        descripcion: "Factura de electricidad del mes de noviembre",
-        monto: 120,
-        fecha: "2024-11-15",
-        estado: "No pagado"
-      },
-      {
-        id: "exp3",
-        propiedad: "Calle Secundaria 456",
-        tipo: "Gas",
-        descripcion: "Factura de gas del mes de noviembre",
-        monto: 3,
-        fecha: "2024-11-15",
-        estado: "Pagado"
-      },
-      {
-        id: "exp4",
-        propiedad: "Calle Secundaria 456",
-        tipo: "Mantenimiento",
-        descripcion: "Mantenimiento general del edificio",
-        monto: 20,
-        fecha: "2024-11-10",
-        estado: "Pagado"
-      }
-    ]);
-  }, []);
+ useEffect(() => {
+  const cargarExpensas = async () => {
+    try {
+      const userData = localStorage.getItem("user");
+      if (!userData) return;
+
+      const user = JSON.parse(userData);
+      const inquilinoId = user.id;
+
+      // 1. Obtener contrato
+      const contrato = await contratoService.getContratoDeInquilino(inquilinoId);
+      const contratoId = contrato.id;
+
+      // 2. Obtener expensas del backend
+      const expensasBackend = await cuotaService.getExpensasPorContrato(contratoId);
+
+      // 3. Mapear al frontend
+      const expensasFront: Expensa[] = expensasBackend.map((e) => ({
+  id: e.id.toString(),
+  propiedad: contrato.propiedad?.direccion ?? "Propiedad",
+  
+  // TS exige literal → usamos as const
+  tipo: "Mantenimiento" as const,
+
+  descripcion: `Expensa del ${e.fecha_vencimiento}`,
+  monto: Number(e.monto),
+  fecha: e.fecha_vencimiento,
+  estado: e.estado === "pagada" ? "Pagado" : "No pagado",
+}));
+
+      setExpensas(expensasFront);
+
+      // KPI's
+      setTotalExpensas(expensasFront.reduce((a, x) => a + x.monto, 0));
+      setPagadas(expensasFront.filter(x => x.estado === "Pagado").reduce((a, x) => a + x.monto, 0));
+      setNoPagadas(expensasFront.filter(x => x.estado !== "Pagado").reduce((a, x) => a + x.monto, 0));
+
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  cargarExpensas();
+}, []);
+
   const getTipoIcon = (tipo: string) => {
     switch (tipo) {
       case "Agua": return "💧";

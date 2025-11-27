@@ -38,6 +38,10 @@ getContratoActivo(@Param("usuarioId") usuarioId: number) {
   return this.contratoService.getContratoActivo(usuarioId);
 }
 
+@Get('/inquilino/:id')
+async getContratoPorInquilino(@Param('id') id: number) {
+  return this.contratoService.getContratoPorInquilino(id);
+}
 
 
 

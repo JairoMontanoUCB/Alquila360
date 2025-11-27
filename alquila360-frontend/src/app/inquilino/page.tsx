@@ -4,7 +4,7 @@ import { useState, useEffect, ChangeEvent } from "react";
 import Link from "next/link";
 
 // IMPORTAR SERVICES
-import { getContratoActual } from "@/services/contratoService";
+import { contratoService } from "@/services/contratoService";
 //import { getProximoPago } from "@/services/pagoService";
 import { pagoService } from "@/services/pagoService";
 import { getTicketsUsuario, crearTicket } from "@/services/ticketService";
@@ -21,29 +21,36 @@ export default function InquilinoDashboard() {
 
   // CARGAR DATOS REALES
   useEffect(() => {
-    const loadData = async () => {
+    const cargarDatosDashboard = async () => {
       try {
-        const userId = Number(localStorage.getItem("userId"));
-        if (!userId) return;
+        const userData = localStorage.getItem("user");
+        if (!userData) return;
 
-        const contrato = await getContratoActual(userId);
+        const user = JSON.parse(userData);
+        const inquilinoId = user.id;
+
+        // 🔥 1. OBTENER CONTRATO ACTUAL
+        const contrato = await contratoService.getContratoActual(inquilinoId);
         setContratoActivo(contrato);
 
-        //const pago = await getProximoPago(contrato.id);
-        const pago = await pagoService.getProximoPago(userId);
-        setProximoPago(pago);
+        // 🔥 2. OBTENER PRÓXIMO PAGO (si ya tienes backend)
+        // const pago = await pagoService.getProximoPago(inquilinoId);
+        // setProximoPago(pago);
 
-        const tks = await getTicketsUsuario(userId);
-        setTickets(tks);
+        // 🔥 3. OBTENER TICKETS DEL INQUILINO
+        const ticketsUsuario = await getTicketsUsuario(inquilinoId);
+        setTickets(ticketsUsuario);
 
-        const exp = await getExpensasPendientes(userId);
-        setExpensasPendientes(exp.total ?? 0);
+        // 🔥 4. OBTENER EXPENSAS PENDIENTES (si usas este servicio)
+        const expensas = await getExpensasPendientes(inquilinoId);
+        setExpensasPendientes(expensas.total ?? 0);
+
       } catch (error) {
-        console.error("Error cargando dashboard:", error);
+        console.error("Error cargando dashboard del inquilino:", error);
       }
     };
 
-    loadData();
+    cargarDatosDashboard();
   }, []);
 
   const ticketsAbiertos = tickets.filter((t) => t.estado === "Abierto").length;
