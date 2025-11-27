@@ -1,195 +1,301 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import axios from "@/app/utils/axios.util";
+import React, { useState, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { getUsuarioActual } from "../../utils/auth";
+import {
+  contratoService,
+  ContratoBackend,
+  PropiedadBackend,
+  InquilinoBackend,
+} from "@/services/contratoService";
 
-// INTERFAZ REALISTA DEL CONTRATO
+
+/* -------------------------------------------------------------------------- */
+/*                                   TIPOS                                    */
+/* -------------------------------------------------------------------------- */
+
+type EstadoContrato = "Vigente" | "Finalizado";
+
 interface Contrato {
-  id: number;
-  fecha_inicio: string;
-  fecha_fin: string;
-  monto_mensual: number;
-  estado: string;
-  propiedad: {
-    id: number;
-    direccion: string;
-    ciudad: string;
-    tipo: string;
-    descripcion: string | null;
-    precio_referencia: number;
-    fotos: { url: string }[];
-    propietario: {
-      id: number;
-      nombre: string;
-      apellido: string;
-      email: string;
-    };
-  };
+  id: string;
+  propiedad: string;
+  fechaInicio: string;
+  fechaFin: string;
+  montoAlquiler: string;
+  montoGarantia: string;
+  estado: EstadoContrato;
+  direccion: string;
+  tipoPropiedad: string;
 }
 
+/* -------------------------------------------------------------------------- */
+/*                                  SIDEBAR                                   */
+/* -------------------------------------------------------------------------- */
 
+const inquilinoMenu = [
+  { label: "Home", path: "/inquilino" },
+  { label: "Contratos", path: "/inquilino/contratos" },
+  { label: "Pagos", path: "/inquilino/pagos" },
+  { label: "Tickets", path: "/inquilino/tickets" },
+  { label: "Expensas", path: "/inquilino/expensas" },
+  { label: "Perfil", path: "/inquilino/perfil" },
+];
 
-export default function Contratos() {
+function SidebarInquilino() {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  return (
+    <aside className="w-64 bg-[#0b3b2c] text-white flex flex-col py-6 px-4 min-h-screen">
+      <div
+        className="text-2xl font-extrabold tracking-wide mb-8 px-2 cursor-pointer"
+        onClick={() => router.push("/inquilino")}
+      >
+        ALQUILA 360
+      </div>
+
+      <nav className="flex-1 space-y-1">
+        {inquilinoMenu.map((item) => {
+          const active = pathname === item.path;
+          return (
+            <button
+              key={item.path}
+              onClick={() => router.push(item.path)}
+              className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition ${
+                active ? "bg-[#4b7f5e] font-semibold" : "hover:bg-[#164332]"
+              }`}
+            >
+              {item.label}
+            </button>
+          );
+        })}
+      </nav>
+
+      <div className="mt-6 px-2 text-xs text-slate-300">Inquilino</div>
+      <button className="mt-2 px-3 py-2 text-xs text-slate-200 hover:bg-[#164332] rounded-lg text-left">
+        Cerrar Sesion
+      </button>
+    </aside>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                         FORMATEADORES (FECHA / MONEDA)                     */
+/* -------------------------------------------------------------------------- */
+
+function formatearFechaBonita(fecha: string) {
+  if (!fecha) return "-";
+  const d = new Date(fecha);
+  if (isNaN(d.getTime())) return fecha;
+  return d.toLocaleDateString("es-AR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function formatearMoneda(valor: string) {
+  const num = Number(valor);
+  if (isNaN(num)) return `$${valor}`;
+  return `$${num.toLocaleString("es-AR")}`;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                             PAGINA: CONTRATOS                             */
+/* -------------------------------------------------------------------------- */
+
+export default function ContratosInquilinoPage() {
+  const router = useRouter();
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [inquilinoId, setInquilinoId] = useState<number | null>(null);
+  const [userLoading, setUserLoading] = useState(true);
+
+  // ===== VERIFICACIÓN DE USUARIO =====
+  
+
 
 useEffect(() => {
-  const loadContrato = async () => {
+  const usuario = getUsuarioActual();
+
+  if (!usuario) {
+    console.error("No hay usuario logueado");
+    router.push("/login");
+    return;
+  }
+
+  if (usuario.role !== "inquilino") {
+    console.error("El rol no corresponde:", usuario.role);
+    router.push("/login");
+    return;
+  }
+
+  setInquilinoId(usuario.id);
+  setUserLoading(false);
+}, [router]);
+
+
+  // ===== CARGA DE CONTRATOS =====
+  useEffect(() => {
+    if (inquilinoId) {
+      cargarContratos();
+    }
+  }, [inquilinoId]);
+
+  const cargarContratos = async () => {
+  if (!inquilinoId) return;
+
+  try {
+    setLoading(true);
+    setError(null);
+
+    console.log("Cargando contrato actual para inquilino:", inquilinoId);
+
+    const contrato = await contratoService.getContratoActual(inquilinoId);
+
+    if (!contrato) {
+      setContratos([]);
+      return;
+    }
+
+    const transformado: Contrato = {
+      id: `C-${String(contrato.id).padStart(3, "0")}`,
+      propiedad: contrato.propiedad?.direccion || "Sin dirección",
+      direccion: contrato.propiedad?.direccion || "",
+      tipoPropiedad: contrato.propiedad?.tipo || "",
+      fechaInicio: contrato.fecha_inicio,
+      fechaFin: contrato.fecha_fin,
+      montoAlquiler: contrato.monto_mensual.toString(),
+      montoGarantia: contrato.garantia?.toString() || "0",
+      estado: contrato.estado === "activo" ? "Vigente" : "Finalizado",
+    };
+
+    setContratos([transformado]);
+
+  } catch (err: any) {
+    console.error("Error cargando contrato actual:", err);
+    setError("No se pudo cargar el contrato actual.");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+  const descargarPDF = async (contratoId: string) => {
     try {
-      const userId = Number(localStorage.getItem("userId"));
-      if (!userId) return;
-
-      const res = await fetch(`http://localhost:3001/contrato/actual/${userId}`);
-      const data = await res.json();
-
-      if (!data || !data.id) {
-        setContratos([]);
-        setLoading(false);
-        return;
-      }
-
-      setContratos([data]);  
-      setLoading(false);
-
-    } catch (error) {
-      console.error("Error cargando contrato:", error);
-      setLoading(false);
+      const idNumerico = contratoId.replace('C-', '');
+      
+      await contratoService.descargarContratoPDF(Number(idNumerico));
+    } catch (error: any) {
+      console.error('Error completo:', error);
+      alert(`Error al descargar el PDF: ${error.response?.data?.message || error.message}`);
     }
   };
 
-  loadContrato();
-}, []);
+return (
+  <div className="min-h-screen bg-[#f3efe3] flex">
+    <SidebarInquilino />
 
+    {/* CONTENEDOR PRINCIPAL CENTRADO COMO EL DASHBOARD */}
+    <main className="ml-64 flex-1 px-10 py-10 flex justify-center">
 
+      <div className="w-full max-w-6xl">
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
-      <aside className="fixed left-0 top-0 h-full w-64 bg-[#1a5f4a] text-white flex flex-col">
-        <div className="p-6">
-          <h1 className="text-2xl font-bold">ALQUILA 360</h1>
-        </div>
-
-        <nav className="flex-1 px-4 space-y-2">
-          <Link href="/inquilino" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#156b52]">
-            <span>🏠</span>
-            <span>Home</span>
-          </Link>
-          <Link href="/inquilino/contratos" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[#156b52]">
-            <span>📄</span>
-            <span>Contrato</span>
-          </Link>
-          <Link href="/inquilino/pagos" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#156b52]">
-            <span>💳</span>
-            <span>Pagos</span>
-          </Link>
-          <Link href="/inquilino/ticket" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#156b52]">
-            <span>🔧</span>
-            <span>Tickets</span>
-          </Link>
-          <Link href="/inquilino/expensas" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#156b52]">
-            <span>📊</span>
-            <span>Expensas</span>
-          </Link>
-          <Link href="/inquilino/perfil" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#156b52]">
-            <span>👤</span>
-            <span>Perfil</span>
-          </Link>
-        </nav>
-
-        <div className="p-4 border-t border-[#156b52]">
-          <p className="text-sm text-gray-300 mb-2">Inquilino</p>
-          <button className="flex items-center gap-3 px-4 py-3 w-full rounded-lg hover:bg-[#156b52]">
-            <span>🚪</span>
-            <span>Cerrar Sesión</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* MAIN */}
-      <main className="ml-64 flex-1 p-8">
-        <header className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-3xl font-bold text-gray-800">Contratos</h2>
-            <p className="text-gray-600">Historial de contratos de alquiler</p>
-          </div>
-          <button className="px-6 py-2 bg-yellow-400 text-gray-800 rounded-lg hover:bg-yellow-500 transition font-semibold">
-            Nuevo Contrato
-          </button>
+        {/* HEADER */}
+        <header className="mb-6">
+          <h2 className="text-3xl font-extrabold text-[#123528]">Mis Contratos</h2>
+          <p className="text-sm text-slate-600">Lista de tus contratos de alquiler</p>
         </header>
 
-        {/* TABLA */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+        {loading && (
+          <p className="text-center py-4 text-slate-600">Cargando...</p>
+        )}
+
+        {/* CARD PRINCIPAL COMO EN DASHBOARD */}
+        <div className="bg-white rounded-2xl shadow-sm border border-[#d2ccb9] p-6">
+
+          {/* TABLA CENTRADA */}
+          <div className="overflow-hidden rounded-xl border border-[#e0d7c5]">
+            <table className="w-full text-sm">
+              <thead className="bg-[#fdfaf3] border-b border-[#e0d7c5] text-[#4a5a52]">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Propiedad</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Inquilino</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha Inicio</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha Fin</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cuota Mensual</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+                  <th className="p-4 text-left font-semibold">N°</th>
+                  <th className="p-4 text-left font-semibold">Propiedad</th>
+                  <th className="p-4 text-left font-semibold">Fecha Inicio</th>
+                  <th className="p-4 text-left font-semibold">Fecha Fin</th>
+                  <th className="p-4 text-left font-semibold">Cuota</th>
+                  <th className="p-4 text-left font-semibold">Estado</th>
+                  <th className="p-4 text-left font-semibold">Descargar</th>
                 </tr>
               </thead>
 
-              <tbody className="bg-white divide-y divide-gray-200">
-                {loading && (
-                  <tr>
-                    <td colSpan={7} className="text-center py-6 text-gray-500">
-                      Cargando contratos...
-                    </td>
-                  </tr>
-                )}
-
-                {!loading && contratos.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="text-center py-6 text-gray-500">
-                      No tienes contratos registrados
-                    </td>
-                  </tr>
-                )}
+              <tbody className="divide-y divide-[#e0d7c5] bg-[#fefefe]">
 
                 {contratos.map((c) => (
-                  <tr key={c.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">📄 {c.id}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-  {c.propiedad?.direccion ?? "Sin dirección"}
-  <br />
-  <span className="text-gray-400 text-xs">
-    {c.propiedad?.tipo}
-  </span>
-</td>
+                  <tr key={c.id} className="hover:bg-[#f7f3e8] transition">
+                    <td className="p-4 font-semibold text-[#123528]">{c.id}</td>
 
-                    <td className="px-6 py-4 text-sm text-gray-600">
-  Usted mismo
-</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{c.fecha_inicio}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{c.fecha_fin}</td>
-                    
-<td className="px-6 py-4 text-sm font-semibold text-gray-900">
-  ${c.monto_mensual}
-</td>
-                    <td className="px-6 py-4">
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                    <td className="p-4 text-[#123528]">
+                      {c.propiedad}
+                      <div className="text-xs text-slate-500">{c.tipoPropiedad}</div>
+                    </td>
+
+                    <td className="p-4 text-[#123528]">
+                      {formatearFechaBonita(c.fechaInicio)}
+                    </td>
+
+                    <td className="p-4 text-[#123528]">
+                      {formatearFechaBonita(c.fechaFin)}
+                    </td>
+
+                    <td className="p-4 font-semibold text-[#123528]">
+                      {formatearMoneda(c.montoAlquiler)}
+                    </td>
+
+                    <td className="p-4">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-semibold border ${
+                          c.estado === "Vigente"
+                            ? "bg-[#d3f7e8] text-[#1b7c4b] border-[#a3e7c9]"
+                            : "bg-gray-100 text-gray-700 border-gray-300"
+                        }`}
+                      >
                         {c.estado}
                       </span>
                     </td>
+
+                    <td className="p-4">
+                      <button
+                        onClick={() => descargarPDF(c.id)}
+                        className="px-4 py-2 rounded-lg border border-[#c4bda9] bg-[#fdfaf3] hover:bg-[#f4f0e4] text-sm text-[#123528] transition"
+                      >
+                        Imprimir
+                      </button>
+                    </td>
                   </tr>
                 ))}
+
+                {!loading && contratos.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      className="p-6 text-center text-slate-500"
+                    >
+                      No tenés contratos disponibles.
+                    </td>
+                  </tr>
+                )}
+
               </tbody>
             </table>
           </div>
-        </div>
 
-        {/* HISTORIAL FINALIZADOS */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">Historial de Contratos Finalizados</h3>
-          <p className="text-gray-600">No hay contratos finalizados para mostrar.</p>
         </div>
-      </main>
-    </div>
-  );
+      </div>
+    </main>
+  </div>
+);
+
 }

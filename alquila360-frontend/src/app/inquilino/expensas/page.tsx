@@ -30,7 +30,7 @@ export default function GestionExpensas() {
       const inquilinoId = user.id;
 
       // 1. Obtener contrato
-      const contrato = await contratoService.getContratoDeInquilino(inquilinoId);
+      const contrato = await contratoService.getContratoActual(inquilinoId);
       const contratoId = contrato.id;
 
       // 2. Obtener expensas del backend

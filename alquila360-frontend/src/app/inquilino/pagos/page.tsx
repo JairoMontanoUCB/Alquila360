@@ -40,7 +40,7 @@ export default function GestionPagos() {
       const inquilinoId = user.id;
 
       // 1. Buscar contrato del inquilino
-      const contrato = await contratoService.getContratoDeInquilino(inquilinoId);
+      const contrato = await contratoService.getContratoActual(inquilinoId);
       const contratoId = contrato.id;
 
       // 2. Obtener cuotas normales del contrato
