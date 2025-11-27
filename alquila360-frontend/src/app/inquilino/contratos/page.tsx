@@ -116,7 +116,7 @@ export default function ContratosInquilinoPage() {
   useEffect(() => {
     const obtenerUsuarioLogueado = () => {
       try {
-        const usuarioStorage = localStorage.getItem('usuario');
+        const usuarioStorage = localStorage.getItem('user');
         const role = localStorage.getItem('role');
 
         if (usuarioStorage && role === 'inquilino') {
